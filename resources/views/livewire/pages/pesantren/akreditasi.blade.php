@@ -22,10 +22,19 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function create()
     {
-        Akreditasi::create([
+        $akreditasi = Akreditasi::create([
             'user_id' => auth()->id(),
             'status' => 6, // pengajuan
         ]);
+
+        // Notify Admin
+        $admins = \App\Models\User::whereHas('role', function($q) { $q->where('id', 1); })->get();
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
+            'pengajuan',
+            'Pengajuan Akreditasi Baru',
+            'Pesantren ' . (auth()->user()->pesantren->nama_pesantren ?? auth()->user()->name) . ' telah membuat pengajuan akreditasi baru.',
+            route('admin.akreditasi')
+        ));
 
         session()->flash('status', 'Pengajuan akreditasi berhasil dibuat.');
     }

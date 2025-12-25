@@ -97,6 +97,23 @@ new #[Layout('layouts.app')] class extends Component {
         
         $this->akreditasi->update(['status' => 4]); // 4. Visitasi
         
+        // Notify Admin
+        $admins = \App\Models\User::whereHas('role', function($q) { $q->where('id', 1); })->get();
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
+            'assessment_selesai',
+            'Assessment Selesai',
+            'Asesor ' . auth()->user()->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name),
+            route('admin.akreditasi')
+        ));
+
+        // Notify Pesantren
+        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
+            'visitasi',
+            'Update Status: Visitasi',
+            'Assessment telah selesai. Status pengajuan Anda kini adalah Visitasi.',
+            route('pesantren.akreditasi')
+        ));
+
         session()->flash('status', 'Verifikasi berhasil diselesaikan. Status berubah menjadi Visitasi.');
         return redirect()->route('asesor.akreditasi');
     }

@@ -82,6 +82,25 @@ new #[Layout('layouts.app')] class extends Component {
             'nomor_sk' => $this->nomor_sk,
         ]);
 
+        // Notify Pesantren
+        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
+            'validasi',
+            'Akreditasi Disetujui',
+            'Selamat! Pengajuan akreditasi Anda telah disetujui dengan nomor SK: ' . $this->nomor_sk,
+            route('pesantren.akreditasi')
+        ));
+
+        // Notify Asesor
+        $asesorUser = $this->akreditasi->assessment->asesor->user ?? null;
+        if ($asesorUser) {
+            $asesorUser->notify(new \App\Notifications\AkreditasiNotification(
+                'validasi',
+                'Akreditasi Divalidasi',
+                'Hasil assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name) . ' telah divalidasi oleh Admin.',
+                route('asesor.akreditasi')
+            ));
+        }
+
         session()->flash('status', 'Akreditasi berhasil disetujui.');
         return redirect()->route('admin.akreditasi');
     }

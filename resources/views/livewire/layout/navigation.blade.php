@@ -100,6 +100,11 @@ new class extends Component {
 
             <!-- Right Side: Settings Dropdown (Desktop) & Profile Trigger (Mobile) -->
             <div class="flex items-center sm:ms-6">
+                <!-- Notifications -->
+                <div class="hidden sm:flex sm:items-center sm:ms-3">
+                    <livewire:layout.notification-menu />
+                </div>
+
                 <!-- Desktop Settings Dropdown -->
                 <div class="hidden sm:flex sm:items-center">
                     <x-dropdown align="right" width="48">
@@ -139,6 +144,9 @@ new class extends Component {
 
                 <!-- Mobile Profile Link -->
                 <div class="flex items-center sm:hidden">
+                    <div class="me-2">
+                        <livewire:layout.notification-menu />
+                    </div>
                     <a href="{{ route('profile') }}" wire:navigate class="p-2 text-gray-400 hover:text-gray-500">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

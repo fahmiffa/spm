@@ -63,6 +63,25 @@ new #[Layout('layouts.app')] class extends Component {
         $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
         $akreditasi->update(['status' => 5]); // 5. assesment
 
+        // Notify Pesantren
+        $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
+            'assessment',
+            'Update Status: Assessment',
+            'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.',
+            route('pesantren.akreditasi')
+        ));
+
+        // Notify Asesor
+        $asesor = Asesor::with('user')->find($this->asesor_id);
+        if ($asesor && $asesor->user) {
+            $asesor->user->notify(new \App\Notifications\AkreditasiNotification(
+                'tugas_baru',
+                'Tugas Assessment Baru',
+                'Anda telah ditugaskan sebagai asesor untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name),
+                route('asesor.akreditasi')
+            ));
+        }
+
         session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assesment.');
         $this->dispatch('close-modal', 'verifikasi-modal');
     }
