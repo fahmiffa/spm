@@ -37,6 +37,15 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        $this->validate([
+            'evaluasis.*' => 'required|numeric|min:1|max:4',
+            'catatans.*' => 'nullable|string',
+        ], [
+            'evaluasis.*.numeric' => 'Nilai harus berupa angka.',
+            'evaluasis.*.min' => 'Nilai minimal adalah 1.',
+            'evaluasis.*.max' => 'Nilai maksimal adalah 4.',
+        ]);
+
         foreach ($this->evaluasis as $butirId => $isian) {
             Edpm::updateOrCreate(
                 ['user_id' => auth()->id(), 'butir_id' => $butirId],
@@ -52,6 +61,7 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         session()->flash('status', 'Evaluasi EDPM berhasil disimpan.');
+        $this->dispatch('notification-received', title: 'Berhasil', message: 'Evaluasi EDPM berhasil disimpan.');
     }
 }; ?>
 
@@ -91,7 +101,10 @@ new #[Layout('layouts.app')] class extends Component {
                                         <td class="border border-gray-300 px-2 py-2 text-center font-bold">{{ $butir->nomor_butir }}</td>
                                         <td class="border border-gray-300 px-4 py-2">{{ $butir->butir_pernyataan }}</td>
                                         <td class="border border-gray-300 p-0">
-                                            <input type="text" wire:model.live="evaluasis.{{ $butir->id }}" class="w-full border-0 p-2 text-sm focus:ring-2 focus:ring-indigo-500">
+                                            <input type="number" min="1" max="4" wire:model.live="evaluasis.{{ $butir->id }}" class="w-full border-0 p-2 text-sm focus:ring-2 focus:ring-indigo-500 @error('evaluasis.'.$butir->id) bg-red-50 @enderror">
+                                            @error('evaluasis.'.$butir->id)
+                                                <div class="px-2 pb-1 text-[10px] text-red-600 font-medium">{{ $message }}</div>
+                                            @enderror
                                         </td>
                                         @if($index === 0)
                                             <td rowspan="{{ $butirsCount }}" class="border border-gray-300 p-0 align-top">
