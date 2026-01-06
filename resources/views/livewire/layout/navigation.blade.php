@@ -15,253 +15,318 @@ new class extends Component {
     }
 }; ?>
 
-<nav x-data="{ open: false }" class="bg-white border-b border-gray-100 sticky top-0 z-40 shadow-sm">
-    <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16 relative">
-            <!-- Left Side: Hamburger (Mobile) & Desktop Links (Start) -->
-            <div class="flex items-center">
-                <!-- Hamburger (Mobile Only) -->
-                <div class="flex items-center sm:hidden">
-                    <button @click="open = ! open"
-                        class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
-                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                            <path :class="{ 'hidden': open, 'inline-flex': !open }" class="inline-flex"
-                                stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 12h16M4 6h16M4 18h16" />
-                            <path :class="{ 'hidden': !open, 'inline-flex': open }" class="hidden" stroke-linecap="round"
-                                stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Logo (Desktop: Left, Mobile: Hidden/Placeholder) -->
-                <div class="hidden sm:shrink-0 sm:flex sm:items-center">
-                    <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
-                    </a>
-                </div>
-
-                <!-- Desktop Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-                    @if (auth()->user()->isAdmin())
-                        <x-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" wire:navigate>
-                            {{ __('Roles') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" wire:navigate>
-                            {{ __('Accounts') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" wire:navigate>
-                            {{ __('Master EDPM') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-nav-link>
-                    @endif
-
-                    @if (auth()->user()->isPesantren())
-                        <x-nav-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" wire:navigate>
-                            {{ __('Profil Pesantren') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" wire:navigate>
-                            {{ __('IPM') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" wire:navigate>
-                            {{ __('REKAPITULASI DATA SDM') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" wire:navigate>
-                            {{ __('EDPM') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-nav-link>
-                    @endif
-
-                    @if (auth()->user()->isAsesor())
-                        <x-nav-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" wire:navigate>
-                            {{ __('Profil') }}
-                        </x-nav-link>
-                        <x-nav-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-nav-link>
-                    @endif
-                </div>
-            </div>
-
-            <!-- Center: Logo (Mobile Only) -->
-            <div class="flex items-center sm:hidden absolute left-1/2 -translate-x-1/2 h-full">
-                <a href="{{ route('dashboard') }}" wire:navigate>
-                    <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+<div class="h-full flex-shrink-0">
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:flex lg:flex-shrink-0 h-full">
+        <div class="flex flex-col w-64 border-r border-gray-200 bg-white h-full">
+            <!-- Logo Section -->
+            <div class="flex items-center h-16 px-6 border-b border-gray-200">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
+                    <x-application-logo class="h-8 w-auto text-indigo-600" />
+                    <span class="font-bold text-lg text-gray-800 tracking-tight">SPM Pesantren</span>
                 </a>
             </div>
 
-            <!-- Right Side: Settings Dropdown (Desktop) & Profile Trigger (Mobile) -->
-            <div class="flex items-center sm:ms-6">
-                <!-- Notifications -->
-                <div class="hidden sm:flex sm:items-center sm:ms-3">
-                    <livewire:layout.notification-menu />
-                </div>
-
-                <!-- Desktop Settings Dropdown -->
-                <div class="hidden sm:flex sm:items-center">
-                    <x-dropdown align="right" width="48">
-                        <x-slot name="trigger">
-                            <button
-                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
-                                <div x-data='@json(['name' => auth()->user()->name,'role' => auth()->user()->role->name,])' x-text="`${name} (${role})`"
-                                    x-on:profile-updated.window="name = $event.detail.name;role = $event.detail.role;"
-                                    class="whitespace-nowrap">
-                                </div>
-
-                                <div class="ms-1">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd"
-                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                </div>
-                            </button>
-                        </x-slot>
-
-                        <x-slot name="content">
-                            <x-dropdown-link :href="route('profile')" wire:navigate>
-                                {{ __('Profile') }}
-                            </x-dropdown-link>
-
-                            <!-- Authentication -->
-                            <button wire:click="logout" class="w-full text-start">
-                                <x-dropdown-link>
-                                    {{ __('Log Out') }}
-                                </x-dropdown-link>
-                            </button>
-                        </x-slot>
-                    </x-dropdown>
-                </div>
-
-                <!-- Mobile Profile Link -->
-                <div class="flex items-center sm:hidden">
-                    <div class="me-2">
-                        <livewire:layout.notification-menu />
+            <!-- Navigation Links -->
+            <div class="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+                <nav class="mt-2 flex-1 px-4 space-y-1">
+                    <!-- General Menu -->
+                    <div class="space-y-1">
+                        <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">
+                            {{ __('Home') }}
+                        </x-sidebar-link>
                     </div>
-                    <a href="{{ route('profile') }}" wire:navigate class="p-2 text-gray-400 hover:text-gray-500">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Mobile Sidebar Menu -->
-    <div x-show="open" 
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="-translate-x-full"
-         x-transition:enter-end="translate-x-0"
-         x-transition:leave="transition ease-in duration-300"
-         x-transition:leave-start="translate-x-0"
-         x-transition:leave-end="-translate-x-full"
-         class="fixed inset-0 z-50 overflow-hidden sm:hidden" 
-         style="display: none;">
-        
-        <!-- Backdrop -->
-        <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="open = false"></div>
-
-        <!-- Sidebar -->
-        <div class="absolute inset-y-0 left-0 max-w-xs w-full bg-white shadow-xl flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b">
-                <div class="flex items-center gap-2">
-                    <x-application-logo class="block h-8 w-auto fill-current text-gray-800" />
-                    <span class="font-bold text-gray-800">SPM</span>
-                </div>
-                <button @click="open = false" class="text-gray-400 hover:text-gray-500">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto pt-2 pb-4">
-                <div class="space-y-1 px-2">
-                    <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </x-responsive-nav-link>
-                    
+                    <!-- Admin Menu -->
                     @if (auth()->user()->isAdmin())
-                        <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</div>
-                        <x-responsive-nav-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" wire:navigate>
-                            {{ __('Roles') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" wire:navigate>
-                            {{ __('Accounts') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" wire:navigate>
-                            {{ __('Master EDPM') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-responsive-nav-link>
+                        <div class="pt-4 pb-2 px-3">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Administrator</span>
+                        </div>
+                        <div class="space-y-1">
+                            <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
+                                {{ __('Roles') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
+                                {{ __('Accounts') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
+                                {{ __('Master EDPM') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" icon="shield">
+                                {{ __('Akreditasi') }}
+                            </x-sidebar-link>
+                        </div>
                     @endif
 
+                    <!-- Pesantren Menu -->
                     @if (auth()->user()->isPesantren())
-                        <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pesantren</div>
-                        <x-responsive-nav-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" wire:navigate>
-                            {{ __('Profil Pesantren') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" wire:navigate>
-                            {{ __('IPM') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" wire:navigate>
-                            {{ __('REKAPITULASI DATA SDM') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" wire:navigate>
-                            {{ __('EDPM') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-responsive-nav-link>
+                        <div class="pt-4 pb-2 px-3">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
+                        </div>
+                        <div class="space-y-1">
+                            <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
+                                {{ __('Profil Pesantren') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
+                                {{ __('IPM') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
+                                {{ __('Data SDM') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
+                                {{ __('EDPM') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
+                                {{ __('Akreditasi') }}
+                            </x-sidebar-link>
+                        </div>
                     @endif
 
+                    <!-- Asesor Menu -->
                     @if (auth()->user()->isAsesor())
-                        <div class="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Asesor</div>
-                        <x-responsive-nav-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" wire:navigate>
-                            {{ __('Profil') }}
-                        </x-responsive-nav-link>
-                        <x-responsive-nav-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" wire:navigate>
-                            {{ __('Akreditasi') }}
-                        </x-responsive-nav-link>
+                        <div class="pt-4 pb-2 px-3">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
+                        </div>
+                        <div class="space-y-1">
+                            <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
+                                {{ __('My Profile') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
+                                {{ __('Akreditasi') }}
+                            </x-sidebar-link>
+                        </div>
                     @endif
-                </div>
+                </nav>
             </div>
 
-            <!-- Sidebar Footer -->
-            <div class="p-4 border-t bg-gray-50">
-                <div class="flex items-center gap-3 mb-4 px-2">
-                    <div class="flex-shrink-0">
-                        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                            {{ substr(auth()->user()->name, 0, 1) }}
+            <!-- Sidebar Footer User Profile (Fixed Bottom) -->
+            <div class="mt-auto flex-shrink-0 border-t border-gray-200 bg-white p-4" x-data="{ userOpen: false }">
+                <div class="relative">
+                    <button 
+                        @mouseenter="userOpen = true" 
+                        @mouseleave="userOpen = false"
+                        @click="userOpen = !userOpen"
+                        class="flex group w-full items-center focus:outline-none overflow-hidden rounded-lg p-1 hover:bg-gray-50 transition-colors"
+                    >
+                        <div class="flex items-center">
+                            <div class="inline-block h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
+                                {{ substr(auth()->user()->name, 0, 1) }}
+                            </div>
+                            <div class="ml-3 text-left">
+                                <p class="text-[10px] font-medium text-gray-400 uppercase tracking-tighter leading-none mb-1">Signed in as</p>
+                                <p class="text-xs font-bold text-gray-800 truncate w-32 leading-none">{{ auth()->user()->name }}</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Profile Dropdown Card (Hover/Click) -->
+                    <div 
+                        x-show="userOpen"
+                        @mouseenter="userOpen = true"
+                        @mouseleave="userOpen = false"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 translate-y-4"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-4"
+                        class="absolute bottom-full left-0 mb-4 w-72 bg-white rounded-2xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] border border-gray-100 overflow-hidden z-[60]"
+                        style="display: none;"
+                    >
+                        <div class="p-6">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <div class="h-14 w-14 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 overflow-hidden shadow-inner border border-indigo-100 flex-shrink-0 font-bold text-xl uppercase">
+                                    {{ substr(auth()->user()->name, 0, 1) }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="text-sm font-bold text-gray-900 truncate">{{ auth()->user()->name }}</h3>
+                                    <p class="text-[10px] text-gray-500 truncate mb-1">{{ auth()->user()->email }}</p>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
+                                        {{ auth()->user()->role->name }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-1">
+                                <a href="{{ route('profile') }}" wire:navigate class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all group">
+                                    <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                    Profile Settings
+                                </a>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="flex items-center w-full px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all group">
+                                        <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                        Sign Out
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 truncate">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-gray-500 truncate">{{ auth()->user()->email }}</p>
-                    </div>
-                </div>
-                <div class="space-y-1">
-                    <x-responsive-nav-link :href="route('profile')" wire:navigate>
-                        {{ __('Profile Settings') }}
-                    </x-responsive-nav-link>
-                    <button wire:click="logout" class="w-full text-start">
-                        <x-responsive-nav-link class="text-red-600">
-                            {{ __('Log Out') }}
-                        </x-responsive-nav-link>
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
-</nav>
+    </aside>
+
+    <!-- Mobile Sidebar Drawer (Portal) -->
+    <template x-teleport="body">
+        <div x-show="$store.sidebar.open" class="relative z-50 lg:hidden" x-ref="dialog" role="dialog" aria-modal="true" style="display: none;">
+            <!-- Backdrop -->
+            <div x-show="$store.sidebar.open" 
+                 x-transition:enter="transition-opacity ease-linear duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition-opacity ease-linear duration-300"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm" @click="$store.sidebar.open = false"></div>
+
+            <div class="fixed inset-0 flex" @click="$store.sidebar.open = false">
+                <!-- Sidebar UI -->
+                <div x-show="$store.sidebar.open"
+                     @click.stop
+                     x-transition:enter="transition ease-in-out duration-300 transform"
+                     x-transition:enter-start="-translate-x-full"
+                     x-transition:enter-end="translate-x-0"
+                     x-transition:leave="transition ease-in-out duration-300 transform"
+                     x-transition:leave-start="translate-x-0"
+                     x-transition:leave-end="-translate-x-full"
+                     class="relative flex flex-col max-w-xs w-full bg-white shadow-2xl">
+                    
+                    <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                        <div class="flex-shrink-0 flex items-center px-6">
+                            <x-application-logo class="h-8 w-auto text-indigo-600" />
+                            <span class="ml-3 font-bold text-lg text-gray-800 tracking-tight">SPM Pesantren</span>
+                        </div>
+                        <nav class="mt-5 px-4 space-y-1" @click="$store.sidebar.open = false">
+                            <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">
+                                {{ __('Home') }}
+                            </x-sidebar-link>
+                            
+                            <!-- Admin Menu -->
+                            @if (auth()->user()->isAdmin())
+                                <div class="pt-4 pb-2 px-3">
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Administrator</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
+                                        {{ __('Roles') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
+                                        {{ __('Accounts') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
+                                        {{ __('Master EDPM') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" icon="shield">
+                                        {{ __('Akreditasi') }}
+                                    </x-sidebar-link>
+                                </div>
+                            @endif
+
+                            <!-- Pesantren Menu -->
+                            @if (auth()->user()->isPesantren())
+                                <div class="pt-4 pb-2 px-3">
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
+                                        {{ __('Profil Pesantren') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
+                                        {{ __('IPM') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
+                                        {{ __('Data SDM') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
+                                        {{ __('EDPM') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
+                                        {{ __('Akreditasi') }}
+                                    </x-sidebar-link>
+                                </div>
+                            @endif
+
+                            <!-- Asesor Menu -->
+                            @if (auth()->user()->isAsesor())
+                                <div class="pt-4 pb-2 px-3">
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
+                                </div>
+                                <div class="space-y-1">
+                                    <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
+                                        {{ __('My Profile') }}
+                                    </x-sidebar-link>
+                                    <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
+                                        {{ __('Akreditasi') }}
+                                    </x-sidebar-link>
+                                </div>
+                            @endif
+                        </nav>
+                    </div>
+
+                    <!-- Mobile Sidebar Footer User Profile -->
+                    <div class="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50/50" x-data="{ userOpenMobile: false }">
+                        <div class="relative">
+                            <button 
+                                @click="userOpenMobile = !userOpenMobile"
+                                class="flex w-full items-center focus:outline-none p-1 rounded-lg hover:bg-white transition-colors"
+                            >
+                                <div class="flex items-center">
+                                    <div class="inline-block h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
+                                        {{ substr(auth()->user()->name, 0, 1) }}
+                                    </div>
+                                    <div class="ml-3 text-left">
+                                        <p class="text-[10px] font-medium text-gray-400 uppercase tracking-tighter leading-none mb-1">Signed in as</p>
+                                        <p class="text-xs font-bold text-gray-800 truncate w-32 leading-none">{{ auth()->user()->name }}</p>
+                                    </div>
+                                </div>
+                            </button>
+
+                            <!-- Profile Popover (Mobile) -->
+                            <div 
+                                x-show="userOpenMobile"
+                                @click.away="userOpenMobile = false"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 translate-y-4"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                x-transition:leave="transition ease-in duration-150"
+                                x-transition:leave-start="opacity-100 translate-y-0"
+                                x-transition:leave-end="opacity-0 translate-y-4"
+                                class="absolute bottom-full left-0 mb-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[80]"
+                                style="display: none;"
+                            >
+                                <div class="p-5">
+                                    <div class="flex items-center space-x-3 mb-4">
+                                        <div class="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold uppercase transition-transform">
+                                            {{ substr(auth()->user()->name, 0, 1) }}
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="text-xs font-bold text-gray-900 truncate">{{ auth()->user()->name }}</h3>
+                                            <p class="text-[10px] text-gray-500 truncate">{{ auth()->user()->email }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <a href="{{ route('profile') }}" wire:navigate class="flex items-center px-3 py-2 text-xs font-medium text-gray-700 rounded-lg hover:bg-indigo-50 transition-all">
+                                            Profile Settings
+                                        </a>
+                                        <form method="POST" action="{{ route('logout') }}">
+                                            @csrf
+                                            <button type="submit" class="flex items-center w-full px-3 py-2 text-xs font-medium text-red-600 rounded-lg hover:bg-red-50 transition-all">
+                                                Sign Out
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 w-14"></div>
+            </div>
+        </div>
+    </template>
+</div>

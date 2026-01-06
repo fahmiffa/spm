@@ -10,13 +10,13 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.app')] class extends Component {
     public $users;
     public $roles;
-    
+
     public $name;
     public $email;
     public $password;
     public $role_id;
     public $userId;
-    
+
     public $isEditing = false;
 
     public function mount()
@@ -73,7 +73,8 @@ new #[Layout('layouts.app')] class extends Component {
         if (!$this->isEditing) {
             $rules['password'] = ['required', 'string', Rules\Password::defaults()];
         } else {
-            $rules['password'] = ['nullable', 'string', Rules\Password::defaults()];
+            // $rules['password'] = ['nullable', 'string', Rules\Password::defaults()];
+            $rules['password'] = ['nullable', 'string'];
         }
 
         $this->validate($rules);
@@ -146,34 +147,47 @@ new #[Layout('layouts.app')] class extends Component {
                     <table class="min-w-full divide-y divide-gray-200 border">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No.</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    No.</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nama</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Email</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Role</th>
+                                <th
+                                    class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Action</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse ($users as $user)
                                 <tr wire:key="{{ $user->id }}">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->email }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->email }}
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        <span
+                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                             {{ $user->role?->name ?? 'No Role' }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button wire:click="editUser({{ $user->id }})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                        <button wire:click="editUser({{ $user->id }})"
+                                            class="text-indigo-600 hover:text-indigo-900 mr-3">
                                             {{ __('Edit') }}
                                         </button>
                                         @if ($user->id !== auth()->id())
-                                            <button 
-                                                wire:click="deleteUser({{ $user->id }})" 
+                                            <button wire:click="deleteUser({{ $user->id }})"
                                                 wire:confirm="Are you sure you want to delete this account?"
-                                                class="text-red-600 hover:text-red-900"
-                                            >
+                                                class="text-red-600 hover:text-red-900">
                                                 {{ __('Delete') }}
                                             </button>
                                         @endif
@@ -181,7 +195,8 @@ new #[Layout('layouts.app')] class extends Component {
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                                    <td colspan="5"
+                                        class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
                                         No users found.
                                     </td>
                                 </tr>
@@ -206,7 +221,8 @@ new #[Layout('layouts.app')] class extends Component {
             <div class="mt-6 space-y-4">
                 <div>
                     <x-input-label for="name" value="{{ __('Name') }}" />
-                    <x-text-input wire:model="name" id="name" type="text" class="mt-1 block w-full" required autofocus />
+                    <x-text-input wire:model="name" id="name" type="text" class="mt-1 block w-full" required
+                        autofocus />
                     <x-input-error :messages="$errors->get('name')" class="mt-2" />
                 </div>
 
@@ -218,9 +234,11 @@ new #[Layout('layouts.app')] class extends Component {
 
                 <div>
                     <x-input-label for="role_id" value="{{ __('Role') }}" />
-                    <select wire:model="role_id" id="role_id" class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                    <select wire:model="role_id" id="role_id"
+                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                        required>
                         <option value="">Select Role</option>
-                        @foreach($roles as $role)
+                        @foreach ($roles as $role)
                             <option value="{{ $role->id }}">{{ $role->name }}</option>
                         @endforeach
                     </select>
@@ -229,8 +247,9 @@ new #[Layout('layouts.app')] class extends Component {
 
                 <div>
                     <x-input-label for="password" value="{{ __('Password') }}" />
-                    <x-text-input wire:model="password" id="password" type="password" class="mt-1 block w-full" :required="!$isEditing" />
-                    @if($isEditing)
+                    <x-text-input wire:model="password" id="password" type="password" class="mt-1 block w-full"
+                        :required="!$isEditing" />
+                    @if ($isEditing)
                         <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
                     @endif
                     <x-input-error :messages="$errors->get('password')" class="mt-2" />
