@@ -35,9 +35,19 @@ class Akreditasi extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function assessment()
+    public function assessments()
     {
-        return $this->hasOne(Assessment::class);
+        return $this->hasMany(Assessment::class);
+    }
+
+    public function assessment1()
+    {
+        return $this->hasOne(Assessment::class)->where('tipe', 1);
+    }
+
+    public function assessment2()
+    {
+        return $this->hasOne(Assessment::class)->where('tipe', 2);
     }
 
     public static function getStatusLabel($status)

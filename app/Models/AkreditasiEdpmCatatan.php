@@ -9,7 +9,9 @@ class AkreditasiEdpmCatatan extends Model
     protected $fillable = [
         'akreditasi_id',
         'pesantren_id',
+        'asesor_id',
         'komponen_id',
         'catatan',
+        'nk',
     ];
 }

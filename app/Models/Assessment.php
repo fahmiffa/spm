@@ -9,6 +9,7 @@ class Assessment extends Model
     protected $fillable = [
         'akreditasi_id',
         'asesor_id',
+        'tipe',
         'tanggal_mulai',
         'tanggal_berakhir',
     ];

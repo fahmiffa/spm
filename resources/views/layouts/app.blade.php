@@ -39,10 +39,8 @@
                         </button>
                         
                         <!-- Page Title/Breadcrumbs -->
-                        <div class="ml-4 lg:ml-0">
-                            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                                @isset($header) {{ $header }} @else Dashboard @endisset
-                            </h2>
+                        <div class="ml-4 lg:ml-0 flex items-center h-16">
+                            <h2 class="font-bold text-lg text-gray-800 tracking-tight leading-none uppercase">@isset($header){{ $header }}@else Dashboard @endisset</h2>
                         </div>
                     </div>
 

@@ -50,7 +50,7 @@ new class extends Component {
                                 {{ __('Accounts') }}
                             </x-sidebar-link>
                             <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
-                                {{ __('Master EDPM') }}
+                                {{ __('Master Komponen') }}
                             </x-sidebar-link>
                             <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" icon="shield">
                                 {{ __('Akreditasi') }}
@@ -109,7 +109,7 @@ new class extends Component {
                         class="flex group w-full items-center focus:outline-none overflow-hidden rounded-lg p-1 hover:bg-gray-50 transition-colors"
                     >
                         <div class="flex items-center">
-                            <div class="inline-block h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
+                            <div class="ih-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
                                 {{ substr(auth()->user()->name, 0, 1) }}
                             </div>
                             <div class="ml-3 text-left">
@@ -276,7 +276,7 @@ new class extends Component {
                                 class="flex w-full items-center focus:outline-none p-1 rounded-lg hover:bg-white transition-colors"
                             >
                                 <div class="flex items-center">
-                                    <div class="inline-block h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
+                                    <div class="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
                                         {{ substr(auth()->user()->name, 0, 1) }}
                                     </div>
                                     <div class="ml-3 text-left">

@@ -11,6 +11,7 @@ new #[Layout('layouts.app')] class extends Component {
     // Form fields for Komponen
     public $komponen_nama;
     public $komponen_id;
+    public $komponen_ipr;
     
     // Form fields for Butir
     public $butir_id;
@@ -39,6 +40,7 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->komponen_nama = '';
         $this->komponen_id = null;
+        $this->komponen_ipr = false;
         $this->resetErrorBag();
     }
 
@@ -58,6 +60,7 @@ new #[Layout('layouts.app')] class extends Component {
             $komponen = MasterEdpmKomponen::findOrFail($id);
             $this->komponen_id = $komponen->id;
             $this->komponen_nama = $komponen->nama;
+            $this->komponen_ipr = $komponen->ipr == 1;
             $this->modalTitle = 'Edit Komponen';
         } else {
             $this->modalTitle = 'Tambah Komponen';
@@ -72,7 +75,10 @@ new #[Layout('layouts.app')] class extends Component {
         
         MasterEdpmKomponen::updateOrCreate(
             ['id' => $this->komponen_id],
-            ['nama' => $this->komponen_nama]
+            [
+                'nama' => $this->komponen_nama,
+                'ipr' => $this->komponen_ipr ? 1 : 0
+            ]
         );
 
         session()->flash('status', 'Komponen berhasil disimpan.');
@@ -109,7 +115,7 @@ new #[Layout('layouts.app')] class extends Component {
     public function saveButir()
     {
         $this->validate([
-            'butir_no_sk' => 'required|string',
+            // 'butir_no_sk' => 'required|string',
             'butir_nomor_butir' => 'required|string',
             'butir_pernyataan' => 'required|string',
         ]);
@@ -138,11 +144,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Master EDPM') }}
-        </h2>
-    </x-slot>
+    <x-slot name="header">{{ __('Master Komponen') }}</x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -161,7 +163,12 @@ new #[Layout('layouts.app')] class extends Component {
                     @forelse ($komponens as $komponen)
                         <div class="border rounded-lg overflow-hidden shadow-sm">
                             <div class="bg-gray-100 px-4 py-3 flex justify-between items-center border-b">
-                                <h4 class="font-bold text-indigo-700 uppercase tracking-wide">{{ $komponen->nama }}</h4>
+                                <div class="flex items-center gap-3">
+                                    <h4 class="font-bold text-indigo-700 uppercase tracking-wide">{{ $komponen->nama }}</h4>
+                                    @if ($komponen->ipr)
+                                        <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase tracking-tighter">IPR</span>
+                                    @endif
+                                </div>
                                 <div class="flex gap-2">
                                     <x-secondary-button wire:click="openButirModal({{ $komponen->id }})" class="text-xs">
                                         {{ __('+ Tambah Butir') }}
@@ -216,10 +223,20 @@ new #[Layout('layouts.app')] class extends Component {
     <x-modal name="edpm-komponen-modal" focusable>
         <form wire:submit="saveKomponen" class="p-6">
             <h2 class="text-lg font-medium text-gray-900">{{ $modalTitle }}</h2>
-            <div class="mt-6">
-                <x-input-label for="komponen_nama" value="Nama Komponen" />
-                <x-text-input wire:model="komponen_nama" id="komponen_nama" class="mt-1 block w-full" placeholder="Contoh: MUTU LULUSAN" required />
-                <x-input-error :messages="$errors->get('komponen_nama')" class="mt-2" />
+            <div class="mt-6 space-y-4">
+                <div>
+                    <x-input-label for="komponen_nama" value="Nama Komponen" />
+                    <x-text-input wire:model="komponen_nama" id="komponen_nama" class="mt-1 block w-full" placeholder="Contoh: MUTU LULUSAN" required />
+                    <x-input-error :messages="$errors->get('komponen_nama')" class="mt-2" />
+                </div>
+                
+                <div class="flex items-center gap-3 bg-gray-50 border rounded-lg p-3">
+                    <input type="checkbox" wire:model="komponen_ipr" id="komponen_ipr" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 w-5 h-5">
+                    <div>
+                        <x-input-label for="komponen_ipr" value="Komponen IPR" class="font-bold text-gray-800" />
+                        <p class="text-[10px] text-gray-500">Centang jika komponen ini termasuk dalam Indikator Pemenuhan Relatif (IPR)</p>
+                    </div>
+                </div>
             </div>
             <div class="mt-6 flex justify-end">
                 <x-secondary-button x-on:click="$dispatch('close')">Batal</x-secondary-button>
@@ -236,7 +253,7 @@ new #[Layout('layouts.app')] class extends Component {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <x-input-label for="butir_no_sk" value="No SK" />
-                        <x-text-input wire:model="butir_no_sk" id="butir_no_sk" class="mt-1 block w-full" required />
+                        <x-text-input wire:model="butir_no_sk" id="butir_no_sk" class="mt-1 block w-full" />
                         <x-input-error :messages="$errors->get('butir_no_sk')" class="mt-2" />
                     </div>
                     <div>

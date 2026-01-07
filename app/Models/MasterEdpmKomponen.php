@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MasterEdpmKomponen extends Model
 {
-    protected $fillable = ['nama'];
+    protected $fillable = ['nama', 'ipr'];
 
     public function butirs()
     {

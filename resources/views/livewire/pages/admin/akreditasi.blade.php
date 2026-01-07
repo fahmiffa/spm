@@ -8,7 +8,8 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component {
     public $akreditasi_id;
-    public $asesor_id;
+    public $asesor_id1;
+    public $asesor_id2;
     public $tanggal_mulai;
     public $tanggal_berakhir;
 
@@ -38,7 +39,8 @@ new #[Layout('layouts.app')] class extends Component {
     public function openVerifikasiModal($id)
     {
         $this->akreditasi_id = $id;
-        $this->asesor_id = '';
+        $this->asesor_id1 = '';
+        $this->asesor_id2 = '';
         $this->tanggal_mulai = '';
         $this->tanggal_berakhir = '';
         $this->resetErrorBag();
@@ -48,38 +50,53 @@ new #[Layout('layouts.app')] class extends Component {
     public function verifikasi()
     {
         $this->validate([
-            'asesor_id' => 'required|exists:asesors,id',
+            'asesor_id1' => 'required|exists:asesors,id',
+            'asesor_id2' => 'nullable|exists:asesors,id|different:asesor_id1',
             'tanggal_mulai' => 'required|date',
             'tanggal_berakhir' => 'required|date|after_or_equal:tanggal_mulai',
         ]);
 
+        // Clear existing assessments first
+        Assessment::where('akreditasi_id', $this->akreditasi_id)->delete();
+
+        // Create Asesor 1
         Assessment::create([
             'akreditasi_id' => $this->akreditasi_id,
-            'asesor_id' => $this->asesor_id,
+            'asesor_id' => $this->asesor_id1,
+            'tipe' => 1,
             'tanggal_mulai' => $this->tanggal_mulai,
             'tanggal_berakhir' => $this->tanggal_berakhir,
         ]);
+
+        // Create Asesor 2 if selected
+        if ($this->asesor_id2) {
+            Assessment::create([
+                'akreditasi_id' => $this->akreditasi_id,
+                'asesor_id' => $this->asesor_id2,
+                'tipe' => 2,
+                'tanggal_mulai' => $this->tanggal_mulai,
+                'tanggal_berakhir' => $this->tanggal_berakhir,
+            ]);
+        }
 
         $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
         $akreditasi->update(['status' => 5]); // 5. assesment
 
         // Notify Pesantren
-        $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
-            'assessment',
-            'Update Status: Assessment',
-            'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.',
-            route('pesantren.akreditasi')
-        ));
+        $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('assessment', 'Update Status: Assessment', 'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.', route('pesantren.akreditasi')));
 
-        // Notify Asesor
-        $asesor = Asesor::with('user')->find($this->asesor_id);
-        if ($asesor && $asesor->user) {
-            $asesor->user->notify(new \App\Notifications\AkreditasiNotification(
-                'tugas_baru',
-                'Tugas Assessment Baru',
-                'Anda telah ditugaskan sebagai asesor untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name),
-                route('asesor.akreditasi')
-            ));
+        // Notify Asesor 1
+        $asesor1 = Asesor::with('user')->find($this->asesor_id1);
+        if ($asesor1 && $asesor1->user) {
+            $asesor1->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 1 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
+        }
+
+        // Notify Asesor 2
+        if ($this->asesor_id2) {
+            $asesor2 = Asesor::with('user')->find($this->asesor_id2);
+            if ($asesor2 && $asesor2->user) {
+                $asesor2->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 2 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
+            }
         }
 
         session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assesment.');
@@ -88,6 +105,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div class="py-12">
+    <x-slot name="header">{{ __('Akreditasi') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -184,16 +202,29 @@ new #[Layout('layouts.app')] class extends Component {
             </p>
 
             <div class="mt-6 space-y-4">
-                <div>
-                    <x-input-label for="asesor_id" value="Pilih Asesor" />
-                    <select wire:model="asesor_id" id="asesor_id"
-                        class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                        <option value="">-- Pilih Asesor --</option>
-                        @foreach ($this->asesors as $asesor)
-                            <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
-                        @endforeach
-                    </select>
-                    <x-input-error :messages="$errors->get('asesor_id')" class="mt-2" />
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <x-input-label for="asesor_id1" value="Asesor" />
+                        <div class="flex gap-3">
+                            <select wire:model="asesor_id1" id="asesor_id1"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                                <option value="">Ketua</option>
+                                @foreach ($this->asesors as $asesor)
+                                    <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('asesor_id1')" class="mt-2" />
+                            <select wire:model="asesor_id2" id="asesor_id2"
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
+                                <option value="">Anggota</option>
+                                @foreach ($this->asesors as $asesor)
+                                    <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
+                                @endforeach
+                            </select>
+                            <x-input-error :messages="$errors->get('asesor_id2')" class="mt-2" />
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
