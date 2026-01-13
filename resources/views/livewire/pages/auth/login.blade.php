@@ -62,24 +62,24 @@ new #[Layout('layouts.guest')] class extends Component
             <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
         </div>
 
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember" class="inline-flex items-center">
-                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
-            @endif
-
-            <x-primary-button class="ms-3">
+        <div class="flex items-center justify-center mt-4">
+            <x-primary-button class="mx-auto">
                 {{ __('Log in') }}
             </x-primary-button>
+
         </div>
     </form>
+
+    <div class="relative flex items-center py-5">
+        <div class="flex-grow border-t border-gray-300"></div>
+        <span class="flex-shrink mx-4 text-gray-400 text-sm">Atau</span>
+        <div class="flex-grow border-t border-gray-300"></div>
+    </div>
+
+    <div class="flex items-center justify-center">
+        <a href="{{ route('sso.preflight') }}" class="w-full inline-flex justify-center items-center px-4 py-3 rounded-lg shadow-lg transform transition hover:scale-[1.02] active:scale-[0.98] overflow-hidden" 
+           style="background: linear-gradient(to right, #2c506d, #427c95);">
+            <img src="https://aqsa-dev.muhammadiyah.or.id/assets/media/logos/logo-white-full.png" alt="Muhammadiyah ID" class="h-8 object-contain">
+        </a>
+    </div>
 </div>

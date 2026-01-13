@@ -65,3 +65,4 @@ Route::view('profile', 'profile')
     ->name('admin.akreditasi-detail');
 
 require __DIR__.'/auth.php';
+require __DIR__.'/sso/sso.php';
