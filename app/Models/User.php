@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'uuid',
     ];
 
     /**
@@ -101,5 +102,10 @@ class User extends Authenticatable
     public function akreditasis()
     {
         return $this->hasMany(Akreditasi::class);
+    }
+
+    public function profile_data(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Profile::class, 'user_id', 'id');
     }
 }
