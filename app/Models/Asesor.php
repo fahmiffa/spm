@@ -8,6 +8,10 @@ class Asesor extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'layanan_satuan_pendidikan' => 'array',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

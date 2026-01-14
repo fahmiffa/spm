@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Pesantren extends Model
 {
     protected $guarded = [];
+    
+    protected $casts = [
+        'layanan_satuan_pendidikan' => 'array',
+    ];
 
     public function user()
     {

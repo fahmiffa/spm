@@ -10,7 +10,7 @@ new #[Layout('layouts.app')] class extends Component {
     use WithFileUploads;
 
     public $pesantren;
-    
+
     // Form fields
     public $nama_pesantren;
     public $ns_pesantren;
@@ -28,7 +28,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $misi;
 
     // DATA PESANTREN
-    public $layanan_satuan_pendidikan;
+    public $layanan_satuan_pendidikan = [];
     public $rombel_sd = 0;
     public $rombel_mi = 0;
     public $rombel_smp = 0;
@@ -48,7 +48,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $peraturan_kepegawaian_file;
     public $file_lk_iapm_file;
     public $laporan_tahunan_file;
-    
+
     // DOKUMEN SEKUNDER
     public $dok_profil_file;
     public $dok_nsp_file;
@@ -72,7 +72,7 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->pesantren = Pesantren::firstOrCreate(['user_id' => auth()->id()], ['nama_pesantren' => auth()->user()->name]);
-        
+
         $this->nama_pesantren = $this->pesantren->nama_pesantren;
         $this->ns_pesantren = $this->pesantren->ns_pesantren;
         $this->alamat = $this->pesantren->alamat;
@@ -88,7 +88,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->visi = $this->pesantren->visi;
         $this->misi = $this->pesantren->misi;
 
-        $this->layanan_satuan_pendidikan = $this->pesantren->layanan_satuan_pendidikan;
+        $this->layanan_satuan_pendidikan = is_array($this->pesantren->layanan_satuan_pendidikan) ? $this->pesantren->layanan_satuan_pendidikan : [];
         $this->rombel_sd = $this->pesantren->rombel_sd;
         $this->rombel_mi = $this->pesantren->rombel_mi;
         $this->rombel_smp = $this->pesantren->rombel_smp;
@@ -102,11 +102,24 @@ new #[Layout('layouts.app')] class extends Component {
 
         // Store existing file paths
         $fileFields = [
-            'status_kepemilikan_tanah', 'sertifikat_nsp', 'rk_anggaran', 'silabus_rpp', 
-            'peraturan_kepegawaian', 'file_lk_iapm', 'laporan_tahunan', 'dok_profil', 
-            'dok_nsp', 'dok_renstra', 'dok_rk_anggaran', 'dok_kurikulum', 
-            'dok_silabus_rpp', 'dok_kepengasuhan', 'dok_peraturan_kepegawaian', 
-            'dok_sarpras', 'dok_laporan_tahunan', 'dok_sop'
+            'status_kepemilikan_tanah',
+            'sertifikat_nsp',
+            'rk_anggaran',
+            'silabus_rpp',
+            'peraturan_kepegawaian',
+            'file_lk_iapm',
+            'laporan_tahunan',
+            'dok_profil',
+            'dok_nsp',
+            'dok_renstra',
+            'dok_rk_anggaran',
+            'dok_kurikulum',
+            'dok_silabus_rpp',
+            'dok_kepengasuhan',
+            'dok_peraturan_kepegawaian',
+            'dok_sarpras',
+            'dok_laporan_tahunan',
+            'dok_sop'
         ];
 
         foreach ($fileFields as $field) {
@@ -263,7 +276,14 @@ new #[Layout('layouts.app')] class extends Component {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="md:col-span-3">
                                 <x-input-label for="layanan_satuan_pendidikan" value="Layanan Satuan Pendidikan yang Dimiliki" />
-                                <x-text-input wire:model="layanan_satuan_pendidikan" id="layanan_satuan_pendidikan" type="text" class="mt-1 block w-full" />
+                                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    @foreach(['sd', 'smp', 'mi', 'sma', 'ma', 'smk'] as $item)
+                                    <label class="inline-flex items-center p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors {{ in_array($item, (array)$layanan_satuan_pendidikan) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }}">
+                                        <input type="checkbox" wire:model="layanan_satuan_pendidikan" value="{{ $item }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                        <span class="ml-2 uppercase font-medium text-gray-700">{{ $item }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
                             </div>
                             <div>
                                 <x-input-label for="rombel_sd" value="Rombel SD" />
@@ -313,27 +333,27 @@ new #[Layout('layouts.app')] class extends Component {
                         <h3 class="text-lg font-bold mb-4 text-indigo-600">DOKUMEN UTAMA</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @php
-                                $mainDocs = [
-                                    'status_kepemilikan_tanah_file' => 'Status Kepemilikan Tanah',
-                                    'sertifikat_nsp_file' => 'Sertifikat Nomor Statistik Pesantren (NSP)',
-                                    'rk_anggaran_file' => 'Rencana Kerja Anggaran Pesantren',
-                                    'silabus_rpp_file' => 'Silabus dan RPP (Dirosah Islamiyah)',
-                                    'peraturan_kepegawaian_file' => 'Peraturan Kepegawaian',
-                                    'file_lk_iapm_file' => 'File Lembar Kerja (LK) Penilaian IAPM2025',
-                                    'laporan_tahunan_file' => 'Laporan Tahunan Pesantren',
-                                ];
+                            $mainDocs = [
+                            'status_kepemilikan_tanah_file' => 'Status Kepemilikan Tanah',
+                            'sertifikat_nsp_file' => 'Sertifikat Nomor Statistik Pesantren (NSP)',
+                            'rk_anggaran_file' => 'Rencana Kerja Anggaran Pesantren',
+                            'silabus_rpp_file' => 'Silabus dan RPP (Dirosah Islamiyah)',
+                            'peraturan_kepegawaian_file' => 'Peraturan Kepegawaian',
+                            'file_lk_iapm_file' => 'File Lembar Kerja (LK) Penilaian IAPM2025',
+                            'laporan_tahunan_file' => 'Laporan Tahunan Pesantren',
+                            ];
                             @endphp
                             @foreach($mainDocs as $prop => $label)
-                                <div>
-                                    <x-input-label for="{{ $prop }}" value="{{ $label }}" />
-                                    <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                                    @php $dbField = str_replace('_file', '', $prop); @endphp
-                                    @if($existing_files[$dbField])
-                                        <div class="mt-1 text-xs text-green-600">
-                                            File terunggah: <a href="{{ Storage::url($existing_files[$dbField]) }}" target="_blank" class="underline">Lihat File</a>
-                                        </div>
-                                    @endif
+                            <div>
+                                <x-input-label for="{{ $prop }}" value="{{ $label }}" />
+                                <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                @php $dbField = str_replace('_file', '', $prop); @endphp
+                                @if($existing_files[$dbField])
+                                <div class="mt-1 text-xs text-green-600">
+                                    File terunggah: <a href="{{ Storage::url($existing_files[$dbField]) }}" target="_blank" class="underline">Lihat File</a>
                                 </div>
+                                @endif
+                            </div>
                             @endforeach
                         </div>
                     </div>
@@ -343,31 +363,31 @@ new #[Layout('layouts.app')] class extends Component {
                         <h3 class="text-lg font-bold mb-4 text-indigo-600">DOKUMEN SEKUNDER</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             @php
-                                $secondaryDocs = [
-                                    'dok_profil_file' => 'Dokumen Profil Pesantren',
-                                    'dok_nsp_file' => 'Dokumen Sertifikat NSP',
-                                    'dok_renstra_file' => 'Dokumen Renstra Pesantren',
-                                    'dok_rk_anggaran_file' => 'Dokumen Rencana Kerja Anggaran Pesantren',
-                                    'dok_kurikulum_file' => 'Dokumen Kurikulum Pesantren',
-                                    'dok_silabus_rpp_file' => 'Dokumen Silabus dan RPP',
-                                    'dok_kepengasuhan_file' => 'Dokumen Panduan Kepengasuhan Pesantren',
-                                    'dok_peraturan_kepegawaian_file' => 'Dokumen Peraturan Kepegawaian',
-                                    'dok_sarpras_file' => 'Dokumen Sarana dan Prasarana Pesantren',
-                                    'dok_laporan_tahunan_file' => 'Dokumen Laporan Tahunan Pesantren',
-                                    'dok_sop_file' => 'Dokumen SOP Pesantren',
-                                ];
+                            $secondaryDocs = [
+                            'dok_profil_file' => 'Dokumen Profil Pesantren',
+                            'dok_nsp_file' => 'Dokumen Sertifikat NSP',
+                            'dok_renstra_file' => 'Dokumen Renstra Pesantren',
+                            'dok_rk_anggaran_file' => 'Dokumen Rencana Kerja Anggaran Pesantren',
+                            'dok_kurikulum_file' => 'Dokumen Kurikulum Pesantren',
+                            'dok_silabus_rpp_file' => 'Dokumen Silabus dan RPP',
+                            'dok_kepengasuhan_file' => 'Dokumen Panduan Kepengasuhan Pesantren',
+                            'dok_peraturan_kepegawaian_file' => 'Dokumen Peraturan Kepegawaian',
+                            'dok_sarpras_file' => 'Dokumen Sarana dan Prasarana Pesantren',
+                            'dok_laporan_tahunan_file' => 'Dokumen Laporan Tahunan Pesantren',
+                            'dok_sop_file' => 'Dokumen SOP Pesantren',
+                            ];
                             @endphp
                             @foreach($secondaryDocs as $prop => $label)
-                                <div>
-                                    <x-input-label for="{{ $prop }}" value="{{ $label }}" />
-                                    <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
-                                    @php $dbField = str_replace('_file', '', $prop); @endphp
-                                    @if($existing_files[$dbField])
-                                        <div class="mt-1 text-xs text-green-600">
-                                            File terunggah: <a href="{{ Storage::url($existing_files[$dbField]) }}" target="_blank" class="underline">Lihat File</a>
-                                        </div>
-                                    @endif
+                            <div>
+                                <x-input-label for="{{ $prop }}" value="{{ $label }}" />
+                                <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                @php $dbField = str_replace('_file', '', $prop); @endphp
+                                @if($existing_files[$dbField])
+                                <div class="mt-1 text-xs text-green-600">
+                                    File terunggah: <a href="{{ Storage::url($existing_files[$dbField]) }}" target="_blank" class="underline">Lihat File</a>
                                 </div>
+                                @endif
+                            </div>
                             @endforeach
                         </div>
                     </div>
@@ -379,9 +399,9 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
 
                     @if (session('status'))
-                        <div class="mt-4 text-sm text-green-600 font-medium">
-                            {{ session('status') }}
-                        </div>
+                    <div class="mt-4 text-sm text-green-600 font-medium">
+                        {{ session('status') }}
+                    </div>
                     @endif
                 </form>
             </div>

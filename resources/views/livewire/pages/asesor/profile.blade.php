@@ -10,7 +10,7 @@ new #[Layout('layouts.app')] class extends Component {
     use WithFileUploads;
 
     public $asesor;
-    
+
     // Identitas Asesor
     public $nama_dengan_gelar;
     public $nama_tanpa_gelar;
@@ -27,7 +27,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $email_pribadi;
 
     // Data Pesantren
-    public $layanan_satuan_pendidikan;
+    public $layanan_satuan_pendidikan = [];
     public $rombel_sd = 0;
     public $rombel_mi = 0;
     public $rombel_smp = 0;
@@ -54,13 +54,13 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->asesor = Asesor::firstOrCreate(
-            ['user_id' => auth()->id()], 
+            ['user_id' => auth()->id()],
             [
                 'nama_dengan_gelar' => auth()->user()->name,
                 'nama_tanpa_gelar' => auth()->user()->name,
             ]
         );
-        
+
         $this->nama_dengan_gelar = $this->asesor->nama_dengan_gelar;
         $this->nama_tanpa_gelar = $this->asesor->nama_tanpa_gelar;
         $this->nbm_nia = $this->asesor->nbm_nia;
@@ -75,7 +75,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->alamat_rumah = $this->asesor->alamat_rumah;
         $this->email_pribadi = $this->asesor->email_pribadi;
 
-        $this->layanan_satuan_pendidikan = $this->asesor->layanan_satuan_pendidikan;
+        $this->layanan_satuan_pendidikan = is_array($this->asesor->layanan_satuan_pendidikan) ? $this->asesor->layanan_satuan_pendidikan : [];
         $this->rombel_sd = $this->asesor->rombel_sd;
         $this->rombel_mi = $this->asesor->rombel_mi;
         $this->rombel_smp = $this->asesor->rombel_smp;
@@ -152,7 +152,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 
- <x-slot name="header">{{ __('Profil') }}</x-slot>
+<x-slot name="header">{{ __('Profil') }}</x-slot>
 
 <div class="py-12">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -231,7 +231,14 @@ new #[Layout('layouts.app')] class extends Component {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="md:col-span-3">
                                 <x-input-label for="layanan_satuan_pendidikan" value="Layanan Satuan Pendidikan yang Dimiliki" />
-                                <x-text-input wire:model="layanan_satuan_pendidikan" id="layanan_satuan_pendidikan" type="text" class="mt-1 block w-full" />
+                                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                    @foreach(['sd', 'smp', 'mi', 'sma', 'ma', 'smk'] as $item)
+                                    <label class="inline-flex items-center p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors {{ in_array($item, (array)$layanan_satuan_pendidikan) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }}">
+                                        <input type="checkbox" wire:model="layanan_satuan_pendidikan" value="{{ $item }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                        <span class="ml-2 uppercase font-medium text-gray-700">{{ $item }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
                             </div>
                             <div>
                                 <x-input-label for="rombel_sd" value="Rombel SD" />
@@ -284,27 +291,27 @@ new #[Layout('layouts.app')] class extends Component {
                                 <x-input-label for="ktp_file_upload" value="Unggahan KTP" />
                                 <input type="file" wire:model="ktp_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                 @if($existing_files['ktp_file'])
-                                    <div class="mt-1 text-xs text-green-600">
-                                        File terunggah: <a href="{{ Storage::url($existing_files['ktp_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
-                                    </div>
+                                <div class="mt-1 text-xs text-green-600">
+                                    File terunggah: <a href="{{ Storage::url($existing_files['ktp_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
+                                </div>
                                 @endif
                             </div>
                             <div>
                                 <x-input-label for="ijazah_file_upload" value="Unggahan Ijazah Terakhir" />
                                 <input type="file" wire:model="ijazah_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                 @if($existing_files['ijazah_file'])
-                                    <div class="mt-1 text-xs text-green-600">
-                                        File terunggah: <a href="{{ Storage::url($existing_files['ijazah_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
-                                    </div>
+                                <div class="mt-1 text-xs text-green-600">
+                                    File terunggah: <a href="{{ Storage::url($existing_files['ijazah_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
+                                </div>
                                 @endif
                             </div>
                             <div>
                                 <x-input-label for="kartu_nbm_file_upload" value="Unggahan Kartu NBM" />
                                 <input type="file" wire:model="kartu_nbm_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                                 @if($existing_files['kartu_nbm_file'])
-                                    <div class="mt-1 text-xs text-green-600">
-                                        File terunggah: <a href="{{ Storage::url($existing_files['kartu_nbm_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
-                                    </div>
+                                <div class="mt-1 text-xs text-green-600">
+                                    File terunggah: <a href="{{ Storage::url($existing_files['kartu_nbm_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
+                                </div>
                                 @endif
                             </div>
                         </div>
@@ -312,13 +319,12 @@ new #[Layout('layouts.app')] class extends Component {
 
                     <div class="flex items-center justify-end gap-4">
                         @if (session('status'))
-                            <p
-                                x-data="{ show: true }"
-                                x-show="show"
-                                x-transition
-                                x-init="setTimeout(() => show = false, 2000)"
-                                class="text-sm text-green-600 font-medium"
-                            >{{ session('status') }}</p>
+                        <p
+                            x-data="{ show: true }"
+                            x-show="show"
+                            x-transition
+                            x-init="setTimeout(() => show = false, 2000)"
+                            class="text-sm text-green-600 font-medium">{{ session('status') }}</p>
                         @endif
 
                         <x-primary-button>

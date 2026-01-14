@@ -193,7 +193,8 @@ new #[Layout('layouts.app')] class extends Component {
                 <div class="mb-6 flex items-center justify-between">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">Detail Akreditasi (Admin):
-                            {{ $pesantren->nama_pesantren ?? $akreditasi->user->name }}</h2>
+                            {{ $pesantren->nama_pesantren ?? $akreditasi->user->name }}
+                        </h2>
                         <p class="text-sm text-gray-500">Status Saat Ini: <span
                                 class="font-semibold {{ Akreditasi::getStatusBadgeClass($akreditasi->status) }} px-2 py-0.5 rounded text-[10px]">{{ Akreditasi::getStatusLabel($akreditasi->status) }}</span>
                         </p>
@@ -231,105 +232,117 @@ new #[Layout('layouts.app')] class extends Component {
                 <!-- Tab Contents -->
                 <div class="mt-6">
                     @if ($activeTab === 'profil')
-                        <div class="space-y-6 mb-3">
-                            <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">PESANTREN</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Nama Pesantren</p>
-                                    <p class="text-gray-900">{{ $pesantren->nama_pesantren ?? '-' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">NSP</p>
-                                    <p class="text-gray-900">{{ $pesantren->ns_pesantren ?? '-' }}</p>
-                                </div>
-                                <div class="md:col-span-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Alamat</p>
-                                    <p class="text-gray-900">{{ $pesantren->alamat ?? '-' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Kota/Kabupaten</p>
-                                    <p class="text-gray-900">{{ $pesantren->kota_kabupaten ?? '-' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Provinsi</p>
-                                    <p class="text-gray-900">{{ $pesantren->provinsi ?? '-' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Nama Mudir</p>
-                                    <p class="text-gray-900">{{ $pesantren->nama_mudir ?? '-' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-gray-500 uppercase">Tahun Pendirian</p>
-                                    <p class="text-gray-900">{{ $pesantren->tahun_pendirian ?? '-' }}</p>
-                                </div>
+                    <div class="space-y-6 mb-3">
+                        <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">PESANTREN</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Nama Pesantren</p>
+                                <p class="text-gray-900">{{ $pesantren->nama_pesantren ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">NSP</p>
+                                <p class="text-gray-900">{{ $pesantren->ns_pesantren ?? '-' }}</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <p class="text-xs font-bold text-gray-500 uppercase">Alamat</p>
+                                <p class="text-gray-900">{{ $pesantren->alamat ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Kota/Kabupaten</p>
+                                <p class="text-gray-900">{{ $pesantren->kota_kabupaten ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Provinsi</p>
+                                <p class="text-gray-900">{{ $pesantren->provinsi ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Nama Mudir</p>
+                                <p class="text-gray-900">{{ $pesantren->nama_mudir ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Tahun Pendirian</p>
+                                <p class="text-gray-900">{{ $pesantren->tahun_pendirian ?? '-' }}</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <p class="text-xs font-bold text-gray-500 uppercase">Layanan Satuan Pendidikan</p>
+                                <p class="text-gray-900">
+                                    @if($pesantren->layanan_satuan_pendidikan && is_array($pesantren->layanan_satuan_pendidikan))
+                                    {{ implode(', ', array_map('strtoupper', $pesantren->layanan_satuan_pendidikan)) }}
+                                    @else
+                                    -
+                                    @endif
+                                </p>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="space-y-6">
-                            <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">ASESOR</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
-                                @forelse ($akreditasi->assessments as $assessment)
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-500 uppercase">
-                                            {{ $assessment->tipe == 1 ? 'Ketua' : 'Anggota' }}</p>
-                                        <p class="text-gray-900 font-medium">
-                                            {{ $assessment->asesor->user->name ?? '-' }}</p>
-                                    </div>
-                                @empty
-                                    <div class="md:col-span-2">
-                                        <p class="text-gray-500 italic text-sm">Belum ada asesor ditugaskan</p>
-                                    </div>
-                                @endforelse
-
-                                @if ($akreditasi->assessments->isNotEmpty())
-                                    @php $mainAssessment = $akreditasi->assessments->first(); @endphp
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Mulai</p>
-                                        <p class="text-gray-900">
-                                            {{ \Carbon\Carbon::parse($mainAssessment->tanggal_mulai)->format('d M Y') }}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Berakhir</p>
-                                        <p class="text-gray-900">
-                                            {{ \Carbon\Carbon::parse($mainAssessment->tanggal_berakhir)->format('d M Y') }}
-                                        </p>
-                                    </div>
-                                @endif
+                    <div class="space-y-6">
+                        <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">ASESOR</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
+                            @forelse ($akreditasi->assessments as $assessment)
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">
+                                    {{ $assessment->tipe == 1 ? 'Ketua' : 'Anggota' }}
+                                </p>
+                                <p class="text-gray-900 font-medium">
+                                    {{ $assessment->asesor->user->name ?? '-' }}
+                                </p>
                             </div>
-                    @endif
+                            @empty
+                            <div class="md:col-span-2">
+                                <p class="text-gray-500 italic text-sm">Belum ada asesor ditugaskan</p>
+                            </div>
+                            @endforelse
 
-                    @if ($activeTab === 'ipm')
+                            @if ($akreditasi->assessments->isNotEmpty())
+                            @php $mainAssessment = $akreditasi->assessments->first(); @endphp
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Mulai</p>
+                                <p class="text-gray-900">
+                                    {{ \Carbon\Carbon::parse($mainAssessment->tanggal_mulai)->format('d M Y') }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Berakhir</p>
+                                <p class="text-gray-900">
+                                    {{ \Carbon\Carbon::parse($mainAssessment->tanggal_berakhir)->format('d M Y') }}
+                                </p>
+                            </div>
+                            @endif
+                        </div>
+                        @endif
+
+                        @if ($activeTab === 'ipm')
                         <div class="space-y-6">
                             <div class="space-y-4">
                                 @php
-                                    $ipmItems = [
-                                        'nsp_file' => '1. Izin operasional Kementerian Agama (NSP)',
-                                        'lulus_santri_file' =>
-                                            '2. Pernah meluluskan santri / memiliki santri kelas akhir',
-                                        'kurikulum_file' => '3. Menyelenggarakan kurikulum Dirasah Islamiyah',
-                                        'buku_ajar_file' => '4. Menggunakan buku ajar terbitan LP2 PPM',
-                                    ];
+                                $ipmItems = [
+                                'nsp_file' => '1. Izin operasional Kementerian Agama (NSP)',
+                                'lulus_santri_file' =>
+                                '2. Pernah meluluskan santri / memiliki santri kelas akhir',
+                                'kurikulum_file' => '3. Menyelenggarakan kurikulum Dirasah Islamiyah',
+                                'buku_ajar_file' => '4. Menggunakan buku ajar terbitan LP2 PPM',
+                                ];
                                 @endphp
                                 @foreach ($ipmItems as $field => $label)
-                                    <div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
-                                        <span class="text-sm text-gray-700 font-medium">{{ $label }}</span>
-                                        <div>
-                                            @if ($ipm && $ipm->$field)
-                                                <a href="{{ Storage::url($ipm->$field) }}" target="_blank"
-                                                    class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-200">Lihat
-                                                    Dokumen</a>
-                                            @else
-                                                <span class="text-red-500 text-xs italic">Belum diunggah</span>
-                                            @endif
-                                        </div>
+                                <div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
+                                    <span class="text-sm text-gray-700 font-medium">{{ $label }}</span>
+                                    <div>
+                                        @if ($ipm && $ipm->$field)
+                                        <a href="{{ Storage::url($ipm->$field) }}" target="_blank"
+                                            class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-200">Lihat
+                                            Dokumen</a>
+                                        @else
+                                        <span class="text-red-500 text-xs italic">Belum diunggah</span>
+                                        @endif
                                     </div>
+                                </div>
                                 @endforeach
                             </div>
                         </div>
-                    @endif
+                        @endif
 
-                    @if ($activeTab === 'sdm')
+                        @if ($activeTab === 'sdm')
                         <div class="space-y-6">
                             <div class="overflow-x-auto">
                                 <table class="min-w-full border-collapse border border-gray-300 text-xs">
@@ -359,36 +372,46 @@ new #[Layout('layouts.app')] class extends Component {
                                     </thead>
                                     <tbody>
                                         @foreach (['SD', 'MI', 'SMP', 'MTs', 'SMA', 'MA', 'SMK', 'MAK', 'Satuan Pesantren Muadalah (SPM)'] as $level)
-                                            <tr>
-                                                <td class="border border-gray-300 px-2 py-1 font-bold">
-                                                    {{ $loop->iteration }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 font-bold">
-                                                    {{ $level }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->santri_l ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->santri_p ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->ustadz_dirosah_l ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->ustadz_dirosah_p ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->pamong_l ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->pamong_p ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->tendik_l ?? 0 }}</td>
-                                                <td class="border border-gray-300 px-2 py-1 text-center">
-                                                    {{ $sdm[$level]->tendik_p ?? 0 }}</td>
-                                            </tr>
+                                        <tr>
+                                            <td class="border border-gray-300 px-2 py-1 font-bold">
+                                                {{ $loop->iteration }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 font-bold">
+                                                {{ $level }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->santri_l ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->santri_p ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->ustadz_dirosah_l ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->ustadz_dirosah_p ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->pamong_l ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->pamong_p ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->tendik_l ?? 0 }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-1 text-center">
+                                                {{ $sdm[$level]->tendik_p ?? 0 }}
+                                            </td>
+                                        </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    @endif
+                        @endif
 
-                    @if ($activeTab === 'edpm_pesantren')
+                        @if ($activeTab === 'edpm_pesantren')
                         <div class="space-y-6">
                             <div class="overflow-x-auto">
                                 <table class="min-w-full border-collapse border border-gray-300 text-xs">
@@ -402,50 +425,53 @@ new #[Layout('layouts.app')] class extends Component {
                                     </thead>
                                     <tbody>
                                         @foreach ($komponens as $komponen)
-                                            @php $butirsCount = count($komponen->butirs); @endphp
-                                            @foreach ($komponen->butirs as $idx => $butir)
-                                                <tr>
-                                                    <td class="border border-gray-300 px-2 py-2 text-center font-bold">
-                                                        {{ $butir->nomor_butir }}</td>
-                                                    <td class="border border-gray-300 px-4 py-2">
-                                                        {{ $butir->butir_pernyataan }}</td>
-                                                    <td
-                                                        class="border border-gray-300 px-4 py-2 font-medium bg-yellow-50 text-indigo-700">
-                                                        {{ $pesantrenEvaluasis[$butir->id] }}</td>
-                                                    @if ($idx === 0)
-                                                        <td rowspan="{{ $butirsCount }}"
-                                                            class="border border-gray-300 px-4 py-2 text-[10px] bg-gray-50 align-top">
-                                                            <span class="font-bold text-gray-500">KOMPONEN:
-                                                                {{ $komponen->nama }}</span><br>
-                                                            {{ $pesantrenCatatans[$komponen->id] }}
-                                                        </td>
-                                                    @endif
-                                                </tr>
-                                            @endforeach
+                                        @php $butirsCount = count($komponen->butirs); @endphp
+                                        @foreach ($komponen->butirs as $idx => $butir)
+                                        <tr>
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold">
+                                                {{ $butir->nomor_butir }}
+                                            </td>
+                                            <td class="border border-gray-300 px-4 py-2">
+                                                {{ $butir->butir_pernyataan }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-4 py-2 font-medium bg-yellow-50 text-indigo-700">
+                                                {{ $pesantrenEvaluasis[$butir->id] }}
+                                            </td>
+                                            @if ($idx === 0)
+                                            <td rowspan="{{ $butirsCount }}"
+                                                class="border border-gray-300 px-4 py-2 text-[10px] bg-gray-50 align-top">
+                                                <span class="font-bold text-gray-500">KOMPONEN:
+                                                    {{ $komponen->nama }}</span><br>
+                                                {{ $pesantrenCatatans[$komponen->id] }}
+                                            </td>
+                                            @endif
+                                        </tr>
+                                        @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                    @endif
+                        @endif
 
-                    @if ($activeTab === 'instrumen')
+                        @if ($activeTab === 'instrumen')
                         <div class="space-y-6">
                             @if ($akreditasi->status == 4)
-                                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <h3 class="text-sm font-bold text-purple-900 mb-1">Nilai Verifikasi (NV)
-                                            </h3>
-                                            <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
-                                                setiap butir penilaian.</p>
-                                        </div>
-                                        <x-primary-button wire:click="saveAdminNv"
-                                            class="bg-purple-600 hover:bg-purple-700">
-                                            Simpan NV
-                                        </x-primary-button>
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-purple-900 mb-1">Nilai Verifikasi (NV)
+                                        </h3>
+                                        <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
+                                            setiap butir penilaian.</p>
                                     </div>
+                                    <x-primary-button wire:click="saveAdminNv"
+                                        class="bg-purple-600 hover:bg-purple-700">
+                                        Simpan NV
+                                    </x-primary-button>
                                 </div>
+                            </div>
                             @endif
                             <div class="overflow-x-auto mt-4">
                                 <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
@@ -471,62 +497,65 @@ new #[Layout('layouts.app')] class extends Component {
                                     </thead>
                                     <tbody>
                                         @foreach ($komponens as $komponen)
-                                            @php $butirsCount = count($komponen->butirs); @endphp
-                                            @foreach ($komponen->butirs as $index => $butir)
-                                                <tr class="hover:bg-gray-50">
-                                                    @if ($index === 0)
-                                                        <td rowspan="{{ $butirsCount }}"
-                                                            class="border border-gray-300 px-2 py-2 font-bold text-center bg-gray-50 align-middle uppercase text-indigo-700">
-                                                            {{ $komponen->nama }}
-                                                        </td>
-                                                    @endif
-                                                    <td
-                                                        class="border border-gray-300 px-1 py-2 text-center text-gray-500">
-                                                        {{ $butir->no_sk }}</td>
-                                                    <td class="border border-gray-300 px-1 py-2 text-center font-bold">
-                                                        {{ $butir->nomor_butir }}</td>
-                                                    <td class="border border-gray-300 px-2 py-2">
-                                                        {{ $butir->butir_pernyataan }}</td>
-                                                    <td class="border border-gray-300 px-2 py-2 text-center font-bold">
-                                                        {{ $asesor1Evaluasis[$butir->id] ?? '' }}
-                                                    </td>
-                                                    <td
-                                                        class="border border-gray-300 px-2 py-2 text-center font-bold bg-green-50/30">
-                                                        {{ $asesor2Evaluasis[$butir->id] ?? '' }}
-                                                    </td>
-                                                    <td
-                                                        class="border border-gray-300 px-2 py-2 text-center font-bold bg-amber-50/30 text-amber-900">
-                                                        {{ $asesor1Nks[$butir->id] ?? '' }}
-                                                    </td>
-                                                    <td class="border border-gray-300 p-0 bg-purple-50/10">
-                                                        @if ($akreditasi->status == 4)
-                                                            <select wire:model.live="adminNvs.{{ $butir->id }}"
-                                                                class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-purple-500 bg-white">
-                                                                <option value="">Pilih...</option>
-                                                                <option value="1">1</option>
-                                                                <option value="2">2</option>
-                                                                <option value="3">3</option>
-                                                                <option value="4">4</option>
-                                                            </select>
-                                                        @else
-                                                            <div
-                                                                class="px-2 py-2 text-center font-bold text-purple-900">
-                                                                {{ $adminNvs[$butir->id] ?? '' }}
-                                                            </div>
-                                                        @endif
-                                                    </td>
-                                                    <td
-                                                        class="border border-gray-300 px-2 py-2 text-[9px] italic bg-blue-50/20 text-blue-900">
-                                                        {{ $asesor1ButirCatatans[$butir->id] ?? '' }}
-                                                    </td>
-                                                    @if ($index === 0)
-                                                        <td rowspan="{{ $butirsCount }}"
-                                                            class="border border-gray-300 px-2 py-2 bg-indigo-50/20 align-top text-[10px] text-gray-700">
-                                                            {{ $asesor1Catatans[$komponen->id] ?? '-' }}
-                                                        </td>
-                                                    @endif
-                                                </tr>
-                                            @endforeach
+                                        @php $butirsCount = count($komponen->butirs); @endphp
+                                        @foreach ($komponen->butirs as $index => $butir)
+                                        <tr class="hover:bg-gray-50">
+                                            @if ($index === 0)
+                                            <td rowspan="{{ $butirsCount }}"
+                                                class="border border-gray-300 px-2 py-2 font-bold text-center bg-gray-50 align-middle uppercase text-indigo-700">
+                                                {{ $komponen->nama }}
+                                            </td>
+                                            @endif
+                                            <td
+                                                class="border border-gray-300 px-1 py-2 text-center text-gray-500">
+                                                {{ $butir->no_sk }}
+                                            </td>
+                                            <td class="border border-gray-300 px-1 py-2 text-center font-bold">
+                                                {{ $butir->nomor_butir }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-2">
+                                                {{ $butir->butir_pernyataan }}
+                                            </td>
+                                            <td class="border border-gray-300 px-2 py-2 text-center font-bold">
+                                                {{ $asesor1Evaluasis[$butir->id] ?? '' }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-2 py-2 text-center font-bold bg-green-50/30">
+                                                {{ $asesor2Evaluasis[$butir->id] ?? '' }}
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-2 py-2 text-center font-bold bg-amber-50/30 text-amber-900">
+                                                {{ $asesor1Nks[$butir->id] ?? '' }}
+                                            </td>
+                                            <td class="border border-gray-300 p-0 bg-purple-50/10">
+                                                @if ($akreditasi->status == 4)
+                                                <select wire:model.live="adminNvs.{{ $butir->id }}"
+                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-purple-500 bg-white">
+                                                    <option value="">Pilih...</option>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                </select>
+                                                @else
+                                                <div
+                                                    class="px-2 py-2 text-center font-bold text-purple-900">
+                                                    {{ $adminNvs[$butir->id] ?? '' }}
+                                                </div>
+                                                @endif
+                                            </td>
+                                            <td
+                                                class="border border-gray-300 px-2 py-2 text-[9px] italic bg-blue-50/20 text-blue-900">
+                                                {{ $asesor1ButirCatatans[$butir->id] ?? '' }}
+                                            </td>
+                                            @if ($index === 0)
+                                            <td rowspan="{{ $butirsCount }}"
+                                                class="border border-gray-300 px-2 py-2 bg-indigo-50/20 align-top text-[10px] text-gray-700">
+                                                {{ $asesor1Catatans[$komponen->id] ?? '-' }}
+                                            </td>
+                                            @endif
+                                        </tr>
+                                        @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
@@ -553,139 +582,139 @@ new #[Layout('layouts.app')] class extends Component {
                                         </thead>
                                         <tbody>
                                             @php
-                                                $totalCmaks = 0;
-                                                $totalCI = 0;
-                                                $totalBK = 0;
-                                                $totalSkorKomponen = 0;
-                                                $grandTotalSkor = 0;
-                                                
-                                                // Hardcoded bobot komponen
-                                                $bobotKomponen = [
-                                                    'MUTU LULUSAN' => 35,
-                                                    'PROSES PEMBELAJARAN' => 29,
-                                                    'MUTU USTAZ' => 18,
-                                                    'MANAJEMEN PESANTREN' => 18,
-                                                    'B. INDIKATOR PEMENUHAN RELATIF' => 97,
-                                                ];
-                                            @endphp
-                                            
-                                                @php
-                                                    $iprNullComponents = $komponens->filter(function($k) { return is_null($k->ipr); });
-                                                    $iprNotNullComponents = $komponens->filter(function($k) { return !is_null($k->ipr); });
-                                                    
-                                                    // Calculate total for null IPR components
-                                                    $totalSkorIprNull = 0;
-                                                    foreach ($iprNullComponents as $k) {
-                                                        $b = $bobotKomponen[$k->nama] ?? 0;
-                                                        $c_total = count($k->butirs) * 4;
-                                                        $c_ci = 0;
-                                                        foreach ($k->butirs as $butir) {
-                                                            $c_ci += (int)($adminNvs[$butir->id] ?? 0);
-                                                        }
-                                                        if ($c_total > 0) {
-                                                            $totalSkorIprNull += round(($c_ci / $c_total) * $b);
-                                                        }
-                                                    }
-                                                @endphp
+                                            $totalCmaks = 0;
+                                            $totalCI = 0;
+                                            $totalBK = 0;
+                                            $totalSkorKomponen = 0;
+                                            $grandTotalSkor = 0;
 
-                                                @foreach ($komponens as $index => $komponen)
-                                                    @php
-                                                        // Hitung Cmaks
-                                                        $totalButir = count($komponen->butirs);
-                                                        $nilaiMaksimalNk = 4;
-                                                        $cmaksKomponen = $totalButir * $nilaiMaksimalNk;
-                                                        
-                                                        // Hitung CI (sum NV)
-                                                        $sumNvKomponen = 0;
-                                                        foreach ($komponen->butirs as $butir) {
-                                                            $nvValue = $adminNvs[$butir->id] ?? 0;
-                                                            $sumNvKomponen += (int) $nvValue;
-                                                        }
-                                                        
-                                                        // Ambil BK
-                                                        $bkValue = $bobotKomponen[$komponen->nama] ?? 0;
-                                                        
-                                                        // Hitung Skor Komponen
-                                                        $isIpr = !is_null($komponen->ipr);
-                                                        $faktor = $isIpr ? 100 : $bkValue;
-                                                        
-                                                        $skorKomponen = 0;
-                                                        if ($cmaksKomponen > 0) {
-                                                            $skorKomponen = round(($sumNvKomponen / $cmaksKomponen) * $faktor);
-                                                        }
-                                                    @endphp
-                                                    
-                                                    <tr class="hover:bg-gray-50">
-                                                        <td class="border border-gray-300 px-3 py-2 font-medium text-gray-700">
-                                                            {{ $komponen->nama }}
-                                                        </td>
-                                                        <td class="border border-gray-300 px-3 py-2 text-center text-indigo-700 font-bold">
-                                                            {{ $cmaksKomponen }}
-                                                        </td>
-                                                        <td class="border border-gray-300 px-3 py-2 text-center text-purple-700 font-bold">
-                                                            {{ $sumNvKomponen }}
-                                                        </td>
-                                                        <td class="border border-gray-300 px-3 py-2 text-center text-orange-700 font-bold">
-                                                            {{ $bkValue }}
-                                                        </td>
-                                                        <td class="border border-gray-300 px-3 py-2 text-center text-blue-700 font-mono text-[10px]">
-                                                            {{ $skorKomponen }}
-                                                        </td>
-                                                        
-                                                        @if ($index === 0)
-                                                            <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-center text-green-900 font-bold text-lg bg-green-50 align-middle">
-                                                                {{ $totalSkorIprNull }}
-                                                            </td>
-                                                        @elseif ($index === $iprNullComponents->count())
-                                                             <td class="border border-gray-300 px-3 py-2 text-center text-green-900 font-bold text-lg bg-green-100 align-middle">
-                                                                {{ $skorKomponen }}
-                                                            </td>
-                                                        @endif
-                                                    </tr>
-                                                @endforeach
-                                            
+                                            // Hardcoded bobot komponen
+                                            $bobotKomponen = [
+                                            'MUTU LULUSAN' => 35,
+                                            'PROSES PEMBELAJARAN' => 29,
+                                            'MUTU USTAZ' => 18,
+                                            'MANAJEMEN PESANTREN' => 18,
+                                            'B. INDIKATOR PEMENUHAN RELATIF' => 97,
+                                            ];
+                                            @endphp
+
                                             @php
-                                                // Calculate total for not-null IPR components
-                                                $totalSkorIprNotNull = 0;
-                                                foreach ($iprNotNullComponents as $k) {
-                                                    // For IPR not null, factor is 100
-                                                    $c_total = count($k->butirs) * 4;
-                                                    $c_ci = 0;
-                                                    foreach ($k->butirs as $butir) {
-                                                        $c_ci += (int)($adminNvs[$butir->id] ?? 0);
-                                                    }
-                                                    if ($c_total > 0) {
-                                                        $totalSkorIprNotNull += round(($c_ci / $c_total) * 100);
-                                                    }
-                                                }
+                                            $iprNullComponents = $komponens->filter(function($k) { return is_null($k->ipr); });
+                                            $iprNotNullComponents = $komponens->filter(function($k) { return !is_null($k->ipr); });
+
+                                            // Calculate total for null IPR components
+                                            $totalSkorIprNull = 0;
+                                            foreach ($iprNullComponents as $k) {
+                                            $b = $bobotKomponen[$k->nama] ?? 0;
+                                            $c_total = count($k->butirs) * 4;
+                                            $c_ci = 0;
+                                            foreach ($k->butirs as $butir) {
+                                            $c_ci += (int)($adminNvs[$butir->id] ?? 0);
+                                            }
+                                            if ($c_total > 0) {
+                                            $totalSkorIprNull += round(($c_ci / $c_total) * $b);
+                                            }
+                                            }
+                                            @endphp
+
+                                            @foreach ($komponens as $index => $komponen)
+                                            @php
+                                            // Hitung Cmaks
+                                            $totalButir = count($komponen->butirs);
+                                            $nilaiMaksimalNk = 4;
+                                            $cmaksKomponen = $totalButir * $nilaiMaksimalNk;
+
+                                            // Hitung CI (sum NV)
+                                            $sumNvKomponen = 0;
+                                            foreach ($komponen->butirs as $butir) {
+                                            $nvValue = $adminNvs[$butir->id] ?? 0;
+                                            $sumNvKomponen += (int) $nvValue;
+                                            }
+
+                                            // Ambil BK
+                                            $bkValue = $bobotKomponen[$komponen->nama] ?? 0;
+
+                                            // Hitung Skor Komponen
+                                            $isIpr = !is_null($komponen->ipr);
+                                            $faktor = $isIpr ? 100 : $bkValue;
+
+                                            $skorKomponen = 0;
+                                            if ($cmaksKomponen > 0) {
+                                            $skorKomponen = round(($sumNvKomponen / $cmaksKomponen) * $faktor);
+                                            }
+                                            @endphp
+
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="border border-gray-300 px-3 py-2 font-medium text-gray-700">
+                                                    {{ $komponen->nama }}
+                                                </td>
+                                                <td class="border border-gray-300 px-3 py-2 text-center text-indigo-700 font-bold">
+                                                    {{ $cmaksKomponen }}
+                                                </td>
+                                                <td class="border border-gray-300 px-3 py-2 text-center text-purple-700 font-bold">
+                                                    {{ $sumNvKomponen }}
+                                                </td>
+                                                <td class="border border-gray-300 px-3 py-2 text-center text-orange-700 font-bold">
+                                                    {{ $bkValue }}
+                                                </td>
+                                                <td class="border border-gray-300 px-3 py-2 text-center text-blue-700 font-mono text-[10px]">
+                                                    {{ $skorKomponen }}
+                                                </td>
+
+                                                @if ($index === 0)
+                                                <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-center text-green-900 font-bold text-lg bg-green-50 align-middle">
+                                                    {{ $totalSkorIprNull }}
+                                                </td>
+                                                @elseif ($index === $iprNullComponents->count())
+                                                <td class="border border-gray-300 px-3 py-2 text-center text-green-900 font-bold text-lg bg-green-100 align-middle">
+                                                    {{ $skorKomponen }}
+                                                </td>
+                                                @endif
+                                            </tr>
+                                            @endforeach
+
+                                            @php
+                                            // Calculate total for not-null IPR components
+                                            $totalSkorIprNotNull = 0;
+                                            foreach ($iprNotNullComponents as $k) {
+                                            // For IPR not null, factor is 100
+                                            $c_total = count($k->butirs) * 4;
+                                            $c_ci = 0;
+                                            foreach ($k->butirs as $butir) {
+                                            $c_ci += (int)($adminNvs[$butir->id] ?? 0);
+                                            }
+                                            if ($c_total > 0) {
+                                            $totalSkorIprNotNull += round(($c_ci / $c_total) * 100);
+                                            }
+                                            }
                                             @endphp
                                             {{-- Total Row Removed as requested by specific layout --}}
                                         </tbody>
                                     </table>
                                 </div>
-                                
+
                                 {{-- Hasil Akhir & Peringkat --}}
                                 @php
-                                    $nilaiAkreditasi = round((0.7 * $totalSkorIprNull) + (0.3 * $totalSkorIprNotNull));
-                                    
-                                    $peringkat = 'NA';
-                                    if ($nilaiAkreditasi >= 86) {
-                                        $peringkat = 'Unggul';
-                                    } elseif ($nilaiAkreditasi >= 70) {
-                                        $peringkat = 'Baik';
-                                    } elseif ($nilaiAkreditasi >= 0) {
-                                        $peringkat = 'Cukup';
-                                    }
-                                    
-                                    // Set color based on peringkat
-                                    $peringkatColor = match($peringkat) {
-                                        'Unggul' => 'text-green-600 bg-green-50 border-green-200',
-                                        'Baik' => 'text-blue-600 bg-blue-50 border-blue-200',
-                                        'Cukup' => 'text-yellow-600 bg-yellow-50 border-yellow-200',
-                                        default => 'text-gray-600 bg-gray-50 border-gray-200',
-                                    };
+                                $nilaiAkreditasi = round((0.7 * $totalSkorIprNull) + (0.3 * $totalSkorIprNotNull));
+
+                                $peringkat = 'NA';
+                                if ($nilaiAkreditasi >= 86) {
+                                $peringkat = 'Unggul';
+                                } elseif ($nilaiAkreditasi >= 70) {
+                                $peringkat = 'Baik';
+                                } elseif ($nilaiAkreditasi >= 0) {
+                                $peringkat = 'Cukup';
+                                }
+
+                                // Set color based on peringkat
+                                $peringkatColor = match($peringkat) {
+                                'Unggul' => 'text-green-600 bg-green-50 border-green-200',
+                                'Baik' => 'text-blue-600 bg-blue-50 border-blue-200',
+                                'Cukup' => 'text-yellow-600 bg-yellow-50 border-yellow-200',
+                                default => 'text-gray-600 bg-gray-50 border-gray-200',
+                                };
                                 @endphp
-                                
+
                                 <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
                                         <h4 class="text-xs font-bold text-indigo-800 uppercase mb-1">Nilai Akreditasi</h4>
@@ -693,7 +722,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             {{ $nilaiAkreditasi }}
                                         </div>
                                     </div>
-                                    
+
                                     <div class="{{ $peringkatColor }} rounded-lg p-4 border">
                                         <h4 class="text-xs font-bold uppercase mb-1 opacity-80">Peringkat Akreditasi</h4>
                                         <div class="text-2xl font-bold">
@@ -701,58 +730,58 @@ new #[Layout('layouts.app')] class extends Component {
                                         </div>
                                     </div>
                                 </div>
-                    @endif
-                </div>
-
-                @if ($akreditasi->status == 4)
-                    <div class="mt-8 pt-6 border-t border-gray-200">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Approve Form -->
-                            <div class="bg-green-50 p-6 rounded-lg border border-green-200">
-                                <h4 class="text-sm font-bold text-green-900 mb-4 uppercase">Setujui Akreditasi</h4>
-                                <form wire:submit="approve">
-                                    <div class="space-y-4">
-                                        <div>
-                                            <x-input-label for="nomor_sk" value="Nomor SK" />
-                                            <x-text-input wire:model="nomor_sk" id="nomor_sk" type="text"
-                                                class="mt-1 block w-full border-green-300 focus:border-green-500 focus:ring-green-500"
-                                                required placeholder="Masukkan nomor SK resmi..." />
-                                            <x-input-error :messages="$errors->get('nomor_sk')" class="mt-2" />
-                                        </div>
-                                        <div class="flex justify-end">
-                                            <x-primary-button class="bg-green-600 hover:bg-green-700">
-                                                Setujui & Simpan
-                                            </x-primary-button>
-                                        </div>
-                                    </div>
-                                </form>
+                                @endif
                             </div>
 
-                            <!-- Reject Form -->
-                            <div class="bg-red-50 p-6 rounded-lg border border-red-200">
-                                <h4 class="text-sm font-bold text-red-900 mb-4 uppercase">Tolak Akreditasi</h4>
-                                <form wire:submit="reject">
-                                    <div class="space-y-4">
-                                        <div>
-                                            <x-input-label for="catatan_admin" value="Catatan Penolakan" />
-                                            <textarea wire:model="catatan_admin" id="catatan_admin"
-                                                class="mt-1 block w-full border-red-300 focus:border-red-500 focus:ring-red-500 rounded-md shadow-sm text-sm"
-                                                rows="3" required placeholder="Masukkan alasan penolakan..."></textarea>
-                                            <x-input-error :messages="$errors->get('catatan_admin')" class="mt-2" />
-                                        </div>
-                                        <div class="flex justify-end">
-                                            <button type="submit"
-                                                class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                                Tolak Pengajuan
-                                            </button>
-                                        </div>
+                            @if ($akreditasi->status == 4)
+                            <div class="mt-8 pt-6 border-t border-gray-200">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <!-- Approve Form -->
+                                    <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                                        <h4 class="text-sm font-bold text-green-900 mb-4 uppercase">Setujui Akreditasi</h4>
+                                        <form wire:submit="approve">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <x-input-label for="nomor_sk" value="Nomor SK" />
+                                                    <x-text-input wire:model="nomor_sk" id="nomor_sk" type="text"
+                                                        class="mt-1 block w-full border-green-300 focus:border-green-500 focus:ring-green-500"
+                                                        required placeholder="Masukkan nomor SK resmi..." />
+                                                    <x-input-error :messages="$errors->get('nomor_sk')" class="mt-2" />
+                                                </div>
+                                                <div class="flex justify-end">
+                                                    <x-primary-button class="bg-green-600 hover:bg-green-700">
+                                                        Setujui & Simpan
+                                                    </x-primary-button>
+                                                </div>
+                                            </div>
+                                        </form>
                                     </div>
-                                </form>
+
+                                    <!-- Reject Form -->
+                                    <div class="bg-red-50 p-6 rounded-lg border border-red-200">
+                                        <h4 class="text-sm font-bold text-red-900 mb-4 uppercase">Tolak Akreditasi</h4>
+                                        <form wire:submit="reject">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <x-input-label for="catatan_admin" value="Catatan Penolakan" />
+                                                    <textarea wire:model="catatan_admin" id="catatan_admin"
+                                                        class="mt-1 block w-full border-red-300 focus:border-red-500 focus:ring-red-500 rounded-md shadow-sm text-sm"
+                                                        rows="3" required placeholder="Masukkan alasan penolakan..."></textarea>
+                                                    <x-input-error :messages="$errors->get('catatan_admin')" class="mt-2" />
+                                                </div>
+                                                <div class="flex justify-end">
+                                                    <button type="submit"
+                                                        class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                                        Tolak Pengajuan
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
+                            @endif
                         </div>
                     </div>
-                @endif
+                </div>
             </div>
-        </div>
-    </div>
-</div>
