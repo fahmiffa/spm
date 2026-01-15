@@ -10,7 +10,7 @@ new #[Layout('layouts.app')] class extends Component {
     use WithFileUploads;
 
     public $ipm;
-    
+
     // Form fields (files)
     public $nsp_file_upload;
     public $lulus_santri_file_upload;
@@ -27,7 +27,7 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->ipm = Ipm::firstOrCreate(['user_id' => auth()->id()]);
-        
+
         $this->existing_files = [
             'nsp_file' => $this->ipm->nsp_file,
             'lulus_santri_file' => $this->ipm->lulus_santri_file,
@@ -68,7 +68,12 @@ new #[Layout('layouts.app')] class extends Component {
             $this->ipm->update($data);
         }
 
-        session()->flash('status', 'Data IPM berhasil diperbarui.');
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Data IPM berhasil diperbarui.'
+        );
     }
 }; ?>
 
@@ -94,9 +99,9 @@ new #[Layout('layouts.app')] class extends Component {
                         <input type="file" wire:model="nsp_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('nsp_file_upload')" class="mt-2" />
                         @if($existing_files['nsp_file'])
-                            <div class="mt-2 text-xs text-green-600">
-                                Berkas terunggah: <a href="{{ Storage::url($existing_files['nsp_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
-                            </div>
+                        <div class="mt-2 text-xs text-green-600">
+                            Berkas terunggah: <a href="{{ Storage::url($existing_files['nsp_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
+                        </div>
                         @endif
                     </div>
 
@@ -108,9 +113,9 @@ new #[Layout('layouts.app')] class extends Component {
                         <input type="file" wire:model="lulus_santri_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('lulus_santri_file_upload')" class="mt-2" />
                         @if($existing_files['lulus_santri_file'])
-                            <div class="mt-2 text-xs text-green-600">
-                                Berkas terunggah: <a href="{{ Storage::url($existing_files['lulus_santri_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
-                            </div>
+                        <div class="mt-2 text-xs text-green-600">
+                            Berkas terunggah: <a href="{{ Storage::url($existing_files['lulus_santri_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
+                        </div>
                         @endif
                     </div>
 
@@ -122,9 +127,9 @@ new #[Layout('layouts.app')] class extends Component {
                         <input type="file" wire:model="kurikulum_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('kurikulum_file_upload')" class="mt-2" />
                         @if($existing_files['kurikulum_file'])
-                            <div class="mt-2 text-xs text-green-600">
-                                Berkas terunggah: <a href="{{ Storage::url($existing_files['kurikulum_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
-                            </div>
+                        <div class="mt-2 text-xs text-green-600">
+                            Berkas terunggah: <a href="{{ Storage::url($existing_files['kurikulum_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
+                        </div>
                         @endif
                     </div>
 
@@ -136,26 +141,21 @@ new #[Layout('layouts.app')] class extends Component {
                         <input type="file" wire:model="buku_ajar_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('buku_ajar_file_upload')" class="mt-2" />
                         @if($existing_files['buku_ajar_file'])
-                            <div class="mt-2 text-xs text-green-600">
-                                Berkas terunggah: <a href="{{ Storage::url($existing_files['buku_ajar_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
-                            </div>
+                        <div class="mt-2 text-xs text-green-600">
+                            Berkas terunggah: <a href="{{ Storage::url($existing_files['buku_ajar_file']) }}" target="_blank" class="underline font-bold">Lihat Dokumen</a>
+                        </div>
                         @endif
                     </div>
 
                     <div class="flex items-center gap-4">
-                        <x-primary-button>
-                            {{ __('Simpan Perubahan') }}
+                        <x-primary-button wire:loading.attr="disabled">
+                            <svg wire:loading wire:target="save" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span wire:loading.remove wire:target="save">{{ __('Simpan Perubahan') }}</span>
+                            <span wire:loading wire:target="save">{{ __('Memproses...') }}</span>
                         </x-primary-button>
-
-                        @if (session('status'))
-                            <p
-                                x-data="{ show: true }"
-                                x-show="show"
-                                x-transition
-                                x-init="setTimeout(() => show = false, 2000)"
-                                class="text-sm text-green-600 font-medium"
-                            >{{ session('status') }}</p>
-                        @endif
                     </div>
                 </form>
             </div>

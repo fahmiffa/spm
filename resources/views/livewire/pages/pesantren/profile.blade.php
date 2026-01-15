@@ -29,16 +29,10 @@ new #[Layout('layouts.app')] class extends Component {
 
     // DATA PESANTREN
     public $layanan_satuan_pendidikan = [];
-    public $rombel_sd = 0;
-    public $rombel_mi = 0;
-    public $rombel_smp = 0;
-    public $rombel_mts = 0;
-    public $rombel_sma = 0;
-    public $rombel_ma = 0;
-    public $rombel_smk = 0;
-    public $rombel_spm = 0;
-    public $luas_tanah;
-    public $luas_bangunan;
+
+
+    // Dynamic Units Data
+    public $units_data = [];
 
     // DOKUMEN (Uploaded files)
     public $status_kepemilikan_tanah_file;
@@ -89,16 +83,25 @@ new #[Layout('layouts.app')] class extends Component {
         $this->misi = $this->pesantren->misi;
 
         $this->layanan_satuan_pendidikan = is_array($this->pesantren->layanan_satuan_pendidikan) ? $this->pesantren->layanan_satuan_pendidikan : [];
-        $this->rombel_sd = $this->pesantren->rombel_sd;
-        $this->rombel_mi = $this->pesantren->rombel_mi;
-        $this->rombel_smp = $this->pesantren->rombel_smp;
-        $this->rombel_mts = $this->pesantren->rombel_mts;
-        $this->rombel_sma = $this->pesantren->rombel_sma;
-        $this->rombel_ma = $this->pesantren->rombel_ma;
-        $this->rombel_smk = $this->pesantren->rombel_smk;
-        $this->rombel_spm = $this->pesantren->rombel_spm;
-        $this->luas_tanah = $this->pesantren->luas_tanah;
-        $this->luas_bangunan = $this->pesantren->luas_bangunan;
+        // Initialize units_data
+        foreach (['sd', 'mi','smp','mts', 'sma', 'ma', 'smk'] as $unit) {
+            $this->units_data[$unit] = [
+                'luas_tanah' => '',
+                'luas_bangunan' => '',
+                'jumlah_rombel' => 0
+            ];
+        }
+
+        // Load existing units data
+        foreach ($this->pesantren->units as $unit) {
+            if (isset($this->units_data[$unit->unit])) {
+                $this->units_data[$unit->unit] = [
+                    'luas_tanah' => $unit->luas_tanah,
+                    'luas_bangunan' => $unit->luas_bangunan,
+                    'jumlah_rombel' => $unit->jumlah_rombel,
+                ];
+            }
+        }
 
         // Store existing file paths
         $fileFields = [
@@ -132,7 +135,13 @@ new #[Layout('layouts.app')] class extends Component {
         $this->validate([
             'nama_pesantren' => 'required|string|max:255',
             'email_pesantren' => 'nullable|email',
-            // Files validation can be added here
+            'layanan_satuan_pendidikan' => 'array',
+
+            // Dynamic units validation
+            'units_data' => 'array',
+            'units_data.*.jumlah_rombel' => 'required_with:units_data|integer|min:0',
+            'units_data.*.luas_tanah' => 'nullable|string',
+            'units_data.*.luas_bangunan' => 'nullable|string',
         ]);
 
         $data = [
@@ -151,16 +160,7 @@ new #[Layout('layouts.app')] class extends Component {
             'visi' => $this->visi,
             'misi' => $this->misi,
             'layanan_satuan_pendidikan' => $this->layanan_satuan_pendidikan,
-            'rombel_sd' => $this->rombel_sd,
-            'rombel_mi' => $this->rombel_mi,
-            'rombel_smp' => $this->rombel_smp,
-            'rombel_mts' => $this->rombel_mts,
-            'rombel_sma' => $this->rombel_sma,
-            'rombel_ma' => $this->rombel_ma,
-            'rombel_smk' => $this->rombel_smk,
-            'rombel_spm' => $this->rombel_spm,
-            'luas_tanah' => $this->luas_tanah,
-            'luas_bangunan' => $this->luas_bangunan,
+            'layanan_satuan_pendidikan' => $this->layanan_satuan_pendidikan,
         ];
 
         // Handle file uploads
@@ -198,7 +198,30 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->pesantren->update($data);
 
-        session()->flash('status', 'Profil pesantren berhasil diperbarui.');
+        // Save Units Data
+        $currentUnits = $this->layanan_satuan_pendidikan;
+
+        // delete units not in selected list
+        $this->pesantren->units()->whereNotIn('unit', $currentUnits)->delete();
+
+        // update or create selected units
+        foreach ($currentUnits as $unitName) {
+            $this->pesantren->units()->updateOrCreate(
+                ['unit' => $unitName],
+                [
+                    'luas_tanah' => $this->units_data[$unitName]['luas_tanah'] ?? null,
+                    'luas_bangunan' => $this->units_data[$unitName]['luas_bangunan'] ?? null,
+                    'jumlah_rombel' => $this->units_data[$unitName]['jumlah_rombel'] ?? 0,
+                ]
+            );
+        }
+
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Profil pesantren berhasil diperbarui.'
+        );
     }
 }; ?>
 
@@ -276,55 +299,41 @@ new #[Layout('layouts.app')] class extends Component {
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="md:col-span-3">
                                 <x-input-label for="layanan_satuan_pendidikan" value="Layanan Satuan Pendidikan yang Dimiliki" />
-                                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                                    @foreach(['sd', 'smp', 'mi', 'sma', 'ma', 'smk'] as $item)
+                                <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+                                    @foreach(['sd', 'mi', 'smp', 'mts', 'sma', 'ma', 'smk'] as $item)
                                     <label class="inline-flex items-center p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors {{ in_array($item, (array)$layanan_satuan_pendidikan) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }}">
-                                        <input type="checkbox" wire:model="layanan_satuan_pendidikan" value="{{ $item }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                        <input type="checkbox" wire:model.live="layanan_satuan_pendidikan" value="{{ $item }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
                                         <span class="ml-2 uppercase font-medium text-gray-700">{{ $item }}</span>
                                     </label>
                                     @endforeach
                                 </div>
                             </div>
-                            <div>
-                                <x-input-label for="rombel_sd" value="Rombel SD" />
-                                <x-text-input wire:model="rombel_sd" id="rombel_sd" type="number" class="mt-1 block w-full" />
+
+
+                            @if(count($layanan_satuan_pendidikan) > 0)
+                            <div class="md:col-span-3 mt-4 space-y-4">
+                                <h4 class="font-bold text-gray-700 border-b pb-2">Detail Luas Tanah & Bangunan per Unit</h4>
+                                @foreach($layanan_satuan_pendidikan as $unit)
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 border p-4 rounded-lg bg-gray-50 relative">
+                                    <div class="absolute -top-3 left-4 bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded border border-indigo-200 uppercase">
+                                        UNIT {{ $unit }}
+                                    </div>
+                                    <div class="mt-2">
+                                        <x-input-label for="units_data.{{ $unit }}.jumlah_rombel" value="Jumlah Rombel" />
+                                        <x-text-input wire:model="units_data.{{ $unit }}.jumlah_rombel" type="number" class="mt-1 block w-full" placeholder="0" />
+                                    </div>
+                                    <div class="mt-2">
+                                        <x-input-label for="units_data.{{ $unit }}.luas_tanah" value="Luas Tanah (m²)" />
+                                        <x-text-input wire:model="units_data.{{ $unit }}.luas_tanah" type="text" class="mt-1 block w-full" placeholder="0" />
+                                    </div>
+                                    <div class="mt-2">
+                                        <x-input-label for="units_data.{{ $unit }}.luas_bangunan" value="Luas Bangunan (m²)" />
+                                        <x-text-input wire:model="units_data.{{ $unit }}.luas_bangunan" type="text" class="mt-1 block w-full" placeholder="0" />
+                                    </div>
+                                </div>
+                                @endforeach
                             </div>
-                            <div>
-                                <x-input-label for="rombel_mi" value="Rombel MI" />
-                                <x-text-input wire:model="rombel_mi" id="rombel_mi" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_smp" value="Rombel SMP" />
-                                <x-text-input wire:model="rombel_smp" id="rombel_smp" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_mts" value="Rombel MTs" />
-                                <x-text-input wire:model="rombel_mts" id="rombel_mts" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_sma" value="Rombel SMA" />
-                                <x-text-input wire:model="rombel_sma" id="rombel_sma" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_ma" value="Rombel MA" />
-                                <x-text-input wire:model="rombel_ma" id="rombel_ma" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_smk" value="Rombel SMK" />
-                                <x-text-input wire:model="rombel_smk" id="rombel_smk" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="rombel_spm" value="Rombel SPM" />
-                                <x-text-input wire:model="rombel_spm" id="rombel_spm" type="number" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="luas_tanah" value="Luas Tanah" />
-                                <x-text-input wire:model="luas_tanah" id="luas_tanah" type="text" class="mt-1 block w-full" />
-                            </div>
-                            <div>
-                                <x-input-label for="luas_bangunan" value="Luas Bangunan" />
-                                <x-text-input wire:model="luas_bangunan" id="luas_bangunan" type="text" class="mt-1 block w-full" />
-                            </div>
+                            @endif
                         </div>
                     </div>
 
@@ -393,16 +402,17 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
 
                     <div class="flex items-center justify-end mt-4">
-                        <x-primary-button>
-                            {{ __('Simpan Perubahan') }}
+                        <x-primary-button wire:loading.attr="disabled">
+                            <svg wire:loading wire:target="save" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span wire:loading.remove wire:target="save">{{ __('Simpan Perubahan') }}</span>
+                            <span wire:loading wire:target="save">{{ __('Memproses...') }}</span>
                         </x-primary-button>
                     </div>
 
-                    @if (session('status'))
-                    <div class="mt-4 text-sm text-green-600 font-medium">
-                        {{ session('status') }}
-                    </div>
-                    @endif
+
                 </form>
             </div>
         </div>

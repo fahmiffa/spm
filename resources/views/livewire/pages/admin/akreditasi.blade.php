@@ -167,10 +167,7 @@ new #[Layout('layouts.app')] class extends Component {
                                                     Detail
                                                 </a>
                                             @endif
-                                            <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}"
-                                                class="text-indigo-600 hover:text-indigo-900 font-medium" wire:navigate>
-                                                Detail
-                                            </a>
+                                     
                                             <button wire:click="delete({{ $item->id }})"
                                                 wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"
                                                 class="text-red-600 hover:text-red-900 font-medium">

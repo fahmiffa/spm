@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('pesantrens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            
+
             // Profil Information
             $table->string('nama_pesantren');
             $table->string('ns_pesantren')->nullable();
@@ -33,16 +33,7 @@ return new class extends Migration
 
             // DATA PESANTREN
             $table->text('layanan_satuan_pendidikan')->nullable();
-            $table->integer('rombel_sd')->default(0);
-            $table->integer('rombel_mi')->default(0);
-            $table->integer('rombel_smp')->default(0);
-            $table->integer('rombel_mts')->default(0);
-            $table->integer('rombel_sma')->default(0);
-            $table->integer('rombel_ma')->default(0);
-            $table->integer('rombel_smk')->default(0);
-            $table->integer('rombel_spm')->default(0);
-            $table->string('luas_tanah')->nullable();
-            $table->string('luas_bangunan')->nullable();
+
 
             // DOKUMEN (Paths)
             $table->string('status_kepemilikan_tanah')->nullable();
@@ -52,7 +43,7 @@ return new class extends Migration
             $table->string('peraturan_kepegawaian')->nullable();
             $table->string('file_lk_iapm')->nullable();
             $table->string('laporan_tahunan')->nullable();
-            
+
             // DOKUMEN SEKUNDER
             $table->string('dok_profil')->nullable();
             $table->string('dok_nsp')->nullable();
@@ -65,7 +56,7 @@ return new class extends Migration
             $table->string('dok_sarpras')->nullable();
             $table->string('dok_laporan_tahunan')->nullable();
             $table->string('dok_sop')->nullable();
-            
+
             $table->timestamps();
         });
     }

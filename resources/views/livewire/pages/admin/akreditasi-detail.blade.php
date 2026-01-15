@@ -135,7 +135,12 @@ new #[Layout('layouts.app')] class extends Component {
             }
         }
 
-        session()->flash('success', 'Nilai Verifikasi berhasil disimpan.');
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Nilai Verifikasi berhasil disimpan.'
+        );
     }
 
     public function approve()
@@ -264,14 +269,98 @@ new #[Layout('layouts.app')] class extends Component {
                                 <p class="text-gray-900">{{ $pesantren->tahun_pendirian ?? '-' }}</p>
                             </div>
                             <div class="md:col-span-2">
-                                <p class="text-xs font-bold text-gray-500 uppercase">Layanan Satuan Pendidikan</p>
-                                <p class="text-gray-900">
-                                    @if($pesantren->layanan_satuan_pendidikan && is_array($pesantren->layanan_satuan_pendidikan))
-                                    {{ implode(', ', array_map('strtoupper', $pesantren->layanan_satuan_pendidikan)) }}
-                                    @else
-                                    -
-                                    @endif
-                                </p>
+                                <p class="text-xs font-bold text-gray-500 uppercase mb-2">Layanan Satuan Pendidikan</p>
+                                @if($pesantren->units && $pesantren->units->count() > 0)
+                                <div class="overflow-x-auto border rounded-lg">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unit</th>
+                                                <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Jml Rombel</th>
+                                                <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Tanah (m²)</th>
+                                                <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Bangunan (m²)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            @foreach($pesantren->units as $unit)
+                                            <tr>
+                                                <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-gray-900 uppercase">{{ $unit->unit }}</td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->jumlah_rombel }}</td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_tanah ?? '-' }}</td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_bangunan ?? '-' }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @else
+                                <p class="text-gray-900 italic text-sm">Belum ada data unit pendidikan.</p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dokumen Section -->
+                    <div class="space-y-6">
+                        @php
+                        $dokumenUtama = [
+                        'status_kepemilikan_tanah' => 'Status Kepemilikan Tanah',
+                        'sertifikat_nsp' => 'Sertifikat NSP',
+                        'rk_anggaran' => 'Rencana Kerja Anggaran',
+                        'silabus_rpp' => 'Silabus dan RPP',
+                        'peraturan_kepegawaian' => 'Peraturan Kepegawaian',
+                        'file_lk_iapm' => 'File LK Penilaian IAPM',
+                        'laporan_tahunan' => 'Laporan Tahunan',
+                        ];
+
+                        $dokumenSekunder = [
+                        'dok_profil' => 'Dokumen Profil',
+                        'dok_nsp' => 'Dokumen NSP',
+                        'dok_renstra' => 'Dokumen Renstra',
+                        'dok_rk_anggaran' => 'Dokumen RK Anggaran',
+                        'dok_kurikulum' => 'Dokumen Kurikulum',
+                        'dok_silabus_rpp' => 'Dokumen Silabus & RPP',
+                        'dok_kepengasuhan' => 'Dokumen Kepengasuhan',
+                        'dok_peraturan_kepegawaian' => 'Dokumen Peraturan Kepegawaian',
+                        'dok_sarpras' => 'Dokumen Sarpras',
+                        'dok_laporan_tahunan' => 'Dokumen Laporan Tahunan',
+                        'dok_sop' => 'Dokumen SOP',
+                        ];
+                        @endphp
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-lg">
+                            <!-- Dokumen Utama -->
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-500 uppercase mb-3 border-b pb-1">Dokumen Utama</h4>
+                                <div class="space-y-2">
+                                    @foreach($dokumenUtama as $field => $label)
+                                    <div class="flex justify-between items-center bg-white p-2 rounded border border-gray-100">
+                                        <span class="text-xs font-medium text-gray-700">{{ $label }}</span>
+                                        @if($pesantren->$field)
+                                        <a href="{{ Storage::url($pesantren->$field) }}" target="_blank" class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 font-bold uppercase">Lihat</a>
+                                        @else
+                                        <span class="text-[10px] text-gray-400 italic"> - </span>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <!-- Dokumen Sekunder -->
+                            <div>
+                                <h4 class="text-sm font-bold text-gray-500 uppercase mb-3 border-b pb-1">Dokumen Sekunder</h4>
+                                <div class="space-y-2">
+                                    @foreach($dokumenSekunder as $field => $label)
+                                    <div class="flex justify-between items-center bg-white p-2 rounded border border-gray-100">
+                                        <span class="text-xs font-medium text-gray-700">{{ $label }}</span>
+                                        @if($pesantren->$field)
+                                        <a href="{{ Storage::url($pesantren->$field) }}" target="_blank" class="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 font-bold uppercase">Lihat</a>
+                                        @else
+                                        <span class="text-[10px] text-gray-400 italic"> - </span>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -466,9 +555,13 @@ new #[Layout('layouts.app')] class extends Component {
                                         <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
                                             setiap butir penilaian.</p>
                                     </div>
-                                    <x-primary-button wire:click="saveAdminNv"
+                                    <x-primary-button wire:click="saveAdminNv" wire:loading.attr="disabled"
                                         class="bg-purple-600 hover:bg-purple-700">
-                                        Simpan NV
+                                        <svg wire:loading wire:target="saveAdminNv" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Simpan NV</span>
                                     </x-primary-button>
                                 </div>
                             </div>
@@ -749,8 +842,12 @@ new #[Layout('layouts.app')] class extends Component {
                                                     <x-input-error :messages="$errors->get('nomor_sk')" class="mt-2" />
                                                 </div>
                                                 <div class="flex justify-end">
-                                                    <x-primary-button class="bg-green-600 hover:bg-green-700">
-                                                        Setujui & Simpan
+                                                    <x-primary-button wire:loading.attr="disabled" class="bg-green-600 hover:bg-green-700">
+                                                        <svg wire:loading wire:target="approve" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span>Setujui & Simpan</span>
                                                     </x-primary-button>
                                                 </div>
                                             </div>
@@ -770,9 +867,13 @@ new #[Layout('layouts.app')] class extends Component {
                                                     <x-input-error :messages="$errors->get('catatan_admin')" class="mt-2" />
                                                 </div>
                                                 <div class="flex justify-end">
-                                                    <button type="submit"
+                                                    <button type="submit" wire:loading.attr="disabled"
                                                         class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                                                        Tolak Pengajuan
+                                                        <svg wire:loading wire:target="reject" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                        <span>Tolak Pengajuan</span>
                                                     </button>
                                                 </div>
                                             </div>

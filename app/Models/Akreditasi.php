@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\AkreditasiEdpm;
+use App\Models\AkreditasiEdpmCatatan;
 
 class Akreditasi extends Model
 {
@@ -27,6 +29,12 @@ class Akreditasi extends Model
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
             }
+        });
+
+        static::deleting(function ($akreditasi) {
+            $akreditasi->assessments()->delete();
+            AkreditasiEdpm::where('akreditasi_id', $akreditasi->id)->delete();
+            AkreditasiEdpmCatatan::where('akreditasi_id', $akreditasi->id)->delete();
         });
     }
 
@@ -76,4 +84,3 @@ class Akreditasi extends Model
         };
     }
 }
-

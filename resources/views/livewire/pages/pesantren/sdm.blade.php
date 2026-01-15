@@ -7,15 +7,29 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.app')] class extends Component {
     public $data = [];
     public $levels = [
-        'SD', 'MI', 'SMP', 'MTs', 'SMA', 'MA', 'SMK', 'MAK', 'Satuan Pesantren Muadalah (SPM)'
+        'SD',
+        'MI',
+        'SMP',
+        'MTs',
+        'SMA',
+        'MA',
+        'SMK',
+        'MAK',
+        'Satuan Pesantren Muadalah (SPM)'
     ];
     public $fields = [
-        'santri_l', 'santri_p', 
-        'ustadz_dirosah_l', 'ustadz_dirosah_p', 
-        'ustadz_non_dirosah_l', 'ustadz_non_dirosah_p', 
-        'pamong_l', 'pamong_p', 
-        'musyrif_l', 'musyrif_p', 
-        'tendik_l', 'tendik_p'
+        'santri_l',
+        'santri_p',
+        'ustadz_dirosah_l',
+        'ustadz_dirosah_p',
+        'ustadz_non_dirosah_l',
+        'ustadz_non_dirosah_p',
+        'pamong_l',
+        'pamong_p',
+        'musyrif_l',
+        'musyrif_p',
+        'tendik_l',
+        'tendik_p'
     ];
 
     public function mount()
@@ -42,7 +56,12 @@ new #[Layout('layouts.app')] class extends Component {
             );
         }
 
-        session()->flash('status', 'Data SDM berhasil disimpan.');
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Data SDM berhasil disimpan.'
+        );
     }
 
     public function getTotal($field)
@@ -95,46 +114,41 @@ new #[Layout('layouts.app')] class extends Component {
                         </thead>
                         <tbody>
                             @foreach($levels as $index => $level)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="border border-gray-300 px-2 py-1 text-center">{{ $index + 1 }}</td>
-                                    <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">{{ $level }}</td>
-                                    @foreach($fields as $field)
-                                        <td class="border border-gray-300 p-0">
-                                            <input type="number" 
-                                                wire:model.live="data.{{ $level }}.{{ $field }}" 
-                                                class="w-full border-0 p-1 text-center focus:ring-2 focus:ring-indigo-500" 
-                                                min="0">
-                                        </td>
-                                    @endforeach
-                                </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-300 px-2 py-1 text-center">{{ $index + 1 }}</td>
+                                <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">{{ $level }}</td>
+                                @foreach($fields as $field)
+                                <td class="border border-gray-300 p-0">
+                                    <input type="number"
+                                        wire:model.live="data.{{ $level }}.{{ $field }}"
+                                        class="w-full border-0 p-1 text-center focus:ring-2 focus:ring-indigo-500"
+                                        min="0">
+                                </td>
+                                @endforeach
+                            </tr>
                             @endforeach
                         </tbody>
                         <tfoot class="bg-blue-50 font-bold">
                             <tr>
                                 <td colspan="2" class="border border-gray-300 px-4 py-2 text-center uppercase">JUMLAH</td>
                                 @foreach($fields as $field)
-                                    <td class="border border-gray-300 px-2 py-2 text-center">
-                                        {{ $this->getTotal($field) }}
-                                    </td>
+                                <td class="border border-gray-300 px-2 py-2 text-center">
+                                    {{ $this->getTotal($field) }}
+                                </td>
                                 @endforeach
                             </tr>
                         </tfoot>
                     </table>
 
                     <div class="mt-6 flex items-center gap-4">
-                        <x-primary-button>
-                            {{ __('Simpan Data SDM') }}
+                        <x-primary-button wire:loading.attr="disabled">
+                            <svg wire:loading wire:target="save" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span wire:loading.remove wire:target="save">{{ __('Simpan Data SDM') }}</span>
+                            <span wire:loading wire:target="save">{{ __('Memproses...') }}</span>
                         </x-primary-button>
-
-                        @if (session('status'))
-                            <p
-                                x-data="{ show: true }"
-                                x-show="show"
-                                x-transition
-                                x-init="setTimeout(() => show = false, 2000)"
-                                class="text-sm text-green-600 font-medium"
-                            >{{ session('status') }}</p>
-                        @endif
                     </div>
                 </form>
             </div>
