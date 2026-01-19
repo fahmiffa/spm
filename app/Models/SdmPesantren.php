@@ -12,4 +12,9 @@ class SdmPesantren extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function pesantrenUnit()
+    {
+        return $this->belongsTo(PesantrenUnit::class);
+    }
 }

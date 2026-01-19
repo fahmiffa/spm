@@ -54,6 +54,16 @@ new #[Layout('layouts.app')] class extends Component {
             'asesor_id2' => 'nullable|exists:asesors,id|different:asesor_id1',
             'tanggal_mulai' => 'required|date',
             'tanggal_berakhir' => 'required|date|after_or_equal:tanggal_mulai',
+        ], [
+            'asesor_id1.required' => 'Asesor 1 wajib dipilih.',
+            'asesor_id1.exists' => 'Asesor 1 tidak valid.',
+            'asesor_id2.exists' => 'Asesor 2 tidak valid.',
+            'asesor_id2.different' => 'Asesor 1 dan Asesor 2 harus berbeda.',
+            'tanggal_mulai.required' => 'Tanggal mulai wajib diisi.',
+            'tanggal_mulai.date' => 'Format tanggal mulai salah.',
+            'tanggal_berakhir.required' => 'Tanggal berakhir wajib diisi.',
+            'tanggal_berakhir.date' => 'Format tanggal berakhir salah.',
+            'tanggal_berakhir.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai.',
         ]);
 
         // Clear existing assessments first
@@ -114,9 +124,9 @@ new #[Layout('layouts.app')] class extends Component {
                 </div>
 
                 @if (session('status'))
-                    <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-                        {{ session('status') }}
-                    </div>
+                <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                    {{ session('status') }}
+                </div>
                 @endif
 
                 <div class="overflow-x-auto">
@@ -133,55 +143,55 @@ new #[Layout('layouts.app')] class extends Component {
                         </thead>
                         <tbody class="text-gray-600 text-sm font-light">
                             @forelse ($this->akreditasis as $index => $item)
-                                <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                    <td class="py-3 px-6 text-left whitespace-nowrap">
-                                        {{ $index + 1 }}
-                                    </td>
-                                    <td class="py-3 px-6 text-left font-medium">
-                                        {{ $item->user->pesantren->nama_pesantren ?? $item->user->name }}
-                                    </td>
-                                    <td class="py-3 px-6 text-left font-medium">
-                                        {{ $item->catatan }}
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        <span
-                                            class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold">
-                                            {{ Akreditasi::getStatusLabel($item->status) }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        {{ $item->created_at->format('d M Y H:i') }}
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        <div class="flex item-center justify-center gap-4">
-                                            @if ($item->status == 6)
-                                                <button wire:click="openVerifikasiModal({{ $item->id }})"
-                                                    class="text-blue-600 hover:text-blue-900 font-medium">
-                                                    Verifikasi
-                                                </button>
-                                            @endif
-                                            @if ($item->status == 4)
-                                                <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}"
-                                                    class="text-indigo-600 hover:text-indigo-900 font-medium"
-                                                    wire:navigate>
-                                                    Detail
-                                                </a>
-                                            @endif
-                                     
-                                            <button wire:click="delete({{ $item->id }})"
-                                                wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"
-                                                class="text-red-600 hover:text-red-900 font-medium">
-                                                Hapus
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                                <td class="py-3 px-6 text-left whitespace-nowrap">
+                                    {{ $index + 1 }}
+                                </td>
+                                <td class="py-3 px-6 text-left font-medium">
+                                    {{ $item->user->pesantren->nama_pesantren ?? $item->user->name }}
+                                </td>
+                                <td class="py-3 px-6 text-left font-medium">
+                                    {{ $item->catatan }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    <span
+                                        class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold">
+                                        {{ Akreditasi::getStatusLabel($item->status) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    {{ $item->created_at->format('d M Y H:i') }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    <div class="flex item-center justify-center gap-4">
+                                        @if ($item->status == 6)
+                                        <button wire:click="openVerifikasiModal({{ $item->id }})"
+                                            class="text-blue-600 hover:text-blue-900 font-medium">
+                                            Verifikasi
+                                        </button>
+                                        @endif
+                                        @if ($item->status == 4)
+                                        <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}"
+                                            class="text-indigo-600 hover:text-indigo-900 font-medium"
+                                            wire:navigate>
+                                            Detail
+                                        </a>
+                                        @endif
+
+                                        <button wire:click="delete({{ $item->id }})"
+                                            wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"
+                                            class="text-red-600 hover:text-red-900 font-medium">
+                                            Hapus
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5" class="py-10 text-center text-gray-500">
-                                        Belum ada data pengajuan akreditasi.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="5" class="py-10 text-center text-gray-500">
+                                    Belum ada data pengajuan akreditasi.
+                                </td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -207,7 +217,7 @@ new #[Layout('layouts.app')] class extends Component {
                                 class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
                                 <option value="">Ketua</option>
                                 @foreach ($this->asesors as $asesor)
-                                    <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
+                                <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('asesor_id1')" class="mt-2" />
@@ -215,11 +225,11 @@ new #[Layout('layouts.app')] class extends Component {
                                 class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
                                 <option value="">Anggota</option>
                                 @foreach ($this->asesors as $asesor)
-                                    <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
+                                <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
                                 @endforeach
                             </select>
-                            <x-input-error :messages="$errors->get('asesor_id2')" class="mt-2" />
                         </div>
+                        <x-input-error :messages="$errors->get('asesor_id2')" class="mt-2" />
                     </div>
 
                 </div>
@@ -246,7 +256,7 @@ new #[Layout('layouts.app')] class extends Component {
                 </x-secondary-button>
 
                 <x-primary-button class="ms-3">
-                    Simpan & Verifikasi
+                    Simpan
                 </x-primary-button>
             </div>
         </form>

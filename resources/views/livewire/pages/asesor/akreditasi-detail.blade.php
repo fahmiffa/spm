@@ -11,12 +11,28 @@ use App\Models\AkreditasiEdpm;
 use App\Models\AkreditasiEdpmCatatan;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Illuminate\Support\Str;
 
 new #[Layout('layouts.app')] class extends Component {
     public $akreditasi;
     public $pesantren;
     public $ipm;
     public $sdm;
+    public $levels = [];
+    public $fields = [
+        'santri_l',
+        'santri_p',
+        'ustadz_dirosah_l',
+        'ustadz_dirosah_p',
+        'ustadz_non_dirosah_l',
+        'ustadz_non_dirosah_p',
+        'pamong_l',
+        'pamong_p',
+        'musyrif_l',
+        'musyrif_p',
+        'tendik_l',
+        'tendik_p',
+    ];
     public $komponens;
 
     // Pesantren's EDPM data (read only)
@@ -56,9 +72,12 @@ new #[Layout('layouts.app')] class extends Component {
         $this->asesorTipe = $currentAssessment->tipe;
 
         $userId = $this->akreditasi->user_id;
-        $this->pesantren = Pesantren::where('user_id', $userId)->first();
+        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
         $this->ipm = Ipm::where('user_id', $userId)->first();
         $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+        if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
+            $this->levels = $this->pesantren->units->pluck('unit')->toArray();
+        }
         $this->komponens = MasterEdpmKomponen::with('butirs')->get();
 
         // Load Pesantren EDPM
@@ -147,6 +166,18 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function finalizeVerification()
     {
+        // Pastikan input NA (dan NK jika Asesor 1) sudah lengkap sebelum verifikasi final
+        $missing = $this->getMissingNaItems();
+        if (!empty($missing)) {
+            $html = '<ul class="text-left">' . implode('', array_map(fn($item) => "<li>• {$item}</li>", $missing)) . '</ul>';
+            $this->dispatch(
+                'show-validation-alert',
+                title: 'Lengkapi penilaian NA',
+                html: $html
+            );
+            return;
+        }
+
         $this->saveAsesorEdpm();
 
         $this->akreditasi->update(['status' => 4]); // 4. Visitasi
@@ -168,9 +199,47 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->activeTab = $tab;
     }
+
+    public function getTotal($field)
+    {
+        $total = 0;
+        foreach ($this->levels as $level) {
+            $total += (int)($this->sdm[$level]->$field ?? 0);
+        }
+        return $total;
+    }
+
+    private function getMissingNaItems(): array
+    {
+        $missing = [];
+        foreach ($this->komponens as $komponen) {
+            foreach ($komponen->butirs as $butir) {
+                if (empty($this->asesorEvaluasis[$butir->id])) {
+                    $missing[] = "NA untuk Butir {$butir->nomor_butir} ({$komponen->nama})";
+                }
+                if ($this->asesorTipe == 1 && empty($this->asesorNks[$butir->id])) {
+                    $missing[] = "NK untuk Butir {$butir->nomor_butir} ({$komponen->nama})";
+                }
+            }
+        }
+        return $missing;
+    }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="{
+    init() {
+        window.addEventListener('show-validation-alert', event => {
+            Swal.fire({
+                title: event.detail.title,
+                html: event.detail.html,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#4f46e5'
+            });
+        });
+    }
+}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -388,63 +457,58 @@ new #[Layout('layouts.app')] class extends Component {
                         <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">REKAPITULASI
                             DATA SDM</h3>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full border-collapse border border-gray-300 text-xs">
-                                <thead class="bg-gray-100 uppercase font-bold text-[10px]">
+                            <table class="min-w-full border-collapse border border-gray-300 text-sm">
+                                <thead class="bg-gray-100 text-nowrap">
                                     <tr>
-                                        <th rowspan="2" class="border border-gray-300 px-2 py-2">BENTUK</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 bg-green-50">
-                                            SANTRI</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 bg-blue-50">
-                                            USTADZ DIROSAH</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 bg-yellow-50">
-                                            PAMONG</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 bg-purple-50">
-                                            TENAGA KEPENDIDIKAN</th>
+                                        <th rowspan="2" class="border border-gray-300 px-2 py-2 text-center">NO</th>
+                                        <th rowspan="2" class="border border-gray-300 px-4 py-2 text-center">BENTUK</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">SANTRI</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">USTADZ DIROSAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">USTADZ NON DIROSAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">PAMONG</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">MUSYRIF/MUSYRIFAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">TENAGA KEPENDIDIKAN</th>
                                     </tr>
                                     <tr class="bg-gray-50">
-                                        <th class="border border-gray-300">L</th>
-                                        <th class="border border-gray-300">P</th>
-                                        <th class="border border-gray-300">L</th>
-                                        <th class="border border-gray-300">P</th>
-                                        <th class="border border-gray-300">L</th>
-                                        <th class="border border-gray-300">P</th>
-                                        <th class="border border-gray-300">L</th>
-                                        <th class="border border-gray-300">P</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
+                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (['SD', 'MI', 'SMP', 'MTs', 'SMA', 'MA', 'SMK', 'MAK', 'Satuan Pesantren Muadalah (SPM)'] as $level)
-                                    <tr>
-                                        <td class="border border-gray-300 px-2 py-1 font-bold">
-                                            {{ $level }}
+                                    @foreach($levels as $index => $level)
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="border border-gray-300 px-2 py-1 text-center">{{ $index + 1 }}</td>
+                                        <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">
+                                            {{ Str::of($level)->replace('_', ' ')->upper() }}
                                         </td>
+                                        @foreach($fields as $field)
                                         <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->santri_l ?? 0 }}
+                                            {{ $sdm[$level]->$field ?? 0 }}
                                         </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->santri_p ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->ustadz_dirosah_l ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->ustadz_dirosah_p ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->pamong_l ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->pamong_p ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->tendik_l ?? 0 }}
-                                        </td>
-                                        <td class="border border-gray-300 px-2 py-1 text-center">
-                                            {{ $sdm[$level]->tendik_p ?? 0 }}
-                                        </td>
+                                        @endforeach
                                     </tr>
                                     @endforeach
                                 </tbody>
+                                <tfoot class="bg-blue-50 font-bold">
+                                    <tr>
+                                        <td colspan="2" class="border border-gray-300 px-4 py-2 text-center uppercase">JUMLAH</td>
+                                        @foreach($fields as $field)
+                                        <td class="border border-gray-300 px-2 py-2 text-center">
+                                            {{ $this->getTotal($field) }}
+                                        </td>
+                                        @endforeach
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>

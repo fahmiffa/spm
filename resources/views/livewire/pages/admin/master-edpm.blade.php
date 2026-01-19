@@ -7,12 +7,12 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component {
     public $komponens;
-    
+
     // Form fields for Komponen
     public $komponen_nama;
     public $komponen_id;
     public $komponen_ipr;
-    
+
     // Form fields for Butir
     public $butir_id;
     public $butir_komponen_id;
@@ -72,7 +72,7 @@ new #[Layout('layouts.app')] class extends Component {
     public function saveKomponen()
     {
         $this->validate(['komponen_nama' => 'required|string|max:255']);
-        
+
         MasterEdpmKomponen::updateOrCreate(
             ['id' => $this->komponen_id],
             [
@@ -97,7 +97,7 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->resetButirForm();
         $this->butir_komponen_id = $komponenId;
-        
+
         if ($butirId) {
             $butir = MasterEdpmButir::findOrFail($butirId);
             $this->butir_id = $butir->id;
@@ -146,7 +146,29 @@ new #[Layout('layouts.app')] class extends Component {
 <div>
     <x-slot name="header">{{ __('Master Komponen') }}</x-slot>
 
-    <div class="py-12">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <div class="py-12" x-data="{
+        confirmDelete(id, type) {
+            Swal.fire({
+                title: 'Apakah Anda yakin?',
+                text: type === 'komponen' ? 'Hapus seluruh komponen dan butir di dalamnya?' : 'Hapus butir ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (type === 'komponen') {
+                        $wire.deleteKomponen(id);
+                    } else {
+                        $wire.deleteButir(id);
+                    }
+                }
+            })
+        }
+    }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <!-- Session Status -->
@@ -161,58 +183,62 @@ new #[Layout('layouts.app')] class extends Component {
 
                 <div class="space-y-8">
                     @forelse ($komponens as $komponen)
-                        <div class="border rounded-lg overflow-hidden shadow-sm">
-                            <div class="bg-gray-100 px-4 py-3 flex justify-between items-center border-b">
-                                <div class="flex items-center gap-3">
-                                    <h4 class="font-bold text-indigo-700 uppercase tracking-wide">{{ $komponen->nama }}</h4>
-                                    @if ($komponen->ipr)
-                                        <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase tracking-tighter">IPR</span>
-                                    @endif
-                                </div>
-                                <div class="flex gap-2">
-                                    <x-secondary-button wire:click="openButirModal({{ $komponen->id }})" class="text-xs">
-                                        {{ __('+ Tambah Butir') }}
-                                    </x-secondary-button>
-                                    <button wire:click="openKomponenModal({{ $komponen->id }})" class="text-indigo-600 hover:text-indigo-900 mx-2">
-                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                    </button>
-                                    <button wire:click="deleteKomponen({{ $komponen->id }})" wire:confirm="Hapus seluruh komponen dan butir di dalamnya?" class="text-red-600 hover:text-red-900">
-                                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </div>
+                    <div class="border rounded-lg overflow-hidden shadow-sm">
+                        <div class="bg-gray-100 px-4 py-3 flex justify-between items-center border-b">
+                            <div class="flex items-center gap-3">
+                                <h4 class="font-bold text-indigo-700 uppercase tracking-wide">{{ $komponen->nama }}</h4>
+                                @if ($komponen->ipr)
+                                <span class="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-200 uppercase tracking-tighter">IPR</span>
+                                @endif
                             </div>
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase w-16">No SK</th>
-                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase w-20">No Butir</th>
-                                        <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Butir Pernyataan</th>
-                                        <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase w-24">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @forelse($komponen->butirs as $butir)
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-2 text-sm text-gray-900 border-r">{{ $butir->no_sk }}</td>
-                                            <td class="px-4 py-2 text-sm text-gray-900 border-r font-bold">{{ $butir->nomor_butir }}</td>
-                                            <td class="px-4 py-2 text-sm text-gray-700">{{ $butir->butir_pernyataan }}</td>
-                                            <td class="px-4 py-2 text-right text-sm font-medium whitespace-nowrap">
-                                                <button wire:click="openButirModal({{ $komponen->id }}, {{ $butir->id }})" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
-                                                <button wire:click="deleteButir({{ $butir->id }})" wire:confirm="Hapus butir ini?" class="text-red-600 hover:text-red-900">Hapus</button>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 italic">Belum ada butir pernyataan untuk komponen ini.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                            <div class="flex gap-2">
+                                <x-secondary-button wire:click="openButirModal({{ $komponen->id }})" class="text-xs">
+                                    {{ __('+ Tambah Butir') }}
+                                </x-secondary-button>
+                                <button wire:click="openKomponenModal({{ $komponen->id }})" class="text-indigo-600 hover:text-indigo-900 mx-2">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+                                <button @click="confirmDelete({{ $komponen->id }}, 'komponen')" class="text-red-600 hover:text-red-900">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase w-16">No SK</th>
+                                    <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase w-20">No Butir</th>
+                                    <th class="px-4 py-2 text-left text-xs font-bold text-gray-500 uppercase">Butir Pernyataan</th>
+                                    <th class="px-4 py-2 text-right text-xs font-bold text-gray-500 uppercase w-24">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @forelse($komponen->butirs as $butir)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-2 text-sm text-gray-900 border-r">{{ $butir->no_sk }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-900 border-r font-bold">{{ $butir->nomor_butir }}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-700">{{ $butir->butir_pernyataan }}</td>
+                                    <td class="px-4 py-2 text-right text-sm font-medium whitespace-nowrap">
+                                        <button wire:click="openButirModal({{ $komponen->id }}, {{ $butir->id }})" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
+                                        <button @click="confirmDelete({{ $butir->id }}, 'butir')" class="text-red-600 hover:text-red-900">Hapus</button>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="4" class="px-4 py-4 text-center text-sm text-gray-500 italic">Belum ada butir pernyataan untuk komponen ini.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
                     @empty
-                        <div class="text-center py-10 text-gray-500 border-2 border-dashed rounded-lg">
-                            Belum ada master data EDPM. Klik "Tambah Komponen" untuk memulai.
-                        </div>
+                    <div class="text-center py-10 text-gray-500 border-2 border-dashed rounded-lg">
+                        Belum ada master data EDPM. Klik "Tambah Komponen" untuk memulai.
+                    </div>
                     @endforelse
                 </div>
             </div>
@@ -229,7 +255,7 @@ new #[Layout('layouts.app')] class extends Component {
                     <x-text-input wire:model="komponen_nama" id="komponen_nama" class="mt-1 block w-full" placeholder="Contoh: MUTU LULUSAN" required />
                     <x-input-error :messages="$errors->get('komponen_nama')" class="mt-2" />
                 </div>
-                
+
                 <div class="flex items-center gap-3 bg-gray-50 border rounded-lg p-3">
                     <input type="checkbox" wire:model="komponen_ipr" id="komponen_ipr" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 w-5 h-5">
                     <div>

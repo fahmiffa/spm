@@ -39,10 +39,10 @@ new #[Layout('layouts.app')] class extends Component {
     public function save()
     {
         $this->validate([
-            'nsp_file_upload' => 'nullable|file|max:2048',
-            'lulus_santri_file_upload' => 'nullable|file|max:2048',
-            'kurikulum_file_upload' => 'nullable|file|max:2048',
-            'buku_ajar_file_upload' => 'nullable|file|max:2048',
+            'nsp_file_upload' => 'nullable|file|mimes:pdf|max:500',
+            'lulus_santri_file_upload' => 'nullable|file|mimes:pdf|max:500',
+            'kurikulum_file_upload' => 'nullable|file|mimes:pdf|max:500',
+            'buku_ajar_file_upload' => 'nullable|file|mimes:pdf|max:500',
         ]);
 
         $data = [];
@@ -78,6 +78,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div class="py-12">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -90,13 +91,54 @@ new #[Layout('layouts.app')] class extends Component {
                     </p>
                 </header>
 
-                <form wire:submit="save" class="space-y-6">
+                <form x-on:submit.prevent="
+                    Swal.fire({
+                        title: 'Apakah Anda yakin data yang Anda input sudah benar dan lengkap?',
+                        showCancelButton: true,
+                        confirmButtonColor: '#22c55e',
+                        cancelButtonColor: '#ef4444',
+                        confirmButtonText: 'Ya, Simpan',
+                        cancelButtonText: 'Periksa Lagi',
+                        icon: 'question',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $wire.save();
+                        }
+                    })
+                " class="space-y-6" x-data="{
+                    validateFile(event) {
+                        const file = event.target.files[0];
+                        if (file) {
+                            if (file.type !== 'application/pdf') {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Format Salah',
+                                    text: 'Hanya file PDF yang diperbolehkan.',
+                                    confirmButtonColor: '#4f46e5'
+                                });
+                                event.target.value = '';
+                                return;
+                            }
+                            if (file.size > 500 * 1024) { // 500KB
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Ukuran Terlalu Besar',
+                                    text: 'Ukuran file tidak boleh lebih dari 500KB.',
+                                    confirmButtonColor: '#4f46e5'
+                                });
+                                event.target.value = '';
+                                return;
+                            }
+                        }
+                    }
+                }">
                     <!-- Kriteria 1 -->
                     <div class="p-4 border rounded-lg bg-gray-50">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             1. Pesantren telah memiliki izin operasional Kementerian Agama (Nomor Statistik Pesantren – NSP) yang dibuktikan dengan mengunggah dalam SPM-PesantrenMu.
                         </label>
-                        <input type="file" wire:model="nsp_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <input type="file" accept=".pdf" @change="validateFile($event)" wire:model="nsp_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('nsp_file_upload')" class="mt-2" />
                         @if($existing_files['nsp_file'])
                         <div class="mt-2 text-xs text-green-600">
@@ -110,7 +152,7 @@ new #[Layout('layouts.app')] class extends Component {
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             2. Pesantren pernah meluluskan santri dan/atau memiliki santri kelas akhir.
                         </label>
-                        <input type="file" wire:model="lulus_santri_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <input type="file" accept=".pdf" @change="validateFile($event)" wire:model="lulus_santri_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('lulus_santri_file_upload')" class="mt-2" />
                         @if($existing_files['lulus_santri_file'])
                         <div class="mt-2 text-xs text-green-600">
@@ -124,7 +166,7 @@ new #[Layout('layouts.app')] class extends Component {
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             3. Pesantren memiliki dan menyelenggarakan kurikulum Dirasah Islamiyah sesuai standar kurikulum LP2 PPM di seluruh kelas.
                         </label>
-                        <input type="file" wire:model="kurikulum_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <input type="file" accept=".pdf" @change="validateFile($event)" wire:model="kurikulum_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('kurikulum_file_upload')" class="mt-2" />
                         @if($existing_files['kurikulum_file'])
                         <div class="mt-2 text-xs text-green-600">
@@ -138,7 +180,7 @@ new #[Layout('layouts.app')] class extends Component {
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             4. Pesantren menggunakan buku ajar Dirasah Islamiyah terbitan LP2 PPM.
                         </label>
-                        <input type="file" wire:model="buku_ajar_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        <input type="file" accept=".pdf" @change="validateFile($event)" wire:model="buku_ajar_file_upload" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
                         <x-input-error :messages="$errors->get('buku_ajar_file_upload')" class="mt-2" />
                         @if($existing_files['buku_ajar_file'])
                         <div class="mt-2 text-xs text-green-600">

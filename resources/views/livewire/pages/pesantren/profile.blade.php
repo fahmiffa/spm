@@ -26,6 +26,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $persyarikatan;
     public $visi;
     public $misi;
+    public $luas_tanah;
+    public $luas_bangunan;
 
     // DATA PESANTREN
     public $layanan_satuan_pendidikan = [];
@@ -81,13 +83,13 @@ new #[Layout('layouts.app')] class extends Component {
         $this->persyarikatan = $this->pesantren->persyarikatan;
         $this->visi = $this->pesantren->visi;
         $this->misi = $this->pesantren->misi;
+        $this->luas_tanah = $this->pesantren->luas_tanah;
+        $this->luas_bangunan = $this->pesantren->luas_bangunan;
 
         $this->layanan_satuan_pendidikan = is_array($this->pesantren->layanan_satuan_pendidikan) ? $this->pesantren->layanan_satuan_pendidikan : [];
         // Initialize units_data
-        foreach (['sd', 'mi','smp','mts', 'sma', 'ma', 'smk'] as $unit) {
+        foreach (['sd', 'mi', 'smp', 'mts', 'sma', 'ma', 'smk', 'satuan_pesantren_muadalah_(SPM)'] as $unit) {
             $this->units_data[$unit] = [
-                'luas_tanah' => '',
-                'luas_bangunan' => '',
                 'jumlah_rombel' => 0
             ];
         }
@@ -96,8 +98,6 @@ new #[Layout('layouts.app')] class extends Component {
         foreach ($this->pesantren->units as $unit) {
             if (isset($this->units_data[$unit->unit])) {
                 $this->units_data[$unit->unit] = [
-                    'luas_tanah' => $unit->luas_tanah,
-                    'luas_bangunan' => $unit->luas_bangunan,
                     'jumlah_rombel' => $unit->jumlah_rombel,
                 ];
             }
@@ -140,8 +140,8 @@ new #[Layout('layouts.app')] class extends Component {
             // Dynamic units validation
             'units_data' => 'array',
             'units_data.*.jumlah_rombel' => 'required_with:units_data|integer|min:0',
-            'units_data.*.luas_tanah' => 'nullable|string',
-            'units_data.*.luas_bangunan' => 'nullable|string',
+            'luas_tanah' => 'nullable|string',
+            'luas_bangunan' => 'nullable|string',
         ]);
 
         $data = [
@@ -159,6 +159,8 @@ new #[Layout('layouts.app')] class extends Component {
             'persyarikatan' => $this->persyarikatan,
             'visi' => $this->visi,
             'misi' => $this->misi,
+            'luas_tanah' => $this->luas_tanah,
+            'luas_bangunan' => $this->luas_bangunan,
             'layanan_satuan_pendidikan' => $this->layanan_satuan_pendidikan,
             'layanan_satuan_pendidikan' => $this->layanan_satuan_pendidikan,
         ];
@@ -209,8 +211,6 @@ new #[Layout('layouts.app')] class extends Component {
             $this->pesantren->units()->updateOrCreate(
                 ['unit' => $unitName],
                 [
-                    'luas_tanah' => $this->units_data[$unitName]['luas_tanah'] ?? null,
-                    'luas_bangunan' => $this->units_data[$unitName]['luas_bangunan'] ?? null,
                     'jumlah_rombel' => $this->units_data[$unitName]['jumlah_rombel'] ?? 0,
                 ]
             );
@@ -300,10 +300,10 @@ new #[Layout('layouts.app')] class extends Component {
                             <div class="md:col-span-3">
                                 <x-input-label for="layanan_satuan_pendidikan" value="Layanan Satuan Pendidikan yang Dimiliki" />
                                 <div class="mt-2 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-                                    @foreach(['sd', 'mi', 'smp', 'mts', 'sma', 'ma', 'smk'] as $item)
+                                    @foreach(['sd', 'mi', 'smp', 'mts', 'sma', 'ma', 'smk','satuan_pesantren_muadalah_(SPM)'] as $item)
                                     <label class="inline-flex items-center p-2 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors {{ in_array($item, (array)$layanan_satuan_pendidikan) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200' }}">
                                         <input type="checkbox" wire:model.live="layanan_satuan_pendidikan" value="{{ $item }}" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
-                                        <span class="ml-2 uppercase font-medium text-gray-700">{{ $item }}</span>
+                                        <span class="ml-2 uppercase font-medium text-gray-700 text-xs">{{ str_replace('_', ' ', $item) }}</span>
                                     </label>
                                     @endforeach
                                 </div>
@@ -314,26 +314,33 @@ new #[Layout('layouts.app')] class extends Component {
                             <div class="md:col-span-3 mt-4 space-y-4">
                                 <h4 class="font-bold text-gray-700 border-b pb-2">Detail Luas Tanah & Bangunan per Unit</h4>
                                 @foreach($layanan_satuan_pendidikan as $unit)
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 border p-4 rounded-lg bg-gray-50 relative">
+                                <div class="grid grid-cols-1 md:grid-cols-1 gap-3 border p-4 rounded-lg bg-gray-50 relative">
                                     <div class="absolute -top-3 left-4 bg-indigo-100 text-indigo-800 text-xs font-bold px-2 py-1 rounded border border-indigo-200 uppercase">
-                                        UNIT {{ $unit }}
+                                        UNIT {{ str_replace('_', ' ', $unit) }}
                                     </div>
                                     <div class="mt-2">
                                         <x-input-label for="units_data.{{ $unit }}.jumlah_rombel" value="Jumlah Rombel" />
                                         <x-text-input wire:model="units_data.{{ $unit }}.jumlah_rombel" type="number" class="mt-1 block w-full" placeholder="0" />
                                     </div>
-                                    <div class="mt-2">
-                                        <x-input-label for="units_data.{{ $unit }}.luas_tanah" value="Luas Tanah (m²)" />
-                                        <x-text-input wire:model="units_data.{{ $unit }}.luas_tanah" type="text" class="mt-1 block w-full" placeholder="0" />
-                                    </div>
-                                    <div class="mt-2">
-                                        <x-input-label for="units_data.{{ $unit }}.luas_bangunan" value="Luas Bangunan (m²)" />
-                                        <x-text-input wire:model="units_data.{{ $unit }}.luas_bangunan" type="text" class="mt-1 block w-full" placeholder="0" />
-                                    </div>
                                 </div>
                                 @endforeach
                             </div>
                             @endif
+                        </div>
+                    </div>
+
+                    <!-- Section: DATA LUAS BANGUNAN -->
+                    <div class="mb-8 border-b pb-4">
+                        <h3 class="text-lg font-bold mb-4 text-indigo-600">DATA LUAS BANGUNAN</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <x-input-label for="luas_tanah" value="Luas Tanah (m²)" />
+                                <x-text-input wire:model="luas_tanah" id="luas_tanah" type="text" class="mt-1 block w-full" placeholder="0" />
+                            </div>
+                            <div>
+                                <x-input-label for="luas_bangunan" value="Luas Bangunan (m²)" />
+                                <x-text-input wire:model="luas_bangunan" id="luas_bangunan" type="text" class="mt-1 block w-full" placeholder="0" />
+                            </div>
                         </div>
                     </div>
 

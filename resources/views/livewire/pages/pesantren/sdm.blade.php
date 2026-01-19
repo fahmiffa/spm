@@ -1,22 +1,15 @@
 <?php
 
 use App\Models\SdmPesantren;
+use App\Models\Pesantren;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Illuminate\Support\Str;
 
 new #[Layout('layouts.app')] class extends Component {
     public $data = [];
-    public $levels = [
-        'SD',
-        'MI',
-        'SMP',
-        'MTs',
-        'SMA',
-        'MA',
-        'SMK',
-        'MAK',
-        'Satuan Pesantren Muadalah (SPM)'
-    ];
+    public $levels = [];
+    public $unitIds = [];
     public $fields = [
         'santri_l',
         'santri_p',
@@ -38,6 +31,13 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
+        $pesantren = Pesantren::with('units')->where('user_id', auth()->id())->first();
+
+        if ($pesantren) {
+            $this->levels = $pesantren->units->pluck('unit')->toArray();
+            $this->unitIds = $pesantren->units->pluck('id', 'unit')->toArray();
+        }
+
         $existingData = SdmPesantren::where('user_id', auth()->id())->get()->keyBy('tingkat');
 
         foreach ($this->levels as $level) {
@@ -50,9 +50,11 @@ new #[Layout('layouts.app')] class extends Component {
     public function save()
     {
         foreach ($this->levels as $level) {
+            $unitId = $this->unitIds[$level] ?? null;
+
             SdmPesantren::updateOrCreate(
                 ['user_id' => auth()->id(), 'tingkat' => $level],
-                $this->data[$level]
+                array_merge($this->data[$level], ['pesantren_unit_id' => $unitId])
             );
         }
 
@@ -116,7 +118,9 @@ new #[Layout('layouts.app')] class extends Component {
                             @foreach($levels as $index => $level)
                             <tr class="hover:bg-gray-50">
                                 <td class="border border-gray-300 px-2 py-1 text-center">{{ $index + 1 }}</td>
-                                <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">{{ $level }}</td>
+                                <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">
+                                    {{ Str::of($level)->replace('_', ' ')->upper() }}
+                                </td>
                                 @foreach($fields as $field)
                                 <td class="border border-gray-300 p-0">
                                     <input type="number"

@@ -116,9 +116,22 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
-        $this->validate([
-            'adminNvs.*' => 'nullable|integer|between:1,4',
-        ]);
+        try {
+            $this->validate([
+                'adminNvs.*' => 'nullable|integer|between:1,4',
+            ], [
+                'adminNvs.*.integer' => 'Nilai harus berupa angka.',
+                'adminNvs.*.between' => 'Nilai harus antara 1 sampai 4.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch(
+                'notification-received',
+                type: 'error',
+                title: 'Invalid Nilai',
+                message: 'Terdapat nilai yang tidak valid (harus angka 1-4).'
+            );
+            throw $e;
+        }
 
         $asesor1Id = $this->akreditasi->assessment1->asesor_id ?? null;
         if (!$asesor1Id) {
@@ -147,6 +160,9 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->validate([
             'nomor_sk' => 'required|string|max:255',
+        ], [
+            'nomor_sk.required' => 'Nomor SK wajib diisi.',
+            'nomor_sk.max' => 'Nomor SK maksimal 255 karakter.',
         ]);
 
         $this->akreditasi->update([
@@ -177,6 +193,8 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->validate([
             'catatan_admin' => 'required|string',
+        ], [
+            'catatan_admin.required' => 'Catatan penolakan wajib diisi.',
         ]);
 
         $this->akreditasi->update([
