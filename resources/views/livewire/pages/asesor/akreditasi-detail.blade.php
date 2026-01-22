@@ -1,245 +1,6 @@
-<?php
-
-use App\Models\Akreditasi;
-use App\Models\Pesantren;
-use App\Models\Ipm;
-use App\Models\SdmPesantren;
-use App\Models\MasterEdpmKomponen;
-use App\Models\Edpm;
-use App\Models\EdpmCatatan;
-use App\Models\AkreditasiEdpm;
-use App\Models\AkreditasiEdpmCatatan;
-use Livewire\Attributes\Layout;
-use Livewire\Volt\Component;
-use Illuminate\Support\Str;
-
-new #[Layout('layouts.app')] class extends Component {
-    public $akreditasi;
-    public $pesantren;
-    public $ipm;
-    public $sdm;
-    public $levels = [];
-    public $fields = [
-        'santri_l',
-        'santri_p',
-        'ustadz_dirosah_l',
-        'ustadz_dirosah_p',
-        'ustadz_non_dirosah_l',
-        'ustadz_non_dirosah_p',
-        'pamong_l',
-        'pamong_p',
-        'musyrif_l',
-        'musyrif_p',
-        'tendik_l',
-        'tendik_p',
-    ];
-    public $komponens;
-
-    // Pesantren's EDPM data (read only)
-    public $pesantrenEvaluasis = [];
-    public $pesantrenCatatans = [];
-
-    // Assessor's EDPM evaluation (editable)
-    public $asesorEvaluasis = [];
-    public $asesorCatatans = [];
-    public $asesorNks = [];
-    public $asesorCatatanNks = [];
-    public $asesorButirCatatans = [];
-
-    // Values from the other assessor (for preview)
-    public $otherAsesorEvaluasis = [];
-    public $otherAsesorCatatans = [];
-    public $otherAsesorButirCatatans = [];
-
-    public $asesorTipe;
-    public $activeTab = 'profil';
-
-    public function mount($uuid)
-    {
-        if (!auth()->user()->isAsesor()) {
-            abort(403);
-        }
-
-        $this->akreditasi = Akreditasi::with(['user.pesantren', 'assessments'])
-            ->where('uuid', $uuid)
-            ->firstOrFail();
-
-        // Security check: only assigned assessor can see this
-        $currentAssessment = $this->akreditasi->assessments->where('asesor_id', auth()->user()->asesor->id)->first();
-        if (!$currentAssessment) {
-            abort(403);
-        }
-        $this->asesorTipe = $currentAssessment->tipe;
-
-        $userId = $this->akreditasi->user_id;
-        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
-        $this->ipm = Ipm::where('user_id', $userId)->first();
-        $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
-        if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
-            $this->levels = $this->pesantren->units->pluck('unit')->toArray();
-        }
-        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
-
-        // Load Pesantren EDPM
-        $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
-        $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
-
-        // Load Assessor EDPM (filtered by current assessor)
-        $asesorId = auth()->user()->asesor->id;
-        $aEdpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
-        $aEvaluasis = $aEdpms->pluck('isian', 'butir_id');
-        $aNks = $aEdpms->pluck('nk', 'butir_id');
-        $aButirCatatans = $aEdpms->pluck('catatan', 'butir_id');
-
-        $aCatatansModels = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
-        $aCatatans = $aCatatansModels->pluck('catatan', 'komponen_id');
-        $aCatatanNks = $aCatatansModels->pluck('nk', 'komponen_id');
-
-        // Load the other assessor's data if current is Asesor 1
-        $otherEvaluasis = collect();
-        $otherCatatans = collect();
-        if ($this->asesorTipe == 1) {
-            $otherAssessment = $this->akreditasi->assessments->where('tipe', 2)->first();
-            if ($otherAssessment) {
-                $oEdpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $otherAssessment->asesor_id)->get();
-                $otherEvaluasis = $oEdpms->pluck('isian', 'butir_id');
-                $otherButirCatatans = $oEdpms->pluck('catatan', 'butir_id');
-                $otherCatatans = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $otherAssessment->asesor_id)->get()->pluck('catatan', 'komponen_id');
-            }
-        }
-
-        foreach ($this->komponens as $komponen) {
-            $this->pesantrenCatatans[$komponen->id] = $pCatatans[$komponen->id] ?? '-';
-            $this->asesorCatatans[$komponen->id] = $aCatatans[$komponen->id] ?? '';
-            $this->asesorCatatanNks[$komponen->id] = $aCatatanNks[$komponen->id] ?? '';
-
-            foreach ($komponen->butirs as $butir) {
-                $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '-';
-                $this->asesorEvaluasis[$butir->id] = $aEvaluasis[$butir->id] ?? '';
-                $this->asesorNks[$butir->id] = $aNks[$butir->id] ?? '';
-                $this->asesorButirCatatans[$butir->id] = $aButirCatatans[$butir->id] ?? '';
-                $this->otherAsesorEvaluasis[$butir->id] = $otherEvaluasis[$butir->id] ?? '';
-                $this->otherAsesorButirCatatans[$butir->id] = $otherButirCatatans[$butir->id] ?? '';
-            }
-            $this->otherAsesorCatatans[$komponen->id] = $otherCatatans[$komponen->id] ?? '';
-        }
-    }
-
-    public function saveAsesorEdpm()
-    {
-        if ($this->akreditasi->status != 5) {
-            session()->flash('error', 'Data tidak dapat diubah karena status sudah bukan Assesment.');
-            return;
-        }
-
-        $this->validate([
-            'asesorEvaluasis.*' => 'nullable|integer|between:1,4',
-            'asesorCatatans.*' => 'nullable|string',
-            'asesorButirCatatans.*' => 'nullable|string',
-            'asesorNks.*' => 'nullable|integer|between:1,4',
-            'asesorCatatanNks.*' => 'nullable|integer|between:1,4',
-        ]);
-
-        $asesorId = auth()->user()->asesor->id;
-        foreach ($this->asesorEvaluasis as $butirId => $isian) {
-            $data = [
-                'pesantren_id' => $this->akreditasi->user_id,
-                'isian' => $isian,
-                'catatan' => $this->asesorButirCatatans[$butirId] ?? null
-            ];
-            if ($this->asesorTipe == 1) {
-                $data['nk'] = !empty($this->asesorNks[$butirId]) ? $this->asesorNks[$butirId] : null;
-            }
-            AkreditasiEdpm::updateOrCreate(['akreditasi_id' => $this->akreditasi->id, 'butir_id' => $butirId, 'asesor_id' => $asesorId], $data);
-        }
-
-        foreach ($this->asesorCatatans as $komponenId => $catatan) {
-            $data = ['pesantren_id' => $this->akreditasi->user_id, 'catatan' => $catatan];
-            if ($this->asesorTipe == 1) {
-                $data['nk'] = !empty($this->asesorCatatanNks[$komponenId]) ? $this->asesorCatatanNks[$komponenId] : null;
-            }
-            AkreditasiEdpmCatatan::updateOrCreate(['akreditasi_id' => $this->akreditasi->id, 'komponen_id' => $komponenId, 'asesor_id' => $asesorId], $data);
-        }
-
-        session()->flash('status', 'Instrumen Akreditasi (Evaluasi Asesor) berhasil disimpan.');
-    }
-
-    public function finalizeVerification()
-    {
-        // Pastikan input NA (dan NK jika Asesor 1) sudah lengkap sebelum verifikasi final
-        $missing = $this->getMissingNaItems();
-        if (!empty($missing)) {
-            $html = '<ul class="text-left">' . implode('', array_map(fn($item) => "<li>• {$item}</li>", $missing)) . '</ul>';
-            $this->dispatch(
-                'show-validation-alert',
-                title: 'Lengkapi penilaian NA',
-                html: $html
-            );
-            return;
-        }
-
-        $this->saveAsesorEdpm();
-
-        $this->akreditasi->update(['status' => 4]); // 4. Visitasi
-
-        // Notify Admin
-        $admins = \App\Models\User::whereHas('role', function ($q) {
-            $q->where('id', 1);
-        })->get();
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . auth()->user()->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
-
-        // Notify Pesantren
-        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('visitasi', 'Update Status: Visitasi', 'Assessment telah selesai. Status pengajuan Anda kini adalah Visitasi.', route('pesantren.akreditasi')));
-
-        session()->flash('status', 'Verifikasi berhasil diselesaikan. Status berubah menjadi Visitasi.');
-        return redirect()->route('asesor.akreditasi');
-    }
-
-    public function setTab($tab)
-    {
-        $this->activeTab = $tab;
-    }
-
-    public function getTotal($field)
-    {
-        $total = 0;
-        foreach ($this->levels as $level) {
-            $total += (int)($this->sdm[$level]->$field ?? 0);
-        }
-        return $total;
-    }
-
-    private function getMissingNaItems(): array
-    {
-        $missing = [];
-        foreach ($this->komponens as $komponen) {
-            foreach ($komponen->butirs as $butir) {
-                if (empty($this->asesorEvaluasis[$butir->id])) {
-                    $missing[] = "NA untuk Butir {$butir->nomor_butir} ({$komponen->nama})";
-                }
-                if ($this->asesorTipe == 1 && empty($this->asesorNks[$butir->id])) {
-                    $missing[] = "NK untuk Butir {$butir->nomor_butir} ({$komponen->nama})";
-                }
-            }
-        }
-        return $missing;
-    }
-}; ?>
-
-<div class="py-12" x-data="{
-    init() {
-        window.addEventListener('show-validation-alert', event => {
-            Swal.fire({
-                title: event.detail.title,
-                html: event.detail.html,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#4f46e5'
-            });
-        });
-    }
-}">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@use('App\Models\Akreditasi')
+@use('Illuminate\Support\Facades\Storage')
+<div class="py-12" x-data="akreditasiManagement">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -253,7 +14,7 @@ new #[Layout('layouts.app')] class extends Component {
                         </p>
                     </div>
                     <a href="{{ route('asesor.akreditasi') }}"
-                        class="text-indigo-600 hover:text-indigo-900 font-medium">&larr; Kembali ke Daftar</a>
+                        class="text-indigo-600 hover:text-indigo-900 font-medium">&larr; Kembali</a>
                 </div>
 
                 @if (session('status'))
@@ -267,23 +28,23 @@ new #[Layout('layouts.app')] class extends Component {
                     <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
                         <li class="me-2">
                             <button wire:click="setTab('profil')"
-                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'profil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Profil</button>
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'profil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Profil</button>
                         </li>
                         <li class="me-2">
                             <button wire:click="setTab('ipm')"
-                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'ipm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">IPM</button>
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'ipm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">IPM</button>
                         </li>
                         <li class="me-2">
                             <button wire:click="setTab('sdm')"
-                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'sdm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">SDM</button>
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'sdm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">SDM</button>
                         </li>
                         <li class="me-2">
                             <button wire:click="setTab('edpm_pesantren')"
-                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'edpm_pesantren' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">EDPM</button>
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'edpm_pesantren' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">EDPM</button>
                         </li>
                         <li class="me-2">
                             <button wire:click="setTab('instrumen')"
-                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
                     </ul>
                 </div>
@@ -333,8 +94,6 @@ new #[Layout('layouts.app')] class extends Component {
                                         <tr>
                                             <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unit</th>
                                             <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Jml Rombel</th>
-                                            <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Tanah (m²)</th>
-                                            <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Bangunan (m²)</th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -342,12 +101,20 @@ new #[Layout('layouts.app')] class extends Component {
                                         <tr>
                                             <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-gray-900 uppercase">{{ $unit->unit }}</td>
                                             <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->jumlah_rombel }}</td>
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_tanah ?? '-' }}</td>
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_bangunan ?? '-' }}</td>
                                         </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
+                            </div>
+                            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                                <div>
+                                    <p class="text-xs font-bold text-gray-500 uppercase">Total Luas Tanah (m²)</p>
+                                    <p class="text-gray-900 font-bold">{{ $pesantren->luas_tanah ?? '-' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-gray-500 uppercase">Total Luas Bangunan (m²)</p>
+                                    <p class="text-gray-900 font-bold">{{ $pesantren->luas_bangunan ?? '-' }}</p>
+                                </div>
                             </div>
                             @else
                             <p class="text-gray-900 italic text-sm">Belum ada data unit pendidikan.</p>
@@ -489,7 +256,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <tr class="hover:bg-gray-50">
                                         <td class="border border-gray-300 px-2 py-1 text-center">{{ $index + 1 }}</td>
                                         <td class="border border-gray-300 px-4 py-1 font-medium bg-yellow-50 whitespace-nowrap">
-                                            {{ Str::of($level)->replace('_', ' ')->upper() }}
+                                            {{ \Illuminate\Support\Str::of($level)->replace('_', ' ')->upper() }}
                                         </td>
                                         @foreach($fields as $field)
                                         <td class="border border-gray-300 px-2 py-1 text-center">
@@ -560,54 +327,6 @@ new #[Layout('layouts.app')] class extends Component {
 
                     @if ($activeTab === 'instrumen')
                     <div class="space-y-6">
-                        <div
-                            class="flex justify-between items-center bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                            <div>
-                                <h3
-                                    class="text-lg font-bold text-indigo-900 border-l-4 border-indigo-500 pl-3 uppercase">
-                                    Instrumen Akreditasi (Evaluasi Asesor)</h3>
-                                <p class="text-xs text-indigo-700 mt-1">Silakan isi evaluasi dan catatan kinerja
-                                    berdasarkan hasil tinjauan Anda.</p>
-                            </div>
-                            @if ($akreditasi->status == 5)
-                            <div class="flex gap-2">
-                                @if ($this->asesorTipe == 1)
-                                <x-secondary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
-                                    <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan Draft</span>
-                                    <span wire:loading wire:target="saveAsesorEdpm">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Menyimpan...
-                                    </span>
-                                </x-secondary-button>
-                                <x-primary-button wire:click="finalizeVerification" wire:confirm="Selesaikan verifikasi? Status akan berubah menjadi Visitasi." wire:loading.attr="disabled" wire:target="finalizeVerification">
-                                    <span wire:loading.remove wire:target="finalizeVerification">Selesaikan & Verifikasi</span>
-                                    <span wire:loading wire:target="finalizeVerification">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Memproses...
-                                    </span>
-                                </x-primary-button>
-                                @else
-                                <x-primary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
-                                    <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan</span>
-                                    <span wire:loading wire:target="saveAsesorEdpm">
-                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Menyimpan...
-                                    </span>
-                                </x-primary-button>
-                                @endif
-                            </div>
-                            @endif
-                        </div>
-
                         @if ($akreditasi->status == 4)
                         <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                             <div class="flex items-start gap-3">
@@ -623,25 +342,25 @@ new #[Layout('layouts.app')] class extends Component {
                         @endif
 
                         <form wire:submit="saveAsesorEdpm">
-                            <div class="overflow-x-auto mt-4">
-                                <table class="min-w-full border-collapse border border-gray-300 text-xs">
+                            <div class="overflow-x-auto overflow-y-hidden mt-4">
+                                <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
                                     <thead class="bg-gray-100 font-bold uppercase">
                                         <tr>
-                                            <th class="border border-gray-300 px-4 py-3 w-32">Komponen</th>
-                                            <th class="border border-gray-300 px-2 py-3 w-16 text-center">No SK
+                                            <th class="border border-gray-300 px-2 py-3 w-24">Komponen</th>
+                                            <th class="border border-gray-300 px-1 py-3 w-12 text-center">No SK
                                             </th>
-                                            <th class="border border-gray-300 px-2 py-3 w-16 text-center">No Butir
+                                            <th class="border border-gray-300 px-1 py-3 w-12 text-center">No Butir
                                             </th>
-                                            <th class="border border-gray-300 px-4 py-3 text-left">Butir Pernyataan
+                                            <th class="border border-gray-300 px-2 py-3 text-left">Butir Pernyataan
                                             </th>
                                             @if ($this->asesorTipe == 1)
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-20">NA 1</th>
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-20 bg-green-50">NA 2</th>
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-20 bg-amber-50">NK</th>
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-56 bg-blue-50 text-[10px]">CATATAN BUTIR (NK)</th>
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-64 bg-blue-50 text-[10px]">CATATAN REKOMENDASI KOMPONEN (NK)</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-20">NA 1</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-20 bg-green-50">NA 2</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-20 bg-amber-50">NK</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-48 bg-blue-50 text-[10px]">CATATAN BUTIR (NK)</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-56 bg-blue-50 text-[10px]">CATATAN REKOMENDASI KOMPONEN (NK)</th>
                                             @else
-                                            <th class="border border-gray-300 px-4 py-3 text-center w-24">NA</th>
+                                            <th class="border border-gray-300 px-2 py-3 text-center w-24">NA</th>
                                             @endif
                                         </tr>
                                     </thead>
@@ -652,19 +371,19 @@ new #[Layout('layouts.app')] class extends Component {
                                         <tr class="hover:bg-gray-50">
                                             @if ($index === 0)
                                             <td rowspan="{{ $butirsCount }}"
-                                                class="border border-gray-300 px-4 py-2 font-bold text-center bg-gray-50 align-middle uppercase text-indigo-700">
+                                                class="border border-gray-300 px-2 py-2 font-bold text-center bg-gray-50 align-middle uppercase text-indigo-700">
                                                 {{ $komponen->nama }}
                                             </td>
                                             @endif
                                             <td
-                                                class="border border-gray-300 px-2 py-2 text-center text-gray-500">
+                                                class="border border-gray-300 px-1 py-2 text-center text-gray-500">
                                                 {{ $butir->no_sk }}
                                             </td>
                                             <td
-                                                class="border border-gray-300 px-2 py-2 text-center font-bold">
+                                                class="border border-gray-300 px-1 py-2 text-center font-bold">
                                                 {{ $butir->nomor_butir }}
                                             </td>
-                                            <td class="border border-gray-300 px-4 py-2">
+                                            <td class="border border-gray-300 px-2 py-2">
                                                 {{ $butir->butir_pernyataan }}
                                             </td>
                                             <td class="border border-gray-300 p-0">
@@ -723,11 +442,76 @@ new #[Layout('layouts.app')] class extends Component {
                                 </table>
                             </div>
                         </form>
+
+                        <div
+                            class="flex justify-between items-center bg-indigo-50 p-4 rounded-lg border border-indigo-100 mt-4">
+                            <div>
+                                <h3
+                                    class="text-sm font-bold text-indigo-900 border-l-4 border-indigo-500 pl-3 uppercase">
+                                    Evaluasi Asesor</h3>
+                                <p class="text-[10px] text-indigo-700 mt-1">Pastikan semua data sudah terisi sebelum melakukan verifikasi final.</p>
+                            </div>
+                            @if ($akreditasi->status == 5)
+                            <div class="flex gap-2">
+                                @if ($this->asesorTipe == 1)
+                                <x-secondary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
+                                    <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan Draft</span>
+                                    <span wire:loading wire:target="saveAsesorEdpm">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Menyimpan...
+                                    </span>
+                                </x-secondary-button>
+                                <x-primary-button @click="confirmAction('finalizeVerification', 'Selesaikan verifikasi? Status akan berubah menjadi Visitasi.', 'Ya, Selesaikan')" wire:loading.attr="disabled" wire:target="finalizeVerification">
+                                    <span wire:loading.remove wire:target="finalizeVerification">Selesaikan & Verifikasi</span>
+                                    <span wire:loading wire:target="finalizeVerification">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Memproses...
+                                    </span>
+                                </x-primary-button>
+                                @else
+                                <x-primary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
+                                    <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan</span>
+                                    <span wire:loading wire:target="saveAsesorEdpm">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Menyimpan...
+                                    </span>
+                                </x-primary-button>
+                                @endif
+                            </div>
+                            @endif
+                        </div>
+
+                        <!-- Floating Navigation Buttons for NA Tab -->
+                        <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+                            <button type="button"
+                                onclick="document.getElementById('main-content-scroll').scrollTo({top: 0, behavior: 'smooth'})"
+                                class="flex items-center justify-center w-12 h-12 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+                                title="Scroll Ke Atas">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                </svg>
+                            </button>
+                            <button type="button"
+                                onclick="const el = document.getElementById('main-content-scroll'); el.scrollTo({top: el.scrollHeight, behavior: 'smooth'})"
+                                class="flex items-center justify-center w-12 h-12 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+                                title="Scroll Ke Bawah">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     @endif
                 </div>
-
             </div>
         </div>
     </div>
-</div>

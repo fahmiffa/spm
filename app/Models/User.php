@@ -13,6 +13,33 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasPushSubscriptions;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($user) {
+            // Delete related models that might have their own deleting events
+            if ($user->pesantren) {
+                $user->pesantren->delete();
+            }
+
+            if ($user->asesor) {
+                $user->asesor->delete();
+            }
+
+            foreach ($user->akreditasis as $akreditasi) {
+                $akreditasi->delete();
+            }
+
+            // Delete other related models
+            $user->ipm()->delete();
+            $user->sdm()->delete();
+            $user->edpms()->delete();
+            $user->edpmCatatans()->delete();
+            $user->profile_data()->delete();
+        });
+    }
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,6 +51,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'uuid',
+        'status',
     ];
 
     /**

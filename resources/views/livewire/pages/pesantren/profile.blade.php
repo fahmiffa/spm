@@ -130,6 +130,46 @@ new #[Layout('layouts.app')] class extends Component {
         }
     }
 
+    protected function messages()
+    {
+        return [
+            'required' => ':attribute wajib diisi.',
+            'mimes' => ':attribute harus berformat PDF.',
+            'max' => 'Ukuran :attribute tidak boleh lebih dari :max KB (2MB).',
+            'email' => 'Format :attribute tidak valid.',
+            'integer' => ':attribute harus berupa angka.',
+            'min' => ':attribute minimal :min.',
+            'uploaded' => ':attribute gagal diunggah. Kemungkinan file terlalu besar (Max 2MB) atau koneksi terputus.',
+        ];
+    }
+
+    protected function validationAttributes()
+    {
+        return [
+            'nama_pesantren' => 'Nama Pesantren',
+            'email_pesantren' => 'Email Pesantren',
+            'units_data.*.jumlah_rombel' => 'Jumlah Rombel',
+            'status_kepemilikan_tanah_file' => 'File Status Kepemilikan Tanah',
+            'sertifikat_nsp_file' => 'File Sertifikat NSP',
+            'rk_anggaran_file' => 'File RK Anggaran',
+            'silabus_rpp_file' => 'File Silabus dan RPP',
+            'peraturan_kepegawaian_file' => 'File Peraturan Kepegawaian',
+            'file_lk_iapm_file' => 'File LK IAPM',
+            'laporan_tahunan_file' => 'File Laporan Tahunan',
+            'dok_profil_file' => 'File Dokumen Profil',
+            'dok_nsp_file' => 'File Dokumen NSP',
+            'dok_renstra_file' => 'File Dokumen Renstra',
+            'dok_rk_anggaran_file' => 'File Dokumen RK Anggaran',
+            'dok_kurikulum_file' => 'File Dokumen Kurikulum',
+            'dok_silabus_rpp_file' => 'File Dokumen Silabus dan RPP',
+            'dok_kepengasuhan_file' => 'File Dokumen Kepengasuhan',
+            'dok_peraturan_kepegawaian_file' => 'File Dokumen Peraturan Kepegawaian',
+            'dok_sarpras_file' => 'File Dokumen Sarpras',
+            'dok_laporan_tahunan_file' => 'File Dokumen Laporan Tahunan',
+            'dok_sop_file' => 'File Dokumen SOP',
+        ];
+    }
+
     public function save()
     {
         $this->validate([
@@ -142,6 +182,26 @@ new #[Layout('layouts.app')] class extends Component {
             'units_data.*.jumlah_rombel' => 'required_with:units_data|integer|min:0',
             'luas_tanah' => 'nullable|string',
             'luas_bangunan' => 'nullable|string',
+
+            // File validations
+            'status_kepemilikan_tanah_file' => 'nullable|mimes:pdf|max:2048',
+            'sertifikat_nsp_file' => 'nullable|mimes:pdf|max:2048',
+            'rk_anggaran_file' => 'nullable|mimes:pdf|max:2048',
+            'silabus_rpp_file' => 'nullable|mimes:pdf|max:2048',
+            'peraturan_kepegawaian_file' => 'nullable|mimes:pdf|max:2048',
+            'file_lk_iapm_file' => 'nullable|mimes:pdf|max:2048',
+            'laporan_tahunan_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_profil_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_nsp_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_renstra_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_rk_anggaran_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_kurikulum_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_silabus_rpp_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_kepengasuhan_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_peraturan_kepegawaian_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_sarpras_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_laporan_tahunan_file' => 'nullable|mimes:pdf|max:2048',
+            'dok_sop_file' => 'nullable|mimes:pdf|max:2048',
         ]);
 
         $data = [
@@ -225,7 +285,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="fileManagement">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -362,7 +422,12 @@ new #[Layout('layouts.app')] class extends Component {
                             @foreach($mainDocs as $prop => $label)
                             <div>
                                 <x-input-label for="{{ $prop }}" value="{{ $label }}" />
-                                <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <input type="file"
+                                    x-on:change="if(validate($event)) { $wire.upload('{{ $prop }}', $event.target.files[0]) }"
+                                    accept="application/pdf"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <p class="mt-1 text-[10px] text-gray-400 italic font-medium">* Format PDF, Maksimal 2MB</p>
+                                <x-input-error :messages="$errors->get($prop)" class="mt-1" />
                                 @php $dbField = str_replace('_file', '', $prop); @endphp
                                 @if($existing_files[$dbField])
                                 <div class="mt-1 text-xs text-green-600">
@@ -396,7 +461,12 @@ new #[Layout('layouts.app')] class extends Component {
                             @foreach($secondaryDocs as $prop => $label)
                             <div>
                                 <x-input-label for="{{ $prop }}" value="{{ $label }}" />
-                                <input type="file" wire:model="{{ $prop }}" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <input type="file"
+                                    x-on:change="if(validate($event)) { $wire.upload('{{ $prop }}', $event.target.files[0]) }"
+                                    accept="application/pdf"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <p class="mt-1 text-[10px] text-gray-400 italic font-medium">* Format PDF, Maksimal 2MB</p>
+                                <x-input-error :messages="$errors->get($prop)" class="mt-1" />
                                 @php $dbField = str_replace('_file', '', $prop); @endphp
                                 @if($existing_files[$dbField])
                                 <div class="mt-1 text-xs text-green-600">

@@ -146,29 +146,7 @@ new #[Layout('layouts.app')] class extends Component {
 <div>
     <x-slot name="header">{{ __('Master Komponen') }}</x-slot>
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <div class="py-12" x-data="{
-        confirmDelete(id, type) {
-            Swal.fire({
-                title: 'Apakah Anda yakin?',
-                text: type === 'komponen' ? 'Hapus seluruh komponen dan butir di dalamnya?' : 'Hapus butir ini?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Ya, Hapus!',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    if (type === 'komponen') {
-                        $wire.deleteKomponen(id);
-                    } else {
-                        $wire.deleteButir(id);
-                    }
-                }
-            })
-        }
-    }">
+    <div class="py-12" x-data="deleteConfirmation">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <!-- Session Status -->
@@ -200,7 +178,9 @@ new #[Layout('layouts.app')] class extends Component {
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
                                 </button>
-                                <button @click="confirmDelete({{ $komponen->id }}, 'komponen')" class="text-red-600 hover:text-red-900">
+                                </svg>
+                                </button>
+                                <button @click="confirmDelete({{ $komponen->id }}, 'deleteKomponen', 'Hapus seluruh komponen dan butir di dalamnya?')" class="text-red-600 hover:text-red-900">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                     </svg>
@@ -224,7 +204,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <td class="px-4 py-2 text-sm text-gray-700">{{ $butir->butir_pernyataan }}</td>
                                     <td class="px-4 py-2 text-right text-sm font-medium whitespace-nowrap">
                                         <button wire:click="openButirModal({{ $komponen->id }}, {{ $butir->id }})" class="text-indigo-600 hover:text-indigo-900 mr-2">Edit</button>
-                                        <button @click="confirmDelete({{ $butir->id }}, 'butir')" class="text-red-600 hover:text-red-900">Hapus</button>
+                                        <button @click="confirmDelete({{ $butir->id }}, 'deleteButir', 'Hapus butir ini?')" class="text-red-600 hover:text-red-900">Hapus</button>
                                     </td>
                                 </tr>
                                 @empty

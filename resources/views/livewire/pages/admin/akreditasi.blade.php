@@ -170,13 +170,11 @@ new #[Layout('layouts.app')] class extends Component {
                                             Verifikasi
                                         </button>
                                         @endif
-                                        @if ($item->status == 4)
                                         <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}"
                                             class="text-indigo-600 hover:text-indigo-900 font-medium"
                                             wire:navigate>
                                             Detail
                                         </a>
-                                        @endif
 
                                         <button wire:click="delete({{ $item->id }})"
                                             wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"

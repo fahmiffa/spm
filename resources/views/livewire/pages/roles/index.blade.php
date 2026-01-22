@@ -80,8 +80,8 @@ new #[Layout('layouts.app')] class extends Component {
 <div>
     <x-slot name="header">{{ __('Roles') }}</x-slot>
 
-    <div class="py-12">
-        
+    <div class="py-12" x-data="deleteConfirmation">
+
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <!-- Session Status -->
@@ -114,32 +114,31 @@ new #[Layout('layouts.app')] class extends Component {
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse ($roles as $role)
-                                <tr wire:key="{{ $role->id }}">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $role->name }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $role->parameter }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button wire:click="editRole({{ $role->id }})"
-                                            class="text-indigo-600 hover:text-indigo-900 mr-3">
-                                            {{ __('Edit') }}
-                                        </button>
-                                        <button wire:click="deleteRole({{ $role->id }})"
-                                            wire:confirm="Are you sure you want to delete this role?"
-                                            class="text-red-600 hover:text-red-900">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </td>
-                                </tr>
+                            <tr wire:key="{{ $role->id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $role->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $role->parameter }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button wire:click="editRole({{ $role->id }})"
+                                        class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                        {{ __('Edit') }}
+                                    </button>
+                                    <button @click="confirmDelete({{ $role->id }}, 'deleteRole', 'Hapus role ini?')"
+                                        class="text-red-600 hover:text-red-900">
+                                        {{ __('Delete') }}
+                                    </button>
+                                </td>
+                            </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3"
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                                        No roles found.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="3"
+                                    class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                                    No roles found.
+                                </td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>

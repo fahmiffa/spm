@@ -48,7 +48,7 @@ Route::view('profile', 'profile')
     ->middleware(['auth', 'verified'])
     ->name('asesor.akreditasi');
 
-\Livewire\Volt\Volt::route('asesor/akreditasi/{uuid}', 'pages.asesor.akreditasi-detail')
+Route::get('asesor/akreditasi/{uuid}', \App\Livewire\Pages\Asesor\AkreditasiDetail::class)
     ->middleware(['auth', 'verified'])
     ->name('asesor.akreditasi-detail');
 
@@ -64,5 +64,5 @@ Route::view('profile', 'profile')
     ->middleware(['auth', 'verified'])
     ->name('admin.akreditasi-detail');
 
-require __DIR__.'/auth.php';
-require __DIR__.'/sso/sso.php';
+require __DIR__ . '/auth.php';
+require __DIR__ . '/sso/sso.php';

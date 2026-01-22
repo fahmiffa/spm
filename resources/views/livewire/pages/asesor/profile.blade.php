@@ -94,12 +94,38 @@ new #[Layout('layouts.app')] class extends Component {
         ];
     }
 
+    protected function messages()
+    {
+        return [
+            'required' => ':attribute wajib diisi.',
+            'mimes' => ':attribute harus berformat PDF.',
+            'max' => 'Ukuran :attribute tidak boleh lebih dari :max KB (2MB).',
+            'email' => 'Format :attribute tidak valid.',
+            'uploaded' => ':attribute gagal diunggah. Kemungkinan file terlalu besar (Max 2MB) atau koneksi terputus.',
+        ];
+    }
+
+    protected function validationAttributes()
+    {
+        return [
+            'nama_dengan_gelar' => 'Nama dengan Gelar',
+            'nama_tanpa_gelar' => 'Nama tanpa Gelar',
+            'email_pribadi' => 'Email Pribadi',
+            'ktp_file_upload' => 'File KTP',
+            'ijazah_file_upload' => 'File Ijazah',
+            'kartu_nbm_file_upload' => 'File Kartu NBM',
+        ];
+    }
+
     public function save()
     {
         $this->validate([
             'nama_dengan_gelar' => 'required|string|max:255',
             'nama_tanpa_gelar' => 'required|string|max:255',
             'email_pribadi' => 'nullable|email',
+            'ktp_file_upload' => 'nullable|mimes:pdf|max:2048',
+            'ijazah_file_upload' => 'nullable|mimes:pdf|max:2048',
+            'kartu_nbm_file_upload' => 'nullable|mimes:pdf|max:2048',
         ]);
 
         $data = [
@@ -159,7 +185,7 @@ new #[Layout('layouts.app')] class extends Component {
 
 <x-slot name="header">{{ __('Profil') }}</x-slot>
 
-<div class="py-12">
+<div class="py-12" x-data="fileManagement">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900 border-b border-gray-200">
@@ -294,7 +320,12 @@ new #[Layout('layouts.app')] class extends Component {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <x-input-label for="ktp_file_upload" value="Unggahan KTP" />
-                                <input type="file" wire:model="ktp_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <input type="file"
+                                    accept="application/pdf"
+                                    x-on:change="if(validate($event)) { $wire.upload('ktp_file_upload', $event.target.files[0]) }"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <p class="mt-1 text-[10px] text-gray-400 italic font-medium">* Format PDF, Maksimal 2MB</p>
+                                <x-input-error :messages="$errors->get('ktp_file_upload')" class="mt-1" />
                                 @if($existing_files['ktp_file'])
                                 <div class="mt-1 text-xs text-green-600">
                                     File terunggah: <a href="{{ Storage::url($existing_files['ktp_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
@@ -303,7 +334,12 @@ new #[Layout('layouts.app')] class extends Component {
                             </div>
                             <div>
                                 <x-input-label for="ijazah_file_upload" value="Unggahan Ijazah Terakhir" />
-                                <input type="file" wire:model="ijazah_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <input type="file"
+                                    accept="application/pdf"
+                                    x-on:change="if(validate($event)) { $wire.upload('ijazah_file_upload', $event.target.files[0]) }"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <p class="mt-1 text-[10px] text-gray-400 italic font-medium">* Format PDF, Maksimal 2MB</p>
+                                <x-input-error :messages="$errors->get('ijazah_file_upload')" class="mt-1" />
                                 @if($existing_files['ijazah_file'])
                                 <div class="mt-1 text-xs text-green-600">
                                     File terunggah: <a href="{{ Storage::url($existing_files['ijazah_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>
@@ -312,7 +348,12 @@ new #[Layout('layouts.app')] class extends Component {
                             </div>
                             <div>
                                 <x-input-label for="kartu_nbm_file_upload" value="Unggahan Kartu NBM" />
-                                <input type="file" wire:model="kartu_nbm_file_upload" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <input type="file"
+                                    accept="application/pdf"
+                                    x-on:change="if(validate($event)) { $wire.upload('kartu_nbm_file_upload', $event.target.files[0]) }"
+                                    class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                                <p class="mt-1 text-[10px] text-gray-400 italic font-medium">* Format PDF, Maksimal 2MB</p>
+                                <x-input-error :messages="$errors->get('kartu_nbm_file_upload')" class="mt-1" />
                                 @if($existing_files['kartu_nbm_file'])
                                 <div class="mt-1 text-xs text-green-600">
                                     File terunggah: <a href="{{ Storage::url($existing_files['kartu_nbm_file']) }}" target="_blank" class="underline">Lihat Dokumen</a>

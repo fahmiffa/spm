@@ -74,6 +74,10 @@ class SsoController extends Controller
             return redirect(route('login'))->with('error', 'The credential is invalid, please use another user');
         }
 
+        if ($user->status == 0) {
+            return redirect(route('login'))->with('error', 'Akun Anda telah dinonaktifkan. Silakan hubungi administrator.');
+        }
+
         \Illuminate\Support\Facades\Auth::login($user);
 
         $url = session()->pull('intended_url');

@@ -109,6 +109,26 @@ new #[Layout('layouts.app')] class extends Component {
         $this->activeTab = $tab;
     }
 
+    protected function messages()
+    {
+        return [
+            'adminNvs.*.required' => 'Nilai NV wajib diisi.',
+            'adminNvs.*.integer' => 'Nilai NV harus berupa angka.',
+            'adminNvs.*.between' => 'Nilai NV harus antara 1 sampai 4.',
+        ];
+    }
+
+    protected function validationAttributes()
+    {
+        $attributes = [];
+        foreach ($this->komponens as $k) {
+            foreach ($k->butirs as $b) {
+                $attributes["adminNvs.{$b->id}"] = "Nilai NV Butir {$b->nomor_butir}";
+            }
+        }
+        return $attributes;
+    }
+
     public function saveAdminNv()
     {
         if ($this->akreditasi->status != 4) {
@@ -118,17 +138,33 @@ new #[Layout('layouts.app')] class extends Component {
 
         try {
             $this->validate([
-                'adminNvs.*' => 'nullable|integer|between:1,4',
-            ], [
-                'adminNvs.*.integer' => 'Nilai harus berupa angka.',
-                'adminNvs.*.between' => 'Nilai harus antara 1 sampai 4.',
+                'adminNvs.*' => 'required|integer|between:1,4',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $missingItems = [];
+            $errors = $e->validator->errors()->messages();
+
+            foreach ($errors as $key => $messages) {
+                if (preg_match('/adminNvs\.(\d+)/', $key, $matches)) {
+                    $butirId = $matches[1];
+
+                    // Find butir info from our komponens collection
+                    foreach ($this->komponens as $komponen) {
+                        $butir = $komponen->butirs->firstWhere('id', $butirId);
+                        if ($butir) {
+                            $missingItems[] = "<li><b>NV</b>: Butir {$butir->nomor_butir} ({$komponen->nama})</li>";
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-[11px]">' . implode('', array_unique($missingItems)) . '</ul>';
+
             $this->dispatch(
-                'notification-received',
-                type: 'error',
-                title: 'Invalid Nilai',
-                message: 'Terdapat nilai yang tidak valid (harus angka 1-4).'
+                'validation-failed',
+                title: 'Nilai NV Belum Lengkap',
+                html: "Mohon lengkapi nilai verifikasi berikut sebelum menyimpan:<br>" . $htmlList
             );
             throw $e;
         }
@@ -208,7 +244,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 
-<div class="py-12">
+<div class="py-12" x-data="akreditasiManagement">
     <x-slot name="header">{{ __('Detail Akreditasi') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -223,7 +259,7 @@ new #[Layout('layouts.app')] class extends Component {
                         </p>
                     </div>
                     <a href="{{ route('admin.akreditasi') }}"
-                        class="text-indigo-600 hover:text-indigo-900 font-medium">&larr; Kembali ke Daftar</a>
+                        class="text-indigo-600 hover:text-indigo-900 font-medium">&larr; Kembali</a>
                 </div>
 
                 <!-- Tabs -->
@@ -295,8 +331,6 @@ new #[Layout('layouts.app')] class extends Component {
                                             <tr>
                                                 <th class="px-3 py-2 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Unit</th>
                                                 <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Jml Rombel</th>
-                                                <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Tanah (m²)</th>
-                                                <th class="px-3 py-2 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Luas Bangunan (m²)</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -304,12 +338,20 @@ new #[Layout('layouts.app')] class extends Component {
                                             <tr>
                                                 <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-gray-900 uppercase">{{ $unit->unit }}</td>
                                                 <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->jumlah_rombel }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_tanah ?? '-' }}</td>
-                                                <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->luas_bangunan ?? '-' }}</td>
                                             </tr>
                                             @endforeach
                                         </tbody>
                                     </table>
+                                </div>
+                                <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-500 uppercase">Total Luas Tanah (m²)</p>
+                                        <p class="text-gray-900 font-bold">{{ $pesantren->luas_tanah ?? '-' }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-gray-500 uppercase">Total Luas Bangunan (m²)</p>
+                                        <p class="text-gray-900 font-bold">{{ $pesantren->luas_bangunan ?? '-' }}</p>
+                                    </div>
                                 </div>
                                 @else
                                 <p class="text-gray-900 italic text-sm">Belum ada data unit pendidikan.</p>
@@ -564,26 +606,7 @@ new #[Layout('layouts.app')] class extends Component {
 
                         @if ($activeTab === 'instrumen')
                         <div class="space-y-6">
-                            @if ($akreditasi->status == 4)
-                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-purple-900 mb-1">Nilai Verifikasi (NV)
-                                        </h3>
-                                        <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
-                                            setiap butir penilaian.</p>
-                                    </div>
-                                    <x-primary-button wire:click="saveAdminNv" wire:loading.attr="disabled"
-                                        class="bg-purple-600 hover:bg-purple-700">
-                                        <svg wire:loading wire:target="saveAdminNv" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        <span>Simpan NV</span>
-                                    </x-primary-button>
-                                </div>
-                            </div>
-                            @endif
+
                             <div class="overflow-x-auto mt-4">
                                 <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
                                     <thead class="bg-gray-100 font-bold uppercase">
@@ -648,6 +671,9 @@ new #[Layout('layouts.app')] class extends Component {
                                                     <option value="3">3</option>
                                                     <option value="4">4</option>
                                                 </select>
+                                                @error('adminNvs.' . $butir->id)
+                                                <span class="text-red-500 text-[10px] px-2 pb-1 block whitespace-nowrap">{{ $message }}</span>
+                                                @enderror
                                                 @else
                                                 <div
                                                     class="px-2 py-2 text-center font-bold text-purple-900">
@@ -672,6 +698,25 @@ new #[Layout('layouts.app')] class extends Component {
                                 </table>
                             </div>
 
+                            @if ($akreditasi->status == 4)
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-purple-900 mb-1">Nilai Verifikasi (NV)
+                                        </h3>
+                                        <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
+                                            setiap butir penilaian.</p>
+                                    </div>
+                                    <x-primary-button wire:click="saveAdminNv" wire:loading.attr="disabled"
+                                        class="bg-purple-600 hover:bg-purple-700">
+                                        <svg wire:loading wire:target="saveAdminNv" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Simpan NV</span>
+                                    </x-primary-button>
+                                </div>
+                            </div>
                             {{-- Ringkasan Data --}}
                             <div
                                 class="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
@@ -843,8 +888,6 @@ new #[Layout('layouts.app')] class extends Component {
                                 </div>
                                 @endif
                             </div>
-
-                            @if ($akreditasi->status == 4)
                             <div class="mt-8 pt-6 border-t border-gray-200">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <!-- Approve Form -->
@@ -899,8 +942,29 @@ new #[Layout('layouts.app')] class extends Component {
                                     </div>
                                 </div>
                             </div>
-                            @endif
                         </div>
+                        <!-- Floating Navigation Buttons for NA Tab -->
+                        <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+                            <button type="button"
+                                onclick="document.getElementById('main-content-scroll').scrollTo({top: 0, behavior: 'smooth'})"
+                                class="flex items-center justify-center w-12 h-12 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+                                title="Scroll Ke Atas">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                </svg>
+                            </button>
+                            <button type="button"
+                                onclick="const el = document.getElementById('main-content-scroll'); el.scrollTo({top: el.scrollHeight, behavior: 'smooth'})"
+                                class="flex items-center justify-center w-12 h-12 bg-indigo-600 text-white rounded-full shadow-xl hover:bg-indigo-700 hover:scale-110 active:scale-95 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+                                title="Scroll Ke Bawah">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
+        </div>
+    </div>

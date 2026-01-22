@@ -1,0 +1,274 @@
+<?php
+
+namespace App\Livewire\Pages\Asesor;
+
+use App\Models\Akreditasi;
+use App\Models\Pesantren;
+use App\Models\Ipm;
+use App\Models\SdmPesantren;
+use App\Models\MasterEdpmKomponen;
+use App\Models\Edpm;
+use App\Models\EdpmCatatan;
+use App\Models\AkreditasiEdpm;
+use App\Models\AkreditasiEdpmCatatan;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+
+#[Layout('layouts.app')]
+class AkreditasiDetail extends Component
+{
+    public $akreditasi;
+    public $pesantren;
+    public $ipm;
+    public $sdm;
+    public $levels = [];
+    public $fields = [
+        'santri_l',
+        'santri_p',
+        'ustadz_dirosah_l',
+        'ustadz_dirosah_p',
+        'ustadz_non_dirosah_l',
+        'ustadz_non_dirosah_p',
+        'pamong_l',
+        'pamong_p',
+        'musyrif_l',
+        'musyrif_p',
+        'tendik_l',
+        'tendik_p',
+    ];
+    public $komponens;
+
+    // Pesantren's EDPM data (read only)
+    public $pesantrenEvaluasis = [];
+    public $pesantrenCatatans = [];
+
+    // Assessor's EDPM evaluation (editable)
+    public $asesorEvaluasis = [];
+    public $asesorCatatans = [];
+    public $asesorNks = [];
+    public $asesorCatatanNks = [];
+    public $asesorButirCatatans = [];
+
+    // Values from the other assessor (for preview)
+    public $otherAsesorEvaluasis = [];
+    public $otherAsesorCatatans = [];
+    public $otherAsesorButirCatatans = [];
+
+    public $asesorTipe;
+    public $activeTab = 'profil';
+
+    public function mount($uuid)
+    {
+        if (!auth()->user()->isAsesor()) {
+            abort(403);
+        }
+
+        $this->akreditasi = Akreditasi::with(['user.pesantren', 'assessments'])
+            ->where('uuid', $uuid)
+            ->firstOrFail();
+
+        // Security check: only assigned assessor can see this
+        $currentAssessment = $this->akreditasi->assessments->where('asesor_id', auth()->user()->asesor->id)->first();
+        if (!$currentAssessment) {
+            abort(403);
+        }
+        $this->asesorTipe = $currentAssessment->tipe;
+
+        $userId = $this->akreditasi->user_id;
+        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
+        $this->ipm = Ipm::where('user_id', $userId)->first();
+        $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+        if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
+            $this->levels = $this->pesantren->units->pluck('unit')->toArray();
+        }
+        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+
+        // Load Pesantren EDPM
+        $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
+        $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
+
+        // Load Assessor EDPM (filtered by current assessor)
+        $asesorId = auth()->user()->asesor->id;
+        $aEdpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
+        $aEvaluasis = $aEdpms->pluck('isian', 'butir_id');
+        $aNks = $aEdpms->pluck('nk', 'butir_id');
+        $aButirCatatans = $aEdpms->pluck('catatan', 'butir_id');
+
+        $aCatatansModels = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
+        $aCatatans = $aCatatansModels->pluck('catatan', 'komponen_id');
+        $aCatatanNks = $aCatatansModels->pluck('nk', 'komponen_id');
+
+        // Load the other assessor's data if current is Asesor 1
+        $otherEvaluasis = collect();
+        $otherCatatans = collect();
+        $otherButirCatatans = collect();
+        if ($this->asesorTipe == 1) {
+            $otherAssessment = $this->akreditasi->assessments->where('tipe', 2)->first();
+            if ($otherAssessment) {
+                $oEdpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $otherAssessment->asesor_id)->get();
+                $otherEvaluasis = $oEdpms->pluck('isian', 'butir_id');
+                $otherButirCatatans = $oEdpms->pluck('catatan', 'butir_id');
+                $otherCatatans = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $otherAssessment->asesor_id)->get()->pluck('catatan', 'komponen_id');
+            }
+        }
+
+        foreach ($this->komponens as $komponen) {
+            $this->pesantrenCatatans[$komponen->id] = $pCatatans[$komponen->id] ?? '-';
+            $this->asesorCatatans[$komponen->id] = $aCatatans[$komponen->id] ?? '';
+            $this->asesorCatatanNks[$komponen->id] = $aCatatanNks[$komponen->id] ?? '';
+
+            foreach ($komponen->butirs as $butir) {
+                $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '-';
+                $this->asesorEvaluasis[$butir->id] = $aEvaluasis[$butir->id] ?? '';
+                $this->asesorNks[$butir->id] = $aNks[$butir->id] ?? '';
+                $this->asesorButirCatatans[$butir->id] = $aButirCatatans[$butir->id] ?? '';
+                $this->otherAsesorEvaluasis[$butir->id] = $otherEvaluasis[$butir->id] ?? '';
+                $this->otherAsesorButirCatatans[$butir->id] = $otherButirCatatans[$butir->id] ?? '';
+            }
+            $this->otherAsesorCatatans[$komponen->id] = $otherCatatans[$komponen->id] ?? '';
+        }
+    }
+
+    protected function messages()
+    {
+        return [
+            'asesorEvaluasis.*.required' => 'Nilai NA wajib diisi.',
+            'asesorEvaluasis.*.integer' => 'Nilai NA harus berupa angka.',
+            'asesorEvaluasis.*.between' => 'Nilai NA harus antara 1 sampai 4.',
+            'asesorNks.*.required' => 'Nilai NK wajib diisi.',
+            'asesorNks.*.integer' => 'Nilai NK harus berupa angka.',
+            'asesorNks.*.between' => 'Nilai NK harus antara 1 sampai 4.',
+        ];
+    }
+
+    protected function validationAttributes()
+    {
+        $attributes = [];
+        foreach ($this->komponens as $k) {
+            foreach ($k->butirs as $b) {
+                $attributes["asesorEvaluasis.{$b->id}"] = "Nilai NA Butir {$b->nomor_butir}";
+                $attributes["asesorNks.{$b->id}"] = "Nilai NK Butir {$b->nomor_butir}";
+            }
+        }
+        return $attributes;
+    }
+
+    public function saveAsesorEdpm()
+    {
+        if ($this->akreditasi->status != 5) {
+            session()->flash('error', 'Data tidak dapat diubah karena status sudah bukan Assesment.');
+            return;
+        }
+
+        $rules = [
+            'asesorEvaluasis.*' => 'required|integer|between:1,4',
+            'asesorCatatans.*' => 'nullable|string',
+            'asesorButirCatatans.*' => 'nullable|string',
+        ];
+
+        if ($this->asesorTipe == 1) {
+            $rules['asesorNks.*'] = 'required|integer|between:1,4';
+            $rules['asesorCatatanNks.*'] = 'nullable|integer|between:1,4';
+        }
+
+        try {
+            $this->validate($rules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $missingItems = [];
+            $errors = $e->validator->errors()->messages();
+
+            foreach ($errors as $key => $messages) {
+                if (preg_match('/(asesorEvaluasis|asesorNks)\.(\d+)/', $key, $matches)) {
+                    $type = $matches[1] == 'asesorEvaluasis' ? 'NA' : 'NK';
+                    $butirId = $matches[2];
+
+                    // Find butir info from our komponens collection
+                    foreach ($this->komponens as $komponen) {
+                        $butir = $komponen->butirs->firstWhere('id', $butirId);
+                        if ($butir) {
+                            $missingItems[] = "<li><b>{$type}</b>: Butir {$butir->nomor_butir} ({$komponen->nama})</li>";
+                            break;
+                        }
+                    }
+                }
+            }
+
+            $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-sm">' . implode('', array_unique($missingItems)) . '</ul>';
+
+            $this->dispatch(
+                'validation-failed',
+                title: 'Data Belum Lengkap',
+                html: "Mohon lengkapi penilaian berikut sebelum menyimpan:<br>" . $htmlList
+            );
+            throw $e;
+        }
+
+        $asesorId = auth()->user()->asesor->id;
+        foreach ($this->asesorEvaluasis as $butirId => $isian) {
+            if (empty($isian)) continue;
+
+            $data = [
+                'pesantren_id' => $this->akreditasi->user_id,
+                'isian' => $isian,
+                'catatan' => $this->asesorButirCatatans[$butirId] ?? null
+            ];
+            if ($this->asesorTipe == 1) {
+                $data['nk'] = !empty($this->asesorNks[$butirId]) ? $this->asesorNks[$butirId] : null;
+            }
+            AkreditasiEdpm::updateOrCreate(['akreditasi_id' => $this->akreditasi->id, 'butir_id' => $butirId, 'asesor_id' => $asesorId], $data);
+        }
+
+        foreach ($this->asesorCatatans as $komponenId => $catatan) {
+            $data = ['pesantren_id' => $this->akreditasi->user_id, 'catatan' => $catatan];
+            if ($this->asesorTipe == 1) {
+                $data['nk'] = !empty($this->asesorCatatanNks[$komponenId]) ? $this->asesorCatatanNks[$komponenId] : null;
+            }
+            AkreditasiEdpmCatatan::updateOrCreate(['akreditasi_id' => $this->akreditasi->id, 'komponen_id' => $komponenId, 'asesor_id' => $asesorId], $data);
+        }
+
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Instrumen Akreditasi berhasil disimpan.'
+        );
+    }
+
+    public function finalizeVerification()
+    {
+        $this->saveAsesorEdpm();
+
+        $this->akreditasi->update(['status' => 4]); // 4. Visitasi
+
+        // Notify Admin
+        $admins = \App\Models\User::whereHas('role', function ($q) {
+            $q->where('id', 1);
+        })->get();
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . auth()->user()->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
+
+        // Notify Pesantren
+        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('visitasi', 'Update Status: Visitasi', 'Assessment telah selesai. Status pengajuan Anda kini adalah Visitasi.', route('pesantren.akreditasi')));
+
+        session()->flash('status', 'Verifikasi berhasil diselesaikan. Status berubah menjadi Visitasi.');
+        return redirect()->route('asesor.akreditasi');
+    }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+    }
+
+    public function getTotal($field)
+    {
+        $total = 0;
+        foreach ($this->levels as $level) {
+            $total += (int)($this->sdm[$level]->$field ?? 0);
+        }
+        return $total;
+    }
+
+    public function render()
+    {
+        return view('livewire.pages.asesor.akreditasi-detail');
+    }
+}

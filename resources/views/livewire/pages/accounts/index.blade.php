@@ -15,6 +15,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $email;
     public $password;
     public $role_id;
+    public $status = true; // Default to true (active)
     public $userId;
 
     public $isEditing = false;
@@ -39,6 +40,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->email = '';
         $this->password = '';
         $this->role_id = '';
+        $this->status = true;
         $this->userId = null;
         $this->isEditing = false;
         $this->resetErrorBag();
@@ -56,7 +58,9 @@ new #[Layout('layouts.app')] class extends Component {
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->email = $user->email;
         $this->role_id = $user->role_id;
+        $this->status = $user->status == 1; // 1 is active, 0 is inactive
         $this->password = '';
         $this->isEditing = true;
         $this->dispatch('open-modal', 'account-modal');
@@ -68,14 +72,11 @@ new #[Layout('layouts.app')] class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . ($this->userId ?? 'NULL')],
             'role_id' => ['required', 'exists:roles,id'],
+            'status' => ['boolean'] // Add validation for status
         ];
 
-        if (!$this->isEditing) {
-            $rules['password'] = ['required', 'string', Rules\Password::defaults()];
-        } else {
-            // $rules['password'] = ['nullable', 'string', Rules\Password::defaults()];
-            $rules['password'] = ['nullable', 'string'];
-        }
+        // $rules['password'] = ['nullable', 'string', Rules\Password::defaults()];
+        $rules['password'] = ['nullable', 'string'];
 
         $this->validate($rules);
 
@@ -85,20 +86,22 @@ new #[Layout('layouts.app')] class extends Component {
                 'name' => $this->name,
                 'email' => $this->email,
                 'role_id' => $this->role_id,
+                'status' => $this->status ? 1 : 0
             ];
             if ($this->password) {
                 $data['password'] = Hash::make($this->password);
             }
             $user->update($data);
-            session()->flash('status', 'Account updated successfully.');
+            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil diperbarui.');
         } else {
             User::create([
                 'name' => $this->name,
                 'email' => $this->email,
                 'password' => Hash::make($this->password),
                 'role_id' => $this->role_id,
+                'status' => $this->status ? 1 : 0
             ]);
-            session()->flash('status', 'Account created successfully.');
+            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil ditambahkan.');
         }
 
         $this->loadUsers();
@@ -109,27 +112,37 @@ new #[Layout('layouts.app')] class extends Component {
     public function deleteUser($id)
     {
         if ($id == auth()->id()) {
-            session()->flash('error', 'You cannot delete your own account.');
+            $this->dispatch('swal:error', title: 'Gagal!', text: 'Anda tidak dapat menghapus akun Anda sendiri.');
             return;
         }
         User::find($id)->delete();
         $this->loadUsers();
-        session()->flash('status', 'Account deleted successfully.');
+        $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil dihapus.');
+    }
+
+    public function toggleStatus($id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = $user->status == 1 ? 0 : 1;
+        $user->save();
+
+        $this->loadUsers();
+        $this->dispatch('swal:success', title: 'Berhasil!', text: 'Status akun berhasil diubah.');
     }
 }; ?>
 
 <div>
     <x-slot name="header">{{ __('Account Management') }}</x-slot>
 
-    <div class="py-12">
+    <div class="py-12" x-data="deleteConfirmation">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                 <!-- Session Status -->
                 <x-auth-session-status class="mb-4" :status="session('status')" />
                 @if (session('error'))
-                    <div class="mb-4 font-medium text-sm text-red-600">
-                        {{ session('error') }}
-                    </div>
+                <div class="mb-4 font-medium text-sm text-red-600">
+                    {{ session('error') }}
+                </div>
                 @endif
 
                 <div class="mb-4 flex justify-between items-center">
@@ -156,46 +169,58 @@ new #[Layout('layouts.app')] class extends Component {
                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Role</th>
                                 <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status</th>
+                                <th
                                     class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Action</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse ($users as $user)
-                                <tr wire:key="{{ $user->id }}">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->email }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <span
-                                            class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            {{ $user->role?->name ?? 'No Role' }}
-                                        </span>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button wire:click="editUser({{ $user->id }})"
-                                            class="text-indigo-600 hover:text-indigo-900 mr-3">
-                                            {{ __('Edit') }}
-                                        </button>
-                                        @if ($user->id !== auth()->id())
-                                            <button wire:click="deleteUser({{ $user->id }})"
-                                                wire:confirm="Are you sure you want to delete this account?"
-                                                class="text-red-600 hover:text-red-900">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        @endif
-                                    </td>
-                                </tr>
+                            <tr wire:key="{{ $user->id }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->email }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        {{ $user->role?->name ?? 'No Role' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <span
+                                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $user->status ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                        {{ $user->status ? 'Aktif' : 'Tidak Aktif' }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <button wire:click="editUser({{ $user->id }})"
+                                        class="text-indigo-600 hover:text-indigo-900 mr-3">
+                                        {{ __('Edit') }}
+                                    </button>
+                                    @if ($user->id !== auth()->id())
+                                    <button @click="confirmAction({{ $user->id }}, 'toggleStatus', 'Ubah status akun menjadi {{ $user->status ? 'Tidak Aktif' : 'Aktif' }}?', 'Ya, Ubah!')"
+                                        class="{{ $user->status ? 'text-amber-600 hover:text-amber-900' : 'text-emerald-600 hover:text-emerald-900' }} mr-3">
+                                        {{ $user->status ? __('Non Aktifkan') : __('Aktifkan') }}
+                                    </button>
+                                    <!-- <button @click="confirmDelete({{ $user->id }}, 'deleteUser', 'Hapus akun ini?')"
+                                        class="text-red-600 hover:text-red-900">
+                                        {{ __('Delete') }}
+                                    </button> -->
+                                    @endif
+                                </td>
+                            </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5"
-                                        class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                                        No users found.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="5"
+                                    class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
+                                    No users found.
+                                </td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -235,7 +260,7 @@ new #[Layout('layouts.app')] class extends Component {
                         required>
                         <option value="">Select Role</option>
                         @foreach ($roles as $role)
-                            <option value="{{ $role->id }}">{{ $role->name }}</option>
+                        <option value="{{ $role->id }}">{{ $role->name }}</option>
                         @endforeach
                     </select>
                     <x-input-error :messages="$errors->get('role_id')" class="mt-2" />
@@ -246,9 +271,16 @@ new #[Layout('layouts.app')] class extends Component {
                     <x-text-input wire:model="password" id="password" type="password" class="mt-1 block w-full"
                         :required="!$isEditing" />
                     @if ($isEditing)
-                        <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
+                    <p class="text-xs text-gray-500 mt-1">Leave blank to keep current password.</p>
                     @endif
                     <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                </div>
+
+                <div class="block mt-4">
+                    <label for="status" class="inline-flex items-center">
+                        <input id="status" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="status" wire:model="status">
+                        <span class="ms-2 text-sm text-gray-600">{{ __('Status Aktif') }}</span>
+                    </label>
                 </div>
             </div>
 
@@ -263,4 +295,30 @@ new #[Layout('layouts.app')] class extends Component {
             </div>
         </form>
     </x-modal>
+
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('swal:success', (data) => {
+                Swal.fire({
+                    title: data[0].title,
+                    text: data[0].text,
+                    icon: 'success',
+                    confirmButtonColor: '#10b981', // emerald-500 matching the theme
+                    confirmButtonText: 'OK',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+
+            Livewire.on('swal:error', (data) => {
+                Swal.fire({
+                    title: data[0].title,
+                    text: data[0].text,
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444', // red-500
+                    confirmButtonText: 'OK'
+                });
+            });
+        });
+    </script>
 </div>

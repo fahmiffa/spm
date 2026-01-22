@@ -29,7 +29,7 @@
         <livewire:layout.navigation />
 
         <!-- Main Content Area -->
-        <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+        <div id="main-content-scroll" class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             <!-- Top Header -->
             <header class="sticky top-0 z-30 flex items-center justify-between h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center">
