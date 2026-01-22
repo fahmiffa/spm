@@ -224,31 +224,31 @@
                         <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">REKAPITULASI
                             DATA SDM</h3>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full border-collapse border border-gray-300 text-sm">
-                                <thead class="bg-gray-100 text-nowrap">
+                            <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
+                                <thead class="bg-gray-100 uppercase font-bold text-nowrap">
                                     <tr>
                                         <th rowspan="2" class="border border-gray-300 px-2 py-2 text-center">NO</th>
                                         <th rowspan="2" class="border border-gray-300 px-4 py-2 text-center">BENTUK</th>
                                         <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">SANTRI</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">USTADZ DIROSAH</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">USTADZ NON DIROSAH</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">PAMONG</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">MUSYRIF/MUSYRIFAH</th>
-                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-green-50">TENAGA KEPENDIDIKAN</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-blue-50">USTADZ DIROSAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-indigo-50">USTADZ NON DIROSAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-yellow-50">PAMONG</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-orange-50">MUSYRIF/MUSYRIFAH</th>
+                                        <th colspan="2" class="border border-gray-300 px-2 py-1 text-center bg-purple-50">TENAGA KEPENDIDIKAN</th>
                                     </tr>
-                                    <tr class="bg-gray-50">
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Laki-Laki</th>
-                                        <th class="border border-gray-300 px-2 py-1 text-center text-xs">Perempuan</th>
+                                    <tr class="bg-gray-50 text-center">
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
+                                        <th class="border border-gray-300 px-1 py-1">L</th>
+                                        <th class="border border-gray-300 px-1 py-1">P</th>
                                     </tr>
                                 </thead>
                                 <tbody>

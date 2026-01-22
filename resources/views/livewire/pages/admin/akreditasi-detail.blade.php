@@ -42,6 +42,21 @@ new #[Layout('layouts.app')] class extends Component {
     public $adminNvs = [];
 
     public $activeTab = 'profil';
+    public $levels = [];
+    public $fields = [
+        'santri_l',
+        'santri_p',
+        'ustadz_dirosah_l',
+        'ustadz_dirosah_p',
+        'ustadz_non_dirosah_l',
+        'ustadz_non_dirosah_p',
+        'pamong_l',
+        'pamong_p',
+        'musyrif_l',
+        'musyrif_p',
+        'tendik_l',
+        'tendik_p',
+    ];
 
     public function mount($uuid)
     {
@@ -54,9 +69,12 @@ new #[Layout('layouts.app')] class extends Component {
             ->firstOrFail();
 
         $userId = $this->akreditasi->user_id;
-        $this->pesantren = Pesantren::where('user_id', $userId)->first();
+        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
         $this->ipm = Ipm::where('user_id', $userId)->first();
         $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+        if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
+            $this->levels = $this->pesantren->units->pluck('unit')->toArray();
+        }
         $this->komponens = MasterEdpmKomponen::with('butirs')->get();
 
         // Load Pesantren EDPM
@@ -240,6 +258,15 @@ new #[Layout('layouts.app')] class extends Component {
 
         session()->flash('status', 'Akreditasi telah ditolak.');
         return redirect()->route('admin.akreditasi');
+    }
+
+    public function getTotal($field)
+    {
+        $total = 0;
+        foreach ($this->levels as $level) {
+            $total += (int)($this->sdm[$level]->$field ?? 0);
+        }
+        return $total;
     }
 }; ?>
 
@@ -499,16 +526,18 @@ new #[Layout('layouts.app')] class extends Component {
                                         <tr>
                                             <th rowspan="2" class="border border-gray-300 px-2 py-2">NO.</th>
                                             <th rowspan="2" class="border border-gray-300 px-2 py-2">BENTUK</th>
-                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-green-50">
-                                                SANTRI</th>
-                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-blue-50">
-                                                USTADZ DIROSAH</th>
-                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-yellow-50">
-                                                PAMONG</th>
-                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-purple-50">
-                                                TENAGA KEPENDIDIKAN</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-green-50">SANTRI</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-blue-50">USTADZ DIROSAH</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-indigo-50">USTADZ NON DIROSAH</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-yellow-50">PAMONG</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-orange-50">MUSYRIF/AH</th>
+                                            <th colspan="2" class="border border-gray-300 px-2 py-1 bg-purple-50">TENAGA KEPENDIDIKAN</th>
                                         </tr>
-                                        <tr class="bg-gray-50">
+                                        <tr class="bg-gray-50 text-center">
+                                            <th class="border border-gray-300">L</th>
+                                            <th class="border border-gray-300">P</th>
+                                            <th class="border border-gray-300">L</th>
+                                            <th class="border border-gray-300">P</th>
                                             <th class="border border-gray-300">L</th>
                                             <th class="border border-gray-300">P</th>
                                             <th class="border border-gray-300">L</th>
@@ -520,41 +549,32 @@ new #[Layout('layouts.app')] class extends Component {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (['SD', 'MI', 'SMP', 'MTs', 'SMA', 'MA', 'SMK', 'MAK', 'Satuan Pesantren Muadalah (SPM)'] as $level)
-                                        <tr>
+                                        @foreach ($levels as $index => $level)
+                                        <tr class="text-center">
                                             <td class="border border-gray-300 px-2 py-1 font-bold">
-                                                {{ $loop->iteration }}
+                                                {{ $index + 1 }}
                                             </td>
-                                            <td class="border border-gray-300 px-2 py-1 font-bold">
+                                            <td class="border border-gray-300 px-2 py-1 font-bold text-left uppercase">
                                                 {{ $level }}
                                             </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->santri_l ?? 0 }}
+                                            @foreach($fields as $field)
+                                            <td class="border border-gray-300 px-2 py-1">
+                                                {{ $sdm[$level]->$field ?? 0 }}
                                             </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->santri_p ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->ustadz_dirosah_l ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->ustadz_dirosah_p ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->pamong_l ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->pamong_p ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->tendik_l ?? 0 }}
-                                            </td>
-                                            <td class="border border-gray-300 px-2 py-1 text-center">
-                                                {{ $sdm[$level]->tendik_p ?? 0 }}
-                                            </td>
+                                            @endforeach
                                         </tr>
                                         @endforeach
                                     </tbody>
+                                    <tfoot class="bg-blue-50 font-bold text-center">
+                                        <tr>
+                                            <td colspan="2" class="border border-gray-300 px-4 py-2 uppercase">JUMLAH</td>
+                                            @foreach($fields as $field)
+                                            <td class="border border-gray-300 px-2 py-2">
+                                                {{ $this->getTotal($field) }}
+                                            </td>
+                                            @endforeach
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
