@@ -212,6 +212,10 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function approve()
     {
+        if (!$this->checkScores()) {
+            return;
+        }
+
         $this->validate([
             'nomor_sk' => 'required|string|max:255',
         ], [
@@ -245,6 +249,10 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function reject()
     {
+        if (!$this->checkScores()) {
+            return;
+        }
+
         $this->validate([
             'catatan_admin' => 'required|string',
         ], [
@@ -267,6 +275,31 @@ new #[Layout('layouts.app')] class extends Component {
             $total += (int)($this->sdm[$level]->$field ?? 0);
         }
         return $total;
+    }
+
+    private function checkScores()
+    {
+        $isMissing = false;
+        foreach ($this->komponens as $komponen) {
+            foreach ($komponen->butirs as $butir) {
+                if (empty($this->asesor1Nks[$butir->id]) || empty($this->adminNvs[$butir->id])) {
+                    $isMissing = true;
+                    break 2;
+                }
+            }
+        }
+
+        if ($isMissing) {
+            $this->dispatch(
+                'notification-received',
+                type: 'error',
+                title: 'Data Belum Lengkap',
+                message: 'Tidak dapat memproses akreditasi. Pastikan nilai NK (Asesor) dan NV (Admin) telah diisi untuk semua butir.'
+            );
+            return false;
+        }
+
+        return true;
     }
 }; ?>
 
