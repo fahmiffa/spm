@@ -10,6 +10,11 @@ class Asesor extends Model
 
     protected $casts = [
         'layanan_satuan_pendidikan' => 'array',
+        'riwayat_pendidikan' => 'array',
+        'pengalaman_pelatihan' => 'array',
+        'pengalaman_bekerja' => 'array',
+        'pengalaman_berorganisasi' => 'array',
+        'karya_publikasi' => 'array',
     ];
 
     public function user()
