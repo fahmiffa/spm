@@ -20,6 +20,8 @@ class Akreditasi extends Model
         'nomor_sk',
         'catatan',
         'status',
+        'nilai',
+        'peringkat',
     ];
 
     protected static function boot()

@@ -105,21 +105,37 @@ new #[Layout('layouts.app')] class extends Component {
 
         session()->flash('status', 'Pengajuan akreditasi berhasil dihapus.');
     }
+
+    public function banding($id, $alasan)
+    {
+        $akreditasi = Akreditasi::where('user_id', auth()->id())->findOrFail($id);
+
+        // Ensure status is 2 (Rejected) and has assessments
+        if ($akreditasi->status == 2 && $akreditasi->assessments()->exists()) {
+            $akreditasi->update([
+                'status' => 4, // Validasi
+                'catatan' => $alasan,
+            ]);
+
+            // Notify Admin
+            $admins = \App\Models\User::whereHas('role', function ($q) {
+                $q->where('id', 1);
+            })->get();
+            \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
+                'banding',
+                'Pengajuan Banding Baru',
+                'Pesantren ' . (auth()->user()->pesantren->nama_pesantren ?? auth()->user()->name) . ' telah mengajukan banding akreditasi.',
+                route('admin.akreditasi')
+            ));
+
+            session()->flash('status', 'Pengajuan banding berhasil dikirim. Status berubah menjadi Validasi.');
+        } else {
+            session()->flash('error', 'Gagal mengajukan banding. Pastikan status pengajuan adalah Ditolak dan sudah melalui tahap Assessment.');
+        }
+    }
 }; ?>
 
-<div class="py-12" x-data="{
-    init() {
-        window.addEventListener('show-validation-alert', event => {
-            Swal.fire({
-                title: event.detail.title,
-                html: event.detail.html,
-                icon: 'error',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#4f46e5' 
-            });
-        });
-    }
-}">
+<div class="py-12" x-data="akreditasiPesantren">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -138,18 +154,26 @@ new #[Layout('layouts.app')] class extends Component {
                 </div>
                 @endif
 
+                @if (session('error'))
+                <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+                    {{ session('error') }}
+                </div>
+                @endif
+
                 <div class="overflow-x-auto">
                     <table class="min-w-full bg-white border border-gray-200">
                         <thead>
                             <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
                                 <th class="py-3 px-6 text-left">No</th>
                                 <th class="py-3 px-6 text-center">Status</th>
+                                <th class="py-3 px-6 text-center">Nilai</th>
+                                <th class="py-3 px-6 text-center">Peringkat</th>
                                 <th class="py-3 px-6 text-center">Catatan</th>
-                                <th class="py-3 px-6 text-center">Tanggal Pengajuan</th>
+                                <th class="py-3 px-6 text-center">Tanggal</th>
                                 <th class="py-3 px-6 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-sm font-light">
+                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
                             @forelse ($this->akreditasis as $index => $item)
                             <tr class="border-b border-gray-200 hover:bg-gray-100">
                                 <td class="py-3 px-6 text-left whitespace-nowrap">
@@ -161,6 +185,21 @@ new #[Layout('layouts.app')] class extends Component {
                                         {{ Akreditasi::getStatusLabel($item->status) }}
                                     </span>
                                 </td>
+                                <td class="py-3 px-6 text-center font-bold text-indigo-600">
+                                    {{ $item->nilai ?? '-' }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    @if($item->peringkat)
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold 
+                                        {{ $item->peringkat == 'Unggul' ? 'bg-green-100 text-green-700' : 
+                                           ($item->peringkat == 'Baik' ? 'bg-blue-100 text-blue-700' : 
+                                           'bg-yellow-100 text-yellow-700') }}">
+                                        {{ $item->peringkat }}
+                                    </span>
+                                    @else
+                                    -
+                                    @endif
+                                </td>
                                 <td class="py-3 px-6 text-left font-medium">
                                     {{ $item->catatan }}
                                 </td>
@@ -168,16 +207,23 @@ new #[Layout('layouts.app')] class extends Component {
                                     {{ $item->created_at->format('d M Y H:i') }}
                                 </td>
                                 <td class="py-3 px-6 text-center">
-                                    <button wire:click="delete({{ $item->id }})"
-                                        wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"
-                                        class="text-red-600 hover:text-red-900 font-medium">
-                                        Hapus
-                                    </button>
+                                    <div class="flex items-center justify-center gap-4">
+                                        @if ($item->status == 2 && $item->assessments()->exists())
+                                        <button @click="confirmBanding({{ $item->id }})"
+                                            class="text-blue-600 hover:text-blue-900 font-medium">
+                                            Banding
+                                        </button>
+                                        @endif
+                                        <button @click="confirmDelete({{ $item->id }})"
+                                            class="text-red-600 hover:text-red-900 font-medium">
+                                            Hapus
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="py-10 text-center text-gray-500">
+                                <td colspan="7" class="py-10 text-center text-gray-500">
                                     Belum ada data pengajuan akreditasi.
                                 </td>
                             </tr>

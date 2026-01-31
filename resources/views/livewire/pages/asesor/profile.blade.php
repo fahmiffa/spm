@@ -51,6 +51,17 @@ new #[Layout('layouts.app')] class extends Component {
     // Existing file paths
     public $existing_files = [];
 
+    // Mode Edit
+    public $isEditing = false;
+
+    public function toggleEdit()
+    {
+        if ($this->isEditing) {
+            $this->mount();
+        }
+        $this->isEditing = !$this->isEditing;
+    }
+
     public function mount()
     {
         if (!auth()->user()->isAsesor()) {
@@ -92,7 +103,19 @@ new #[Layout('layouts.app')] class extends Component {
         $this->pengalaman_pelatihan = $this->asesor->pengalaman_pelatihan ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
         $this->pengalaman_bekerja = $this->asesor->pengalaman_bekerja ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
         $this->pengalaman_berorganisasi = $this->asesor->pengalaman_berorganisasi ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
-        $this->karya_publikasi = $this->asesor->karya_publikasi ?? [''];
+        $rawKarya = $this->asesor->karya_publikasi ?? [];
+        $this->karya_publikasi = [];
+        if (empty($rawKarya)) {
+            $this->karya_publikasi = [['judul' => '', 'link' => '']];
+        } else {
+            foreach ($rawKarya as $karya) {
+                if (is_array($karya)) {
+                    $this->karya_publikasi[] = $karya;
+                } else {
+                    $this->karya_publikasi[] = ['judul' => $karya, 'link' => ''];
+                }
+            }
+        }
 
         $this->existing_files = [
             'foto' => $this->asesor->foto,
@@ -113,7 +136,7 @@ new #[Layout('layouts.app')] class extends Component {
         } elseif ($field == 'pengalaman_berorganisasi') {
             $this->pengalaman_berorganisasi[] = ['dimana' => '', 'kapan' => '', 'sebagai' => ''];
         } elseif ($field == 'karya_publikasi') {
-            $this->karya_publikasi[] = '';
+            $this->karya_publikasi[] = ['judul' => '', 'link' => ''];
         }
     }
 
@@ -127,7 +150,7 @@ new #[Layout('layouts.app')] class extends Component {
     {
         return [
             'required' => ':attribute wajib diisi.',
-            'mimes' => ':attribute harus berformat PDF.',
+            'mimes' => ':attribute harus berformat PDF, JPG, JPEG, atau PNG.',
             'max' => 'Ukuran :attribute tidak boleh lebih dari :max KB (2MB).',
             'email' => 'Format :attribute tidak valid.',
             'uploaded' => ':attribute gagal diunggah. Kemungkinan file terlalu besar (Max 2MB) atau koneksi terputus.',
@@ -153,9 +176,9 @@ new #[Layout('layouts.app')] class extends Component {
             'nama_tanpa_gelar' => 'required|string|max:255',
             'email_pribadi' => 'nullable|email',
             'foto_upload' => 'nullable|image|max:1024',
-            'ktp_file_upload' => 'nullable|mimes:pdf|max:2048',
-            'ijazah_file_upload' => 'nullable|mimes:pdf|max:2048',
-            'kartu_nbm_file_upload' => 'nullable|mimes:pdf|max:2048',
+            'ktp_file_upload' => 'nullable|mimes:pdf,jpg,jpeg,png|max:2048',
+            'ijazah_file_upload' => 'nullable|mimes:pdf,jpg,jpeg,png|max:2048',
+            'kartu_nbm_file_upload' => 'nullable|mimes:pdf,jpg,jpeg,png|max:2048',
             'password' => 'nullable|min:8',
         ]);
 
@@ -234,8 +257,22 @@ new #[Layout('layouts.app')] class extends Component {
     </div>
 </x-slot>
 
-<div class="py-12">
+<div class="py-12" x-data="fileManagement()">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <!-- Header with Toggle Button -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div>
+                <h2 class="text-xl font-bold text-gray-800">Profil Asesor</h2>
+                <p class="text-sm text-gray-500">Kelola informasi data diri dan pengalaman Anda.</p>
+            </div>
+            <div>
+                <button wire:click="toggleEdit" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                    {{ $isEditing ? 'Batal Edit' : 'Edit Profil' }}
+                </button>
+            </div>
+        </div>
+
+        @if($isEditing)
         <form wire:submit="save" class="space-y-8">
             <!-- Section A: DATA DIRI -->
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-xl border border-gray-100">
@@ -292,7 +329,7 @@ new #[Layout('layouts.app')] class extends Component {
                                 <x-input-error :messages="$errors->get('nama_tanpa_gelar')" class="mt-1" />
                             </div>
                             <div>
-                                <x-input-label for="nbm_nia" value="NBM / NIA-PM" />
+                                <x-input-label for="nbm_nia" value="NBM" />
                                 <x-text-input wire:model="nbm_nia" id="nbm_nia" type="text" class="mt-1 block w-full bg-gray-50 border-gray-200 focus:bg-white transition-all shadow-sm" />
                             </div>
                             <div>
@@ -353,12 +390,48 @@ new #[Layout('layouts.app')] class extends Component {
                             <textarea wire:model="alamat_rumah" id="alamat_rumah" rows="2" class="mt-1 block w-full border-gray-200 bg-gray-50 focus:bg-white transition-all shadow-sm focus:border-indigo-500 focus:ring-indigo-500 rounded-md"></textarea>
                         </div>
                         <div>
-                            <x-input-label for="provinsi" value="Provinsi" />
-                            <x-text-input wire:model="provinsi" id="provinsi" type="text" class="mt-1 block w-full bg-gray-50 border-gray-200 focus:bg-white transition-all shadow-sm" />
-                        </div>
-                        <div>
-                            <x-input-label for="kota_kabupaten" value="Kota/Kabupaten" />
-                            <x-text-input wire:model="kota_kabupaten" id="kota_kabupaten" type="text" class="mt-1 block w-full bg-gray-50 border-gray-200 focus:bg-white transition-all shadow-sm" />
+                            <div x-data="wilayahSelector({
+                                selectedProvinsiNama: @entangle('provinsi'),
+                                selectedKabupatenNama: @entangle('kota_kabupaten')
+                            })" class="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-1 md:col-span-2">
+                                <div class="relative">
+                                    <x-input-label for="provinsi" value="Provinsi" />
+                                    <div class="relative mt-1">
+                                        <input type="text"
+                                            x-model="provinsiSearch"
+                                            placeholder="Cari Provinsi..."
+                                            @focus="showProvinsiConfig = true"
+                                            @click.outside="showProvinsiConfig = false"
+                                            class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                        <div x-show="showProvinsiConfig && filteredProvinsi.length > 0" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                            <ul>
+                                                <template x-for="item in filteredProvinsi" :key="item.kode">
+                                                    <li @click="selectProvinsi(item)" class="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm" x-text="item.nama"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <x-input-label for="kota_kabupaten" value="Kota/Kabupaten" />
+                                    <div class="relative mt-1">
+                                        <input type="text"
+                                            x-model="kabupatenSearch"
+                                            placeholder="Cari Kota/Kabupaten..."
+                                            @focus="showKabupatenConfig = true"
+                                            @click.outside="showKabupatenConfig = false"
+                                            class="block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm disabled:bg-gray-100"
+                                            :disabled="!currentProvinsiKode">
+                                        <div x-show="showKabupatenConfig && filteredKabupaten.length > 0" class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                            <ul>
+                                                <template x-for="item in filteredKabupaten" :key="item.kode">
+                                                    <li @click="selectKabupaten(item)" class="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm" x-text="item.nama"></li>
+                                                </template>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -598,15 +671,22 @@ new #[Layout('layouts.app')] class extends Component {
                             </div>
                             <div class="space-y-3">
                                 @foreach($karya_publikasi as $index => $item)
-                                <div class="flex gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100 animate-fadeIn">
-                                    <div class="flex-1">
-                                        <x-text-input wire:model="karya_publikasi.{{ $index }}" type="text" class="block w-full text-sm py-1.5" placeholder="Judul Karya / Link Publikasi" />
+                                <div class="grid grid-cols-1 md:grid-cols-10 gap-3 items-end bg-gray-50 p-3 rounded-lg border border-gray-100 animate-fadeIn">
+                                    <div class="md:col-span-5">
+                                        <x-input-label value="Judul Karya Publikasi" class="text-[10px] text-gray-400" />
+                                        <x-text-input wire:model="karya_publikasi.{{ $index }}.judul" type="text" class="block w-full text-sm py-1.5" placeholder="Judul Buku / Jurnal / Artikel" />
                                     </div>
-                                    <button type="button" wire:click="removeRow('karya_publikasi', {{ $index }})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
+                                    <div class="md:col-span-4">
+                                        <x-input-label value="Link Publikasi (URL)" class="text-[10px] text-gray-400" />
+                                        <x-text-input wire:model="karya_publikasi.{{ $index }}.link" type="text" class="block w-full text-sm py-1.5" placeholder="https://..." />
+                                    </div>
+                                    <div class="md:col-span-1 flex justify-center">
+                                        <button type="button" wire:click="removeRow('karya_publikasi', {{ $index }})" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 @endforeach
                             </div>
@@ -634,20 +714,23 @@ new #[Layout('layouts.app')] class extends Component {
                             <div class="flex flex-col gap-2">
                                 <label class="flex flex-col items-center justify-center h-40 w-full border-2 border-dashed border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all cursor-pointer group">
                                     @if($ktp_file_upload)
+                                    @if(in_array($ktp_file_upload->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg']))
+                                    <img src="{{ $ktp_file_upload->temporaryUrl() }}" class="h-32 w-auto object-contain rounded-lg" alt="Preview KTP">
+                                    @else
                                     <div class="flex flex-col items-center animate-fadeIn">
                                         <svg class="w-12 h-12 text-red-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-2h2v2zm0-4h-2V7h2v5z" />
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                                         </svg>
                                         <span class="text-[10px] text-gray-600 font-bold uppercase">{{ $ktp_file_upload->getClientOriginalName() }}</span>
                                         <span class="text-[9px] text-emerald-500 font-medium">Siap Diunggah</span>
                                     </div>
+                                    @endif
                                     @elseif($existing_files['ktp_file'])
                                     <div class="flex flex-col items-center opacity-70 group-hover:opacity-100 transition-opacity">
                                         <svg class="w-12 h-12 text-indigo-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                                         </svg>
-                                        <span class="text-[10px] text-gray-500 font-bold uppercase">KTP_TERUNGGAH.PDF</span>
+                                        <span class="text-[10px] text-gray-500 font-bold uppercase">FILE_KTP_TERUNGGAH</span>
                                         <span class="text-[9px] text-indigo-400 font-medium">Klik untuk Ganti</span>
                                     </div>
                                     @else
@@ -656,7 +739,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </svg>
                                     <span class="text-xs text-gray-500 group-hover:text-amber-600 font-medium text-center px-4">Klik untuk Unggah KTP</span>
                                     @endif
-                                    <input type="file" wire:model="ktp_file_upload" class="hidden" accept="application/pdf">
+                                    <input type="file" wire:model="ktp_file_upload" class="hidden" accept="application/pdf,image/png,image/jpeg">
                                 </label>
                                 @if($existing_files['ktp_file'])
                                 <a href="{{ Storage::url($existing_files['ktp_file']) }}" target="_blank" class="flex items-center gap-2 text-[10px] text-emerald-600 font-bold hover:underline justify-center mt-1">
@@ -677,6 +760,9 @@ new #[Layout('layouts.app')] class extends Component {
                             <div class="flex flex-col gap-2">
                                 <label class="flex flex-col items-center justify-center h-40 w-full border-2 border-dashed border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all cursor-pointer group">
                                     @if($ijazah_file_upload)
+                                    @if(in_array($ijazah_file_upload->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg']))
+                                    <img src="{{ $ijazah_file_upload->temporaryUrl() }}" class="h-32 w-auto object-contain rounded-lg" alt="Preview Ijazah">
+                                    @else
                                     <div class="flex flex-col items-center animate-fadeIn">
                                         <svg class="w-12 h-12 text-red-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
@@ -684,12 +770,13 @@ new #[Layout('layouts.app')] class extends Component {
                                         <span class="text-[10px] text-gray-600 font-bold uppercase">{{ $ijazah_file_upload->getClientOriginalName() }}</span>
                                         <span class="text-[9px] text-emerald-500 font-medium">Siap Diunggah</span>
                                     </div>
+                                    @endif
                                     @elseif($existing_files['ijazah_file'])
                                     <div class="flex flex-col items-center opacity-70 group-hover:opacity-100 transition-opacity">
                                         <svg class="w-12 h-12 text-indigo-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                                         </svg>
-                                        <span class="text-[10px] text-gray-500 font-bold uppercase">IJAZAH_TERUNGGAH.PDF</span>
+                                        <span class="text-[10px] text-gray-500 font-bold uppercase">FILE_IJAZAH_TERUNGGAH</span>
                                         <span class="text-[9px] text-indigo-400 font-medium">Klik untuk Ganti</span>
                                     </div>
                                     @else
@@ -698,7 +785,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </svg>
                                     <span class="text-xs text-gray-500 group-hover:text-amber-600 font-medium text-center px-4">Klik untuk Unggah Ijazah</span>
                                     @endif
-                                    <input type="file" wire:model="ijazah_file_upload" class="hidden" accept="application/pdf">
+                                    <input type="file" wire:model="ijazah_file_upload" class="hidden" accept="application/pdf,image/png,image/jpeg">
                                 </label>
                                 @if($existing_files['ijazah_file'])
                                 <a href="{{ Storage::url($existing_files['ijazah_file']) }}" target="_blank" class="flex items-center gap-2 text-[10px] text-emerald-600 font-bold hover:underline justify-center mt-1">
@@ -719,6 +806,9 @@ new #[Layout('layouts.app')] class extends Component {
                             <div class="flex flex-col gap-2">
                                 <label class="flex flex-col items-center justify-center h-40 w-full border-2 border-dashed border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition-all cursor-pointer group">
                                     @if($kartu_nbm_file_upload)
+                                    @if(in_array($kartu_nbm_file_upload->getMimeType(), ['image/jpeg', 'image/png', 'image/jpg']))
+                                    <img src="{{ $kartu_nbm_file_upload->temporaryUrl() }}" class="h-32 w-auto object-contain rounded-lg" alt="Preview Kartu NBM">
+                                    @else
                                     <div class="flex flex-col items-center animate-fadeIn">
                                         <svg class="w-12 h-12 text-red-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
@@ -726,12 +816,13 @@ new #[Layout('layouts.app')] class extends Component {
                                         <span class="text-[10px] text-gray-600 font-bold uppercase">{{ $kartu_nbm_file_upload->getClientOriginalName() }}</span>
                                         <span class="text-[9px] text-emerald-500 font-medium">Siap Diunggah</span>
                                     </div>
+                                    @endif
                                     @elseif($existing_files['kartu_nbm_file'])
                                     <div class="flex flex-col items-center opacity-70 group-hover:opacity-100 transition-opacity">
                                         <svg class="w-12 h-12 text-indigo-500 mb-2" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" />
                                         </svg>
-                                        <span class="text-[10px] text-gray-500 font-bold uppercase">NBM_TERUNGGAH.PDF</span>
+                                        <span class="text-[10px] text-gray-500 font-bold uppercase">FILE_NBM_TERUNGGAH</span>
                                         <span class="text-[9px] text-indigo-400 font-medium">Klik untuk Ganti</span>
                                     </div>
                                     @else
@@ -740,7 +831,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </svg>
                                     <span class="text-xs text-gray-500 group-hover:text-amber-600 font-medium text-center px-4">Klik untuk Unggah Kartu NBM</span>
                                     @endif
-                                    <input type="file" wire:model="kartu_nbm_file_upload" class="hidden" accept="application/pdf">
+                                    <input type="file" wire:model="kartu_nbm_file_upload" class="hidden" accept="application/pdf,image/png,image/jpeg">
                                 </label>
                                 @if($existing_files['kartu_nbm_file'])
                                 <a href="{{ Storage::url($existing_files['kartu_nbm_file']) }}" target="_blank" class="flex items-center gap-2 text-[10px] text-emerald-600 font-bold hover:underline justify-center mt-1">
@@ -767,11 +858,285 @@ new #[Layout('layouts.app')] class extends Component {
                     <span class="text-sm font-semibold italic">Menyimpan perubahan...</span>
                 </div>
 
+                <button type="button" wire:click="toggleEdit" class="mr-3 text-gray-600 hover:text-gray-900 font-medium text-sm">Batal</button>
                 <button type="submit" wire:loading.attr="disabled" class="relative inline-flex items-center justify-center px-10 py-3.5 overflow-hidden font-bold text-white transition-all duration-300 bg-indigo-600 rounded-xl group hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 active:scale-95">
                     <span class="relative">{{ __('SIMPAN PROFIL ASESOR') }}</span>
                 </button>
             </div>
         </form>
+        @else
+        <!-- View Mode Content -->
+        <div class="space-y-8">
+            <!-- Section A: Identitas -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100 p-8">
+                <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="p-2 bg-indigo-50 rounded-lg">
+                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 uppercase tracking-wide">A. IDENTITAS ASESOR</h3>
+                </div>
+                <div class="flex flex-col md:flex-row gap-8">
+                    <!-- Photo -->
+                    <div class="flex-shrink-0">
+                        <div class="w-32 h-32 rounded-2xl overflow-hidden bg-gray-100 border-4 border-white shadow-lg mx-auto md:mx-0">
+                            @if($existing_files['foto'])
+                            <img src="{{ Storage::url($existing_files['foto']) }}" class="w-full h-full object-cover">
+                            @else
+                            <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    <!-- Details -->
+                    <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Nama Lengkap (Gelar)</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $nama_dengan_gelar ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Nama Lengkap (Tanpa Gelar)</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $nama_tanpa_gelar ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">NBM / NIA</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $nbm_nia ?: '-' }} / {{ $nomor_induk_asesor_pm ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">NIK</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $nik ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">TTL & Gender</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $tempat_lahir ?: '-' }}, {{ $tanggal_lahir ?: '-' }} ({{ $jenis_kelamin ?: '-' }})</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Status Perkawinan</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $status_perkawinan ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Email & WhatsApp</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $email_pribadi ?: '-' }} | {{ $whatsapp ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Alamat Rumah</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $alamat_rumah ?: '-' }}, {{ $kota_kabupaten?:'-' }}, {{ $provinsi?:'-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Unit Kerja & Profesi</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $unit_kerja ?: '-' }} ({{ $profesi ?: '-' }})</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Jabatan Utama</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $jabatan_utama ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Pendidikan Terakhir</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $pendidikan_terakhir ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Thn Terbit Sertifikat</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $tahun_terbit_sertifikat ?: '-' }}</p>
+                        </div>
+                        <div>
+                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Akreditasi</span>
+                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">
+                                @php
+                                $assessments = auth()->user()->asesor->assessments ?? collect();
+                                $activeProcess = $assessments->contains(function ($a) {
+                                return !in_array($a->akreditasi->status, [1, 2]);
+                                });
+                                @endphp
+                                @if ($assessments->isEmpty())
+                                -
+                                @elseif ($activeProcess)
+                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase">
+                                    Proses
+                                </span>
+                                @else
+                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase">
+                                    Selesai
+                                </span>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section B: Pengalaman -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100 p-8">
+                <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="p-2 bg-emerald-50 rounded-lg">
+                        <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 uppercase tracking-wide">B. PENGALAMAN</h3>
+                </div>
+
+                <div class="space-y-8">
+                    <!-- 1. Pendidikan -->
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Riwayat Pendidikan</h4>
+                        @if(empty($riwayat_pendidikan) || (count($riwayat_pendidikan)==1 && empty($riwayat_pendidikan[0]['dimana'])))
+                        <p class="text-gray-400 italic text-sm ml-4">Tidak ada data.</p>
+                        @else
+                        <div class="grid grid-cols-1 gap-3 ml-4">
+                            @foreach($riwayat_pendidikan as $item)
+                            @if(!empty($item['dimana']))
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div class="font-bold text-gray-800">{{ $item['dimana'] }}</div>
+                                <div class="text-sm text-gray-600 flex justify-between">
+                                    <span>{{ $item['jenjang'] }}</span>
+                                    <span class="font-mono text-emerald-600">{{ $item['kapan'] }}</span>
+                                </div>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- 2. Pelatihan -->
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Pengalaman Pelatihan</h4>
+                        @if(empty($pengalaman_pelatihan) || (count($pengalaman_pelatihan)==1 && empty($pengalaman_pelatihan[0]['dimana'])))
+                        <p class="text-gray-400 italic text-sm ml-4">Tidak ada data.</p>
+                        @else
+                        <div class="grid grid-cols-1 gap-3 ml-4">
+                            @foreach($pengalaman_pelatihan as $item)
+                            @if(!empty($item['dimana']))
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div class="font-bold text-gray-800">{{ $item['dimana'] }}</div>
+                                <div class="text-sm text-gray-600 flex justify-between">
+                                    <span>{{ $item['sebagai'] }}</span>
+                                    <span class="font-mono text-emerald-600">{{ $item['kapan'] }}</span>
+                                </div>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- 3. Bekerja -->
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Pengalaman Bekerja</h4>
+                        @if(empty($pengalaman_bekerja) || (count($pengalaman_bekerja)==1 && empty($pengalaman_bekerja[0]['dimana'])))
+                        <p class="text-gray-400 italic text-sm ml-4">Tidak ada data.</p>
+                        @else
+                        <div class="grid grid-cols-1 gap-3 ml-4">
+                            @foreach($pengalaman_bekerja as $item)
+                            @if(!empty($item['dimana']))
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div class="font-bold text-gray-800">{{ $item['dimana'] }}</div>
+                                <div class="text-sm text-gray-600 flex justify-between">
+                                    <span>{{ $item['sebagai'] }}</span>
+                                    <span class="font-mono text-emerald-600">{{ $item['kapan'] }}</span>
+                                </div>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- 4. Organisasi -->
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Pengalaman Berorganisasi</h4>
+                        @if(empty($pengalaman_berorganisasi) || (count($pengalaman_berorganisasi)==1 && empty($pengalaman_berorganisasi[0]['dimana'])))
+                        <p class="text-gray-400 italic text-sm ml-4">Tidak ada data.</p>
+                        @else
+                        <div class="grid grid-cols-1 gap-3 ml-4">
+                            @foreach($pengalaman_berorganisasi as $item)
+                            @if(!empty($item['dimana']))
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <div class="font-bold text-gray-800">{{ $item['dimana'] }}</div>
+                                <div class="text-sm text-gray-600 flex justify-between">
+                                    <span>{{ $item['sebagai'] }}</span>
+                                    <span class="font-mono text-emerald-600">{{ $item['kapan'] }}</span>
+                                </div>
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+
+                    <!-- 5. Karya Publikasi -->
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Karya Publikasi</h4>
+                        @if(empty($karya_publikasi) || (count($karya_publikasi)==1 && empty($karya_publikasi[0]['judul'])))
+                        <p class="text-gray-400 italic text-sm ml-4">Tidak ada data.</p>
+                        @else
+                        <div class="grid grid-cols-1 gap-3 ml-4">
+                            @foreach($karya_publikasi as $item)
+                            @if(!empty($item['judul']))
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 flex justify-between items-center">
+                                <div class="font-bold text-gray-800 text-sm py-1">{{ $item['judul'] }}</div>
+                                @if(!empty($item['link']))
+                                <a href="{{ $item['link'] }}" target="_blank" class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full hover:bg-indigo-100 transition-colors flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                    Link
+                                </a>
+                                @endif
+                            </div>
+                            @endif
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section C: Dokumen -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100 p-8">
+                <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="p-2 bg-amber-50 rounded-lg">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 uppercase tracking-wide">C. DOKUMEN</h3>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    @php
+                    $docs = [
+                    'ktp_file' => 'KTP',
+                    'ijazah_file' => 'Ijazah Terakhir',
+                    'kartu_nbm_file' => 'Kartu NBM'
+                    ];
+                    @endphp
+                    @foreach($docs as $key => $label)
+                    @if($existing_files[$key])
+                    <a href="{{ Storage::url($existing_files[$key]) }}" target="_blank" class="flex items-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:bg-white hover:shadow-md transition-all group">
+                        <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-bold text-gray-700 text-sm">{{ $label }}</p>
+                            <p class="text-xs text-green-500 font-medium">Tersedia • Klik Lihat</p>
+                        </div>
+                    </a>
+                    @endif
+                    @endforeach
+                </div>
+                @if(!($existing_files['ktp_file'] || $existing_files['ijazah_file'] || $existing_files['kartu_nbm_file']))
+                <p class="text-gray-400 italic text-center">Belum ada dokumen yang diunggah.</p>
+                @endif
+            </div>
+
+        </div>
+        @endif
     </div>
     <style>
         @keyframes fadeIn {

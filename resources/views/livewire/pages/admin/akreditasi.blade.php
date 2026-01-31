@@ -12,6 +12,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesor_id2;
     public $tanggal_mulai;
     public $tanggal_berakhir;
+    public $catatan_penolakan;
+    public $action_type = 'approve'; // 'approve' or 'reject'
 
     public function mount()
     {
@@ -27,7 +29,13 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getAsesorsProperty()
     {
-        return Asesor::with('user')->get();
+        return Asesor::with('user')
+            ->whereDoesntHave('assessments', function ($query) {
+                $query->whereHas('akreditasi', function ($q) {
+                    $q->whereNotIn('status', [1, 2]);
+                });
+            })
+            ->get();
     }
 
     public function delete($id)
@@ -43,84 +51,109 @@ new #[Layout('layouts.app')] class extends Component {
         $this->asesor_id2 = '';
         $this->tanggal_mulai = '';
         $this->tanggal_berakhir = '';
+        $this->catatan_penolakan = '';
+        $this->action_type = 'approve';
         $this->resetErrorBag();
         $this->dispatch('open-modal', 'verifikasi-modal');
     }
 
     public function verifikasi()
     {
-        $this->validate([
-            'asesor_id1' => 'required|exists:asesors,id',
-            'asesor_id2' => 'nullable|exists:asesors,id|different:asesor_id1',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_berakhir' => 'required|date|after_or_equal:tanggal_mulai',
-        ], [
-            'asesor_id1.required' => 'Asesor 1 wajib dipilih.',
-            'asesor_id1.exists' => 'Asesor 1 tidak valid.',
-            'asesor_id2.exists' => 'Asesor 2 tidak valid.',
-            'asesor_id2.different' => 'Asesor 1 dan Asesor 2 harus berbeda.',
-            'tanggal_mulai.required' => 'Tanggal mulai wajib diisi.',
-            'tanggal_mulai.date' => 'Format tanggal mulai salah.',
-            'tanggal_berakhir.required' => 'Tanggal berakhir wajib diisi.',
-            'tanggal_berakhir.date' => 'Format tanggal berakhir salah.',
-            'tanggal_berakhir.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai.',
-        ]);
+        // Validasi berdasarkan action_type
+        if ($this->action_type === 'approve') {
+            $this->validate([
+                'asesor_id1' => 'required|exists:asesors,id',
+                'asesor_id2' => 'nullable|exists:asesors,id|different:asesor_id1',
+                'tanggal_mulai' => 'required|date',
+                'tanggal_berakhir' => 'required|date|after_or_equal:tanggal_mulai',
+            ], [
+                'asesor_id1.required' => 'Asesor 1 wajib dipilih.',
+                'asesor_id1.exists' => 'Asesor 1 tidak valid.',
+                'asesor_id2.exists' => 'Asesor 2 tidak valid.',
+                'asesor_id2.different' => 'Asesor 1 dan Asesor 2 harus berbeda.',
+                'tanggal_mulai.required' => 'Tanggal mulai wajib diisi.',
+                'tanggal_mulai.date' => 'Format tanggal mulai salah.',
+                'tanggal_berakhir.required' => 'Tanggal berakhir wajib diisi.',
+                'tanggal_berakhir.date' => 'Format tanggal berakhir salah.',
+                'tanggal_berakhir.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai.',
+            ]);
 
-        // Clear existing assessments first
-        Assessment::where('akreditasi_id', $this->akreditasi_id)->delete();
+            // Clear existing assessments first
+            Assessment::where('akreditasi_id', $this->akreditasi_id)->delete();
 
-        // Create Asesor 1
-        Assessment::create([
-            'akreditasi_id' => $this->akreditasi_id,
-            'asesor_id' => $this->asesor_id1,
-            'tipe' => 1,
-            'tanggal_mulai' => $this->tanggal_mulai,
-            'tanggal_berakhir' => $this->tanggal_berakhir,
-        ]);
-
-        // Create Asesor 2 if selected
-        if ($this->asesor_id2) {
+            // Create Asesor 1
             Assessment::create([
                 'akreditasi_id' => $this->akreditasi_id,
-                'asesor_id' => $this->asesor_id2,
-                'tipe' => 2,
+                'asesor_id' => $this->asesor_id1,
+                'tipe' => 1,
                 'tanggal_mulai' => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
             ]);
-        }
 
-        $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
-        $akreditasi->update(['status' => 5]); // 5. assesment
-
-        // Notify Pesantren
-        $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('assessment', 'Update Status: Assessment', 'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.', route('pesantren.akreditasi')));
-
-        // Notify Asesor 1
-        $asesor1 = Asesor::with('user')->find($this->asesor_id1);
-        if ($asesor1 && $asesor1->user) {
-            $asesor1->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 1 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
-        }
-
-        // Notify Asesor 2
-        if ($this->asesor_id2) {
-            $asesor2 = Asesor::with('user')->find($this->asesor_id2);
-            if ($asesor2 && $asesor2->user) {
-                $asesor2->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 2 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
+            // Create Asesor 2 if selected
+            if ($this->asesor_id2) {
+                Assessment::create([
+                    'akreditasi_id' => $this->akreditasi_id,
+                    'asesor_id' => $this->asesor_id2,
+                    'tipe' => 2,
+                    'tanggal_mulai' => $this->tanggal_mulai,
+                    'tanggal_berakhir' => $this->tanggal_berakhir,
+                ]);
             }
+
+            $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
+            $akreditasi->update(['status' => 5]); // 5. assesment
+
+            // Notify Pesantren
+            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('assessment', 'Update Status: Assessment', 'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.', route('pesantren.akreditasi')));
+
+            // Notify Asesor 1
+            $asesor1 = Asesor::with('user')->find($this->asesor_id1);
+            if ($asesor1 && $asesor1->user) {
+                $asesor1->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 1 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
+            }
+
+            // Notify Asesor 2
+            if ($this->asesor_id2) {
+                $asesor2 = Asesor::with('user')->find($this->asesor_id2);
+                if ($asesor2 && $asesor2->user) {
+                    $asesor2->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 2 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
+                }
+            }
+
+            session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assesment.');
+        } else {
+            // Reject action
+            $this->validate([
+                'catatan_penolakan' => 'required|string|min:10',
+            ], [
+                'catatan_penolakan.required' => 'Catatan penolakan wajib diisi.',
+                'catatan_penolakan.min' => 'Catatan penolakan minimal 10 karakter.',
+            ]);
+
+            $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
+            $akreditasi->update([
+                'status' => 2, // 2. ditolak
+                'catatan' => $this->catatan_penolakan,
+            ]);
+
+            // Notify Pesantren
+            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('ditolak', 'Pengajuan Ditolak', 'Pengajuan akreditasi Anda ditolak. Catatan: ' . $this->catatan_penolakan, route('pesantren.akreditasi')));
+
+            session()->flash('status', 'Pengajuan berhasil ditolak.');
         }
 
-        session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assesment.');
         $this->dispatch('close-modal', 'verifikasi-modal');
     }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="deleteConfirmation">
     <x-slot name="header">{{ __('Akreditasi') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Manajemen Akreditasi (Admin)</h2>
+                    <h2 class="text-2xl font-semibold text-gray-800">Akreditasi</h2>
                 </div>
 
                 @if (session('status'))
@@ -134,14 +167,16 @@ new #[Layout('layouts.app')] class extends Component {
                         <thead>
                             <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
                                 <th class="py-3 px-6 text-left">No</th>
-                                <th class="py-3 px-6 text-left">Nama Pesantren</th>
+                                <th class="py-3 px-6 text-left">Pesantren</th>
                                 <th class="py-3 px-6 text-center">Catatan</th>
                                 <th class="py-3 px-6 text-center">Status</th>
-                                <th class="py-3 px-6 text-center">Tanggal Pengajuan</th>
+                                <th class="py-3 px-6 text-center">Nilai</th>
+                                <th class="py-3 px-6 text-center">Peringkat</th>
+                                <th class="py-3 px-6 text-center">Tanggal</th>
                                 <th class="py-3 px-6 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-sm font-light">
+                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
                             @forelse ($this->akreditasis as $index => $item)
                             <tr class="border-b border-gray-200 hover:bg-gray-100">
                                 <td class="py-3 px-6 text-left whitespace-nowrap">
@@ -155,12 +190,27 @@ new #[Layout('layouts.app')] class extends Component {
                                 </td>
                                 <td class="py-3 px-6 text-center">
                                     <span
-                                        class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold">
+                                        class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold text-nowrap">
                                         {{ Akreditasi::getStatusLabel($item->status) }}
                                     </span>
                                 </td>
+                                <td class="py-3 px-6 text-center font-bold text-indigo-600">
+                                    {{ $item->nilai ?? '-' }}
+                                </td>
                                 <td class="py-3 px-6 text-center">
-                                    {{ $item->created_at->format('d M Y H:i') }}
+                                    @if($item->peringkat)
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold 
+                                        {{ $item->peringkat == 'Unggul' ? 'bg-green-100 text-green-700' : 
+                                           ($item->peringkat == 'Baik' ? 'bg-blue-100 text-blue-700' : 
+                                           'bg-yellow-100 text-yellow-700') }}">
+                                        {{ $item->peringkat }}
+                                    </span>
+                                    @else
+                                    -
+                                    @endif
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    {{ $item->created_at->format('d M Y') }}
                                 </td>
                                 <td class="py-3 px-6 text-center">
                                     <div class="flex item-center justify-center gap-4">
@@ -176,8 +226,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             Detail
                                         </a>
 
-                                        <button wire:click="delete({{ $item->id }})"
-                                            wire:confirm="Apakah Anda yakin ingin menghapus pengajuan ini?"
+                                        <button @click="confirmDelete({{ $item->id }}, 'delete', 'Pengajuan akreditasi yang dihapus tidak dapat dikembalikan!')"
                                             class="text-red-600 hover:text-red-900 font-medium">
                                             Hapus
                                         </button>
@@ -186,7 +235,7 @@ new #[Layout('layouts.app')] class extends Component {
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="py-10 text-center text-gray-500">
+                                <td colspan="8" class="py-10 text-center text-gray-500">
                                     Belum ada data pengajuan akreditasi.
                                 </td>
                             </tr>
@@ -201,60 +250,102 @@ new #[Layout('layouts.app')] class extends Component {
     <!-- Modal Verifikasi -->
     <x-modal name="verifikasi-modal" focusable>
         <form wire:submit="verifikasi" class="p-6">
-            <h2 class="text-lg font-medium text-gray-900">Konfirmasi Pengajuan dan Sosialisasi IPM</h2>
+            <h2 class="text-lg font-medium text-gray-900">Verifikasi Pengajuan Akreditasi</h2>
             <p class="mt-1 text-sm text-gray-600">
-                Silakan pilih asesor dan tentukan jadwal assesment untuk melanjutkan proses pengajuan.
+                Pilih tindakan yang akan dilakukan untuk pengajuan akreditasi ini.
             </p>
 
+            <!-- Action Type Selection -->
             <div class="mt-6 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <x-input-label for="asesor_id1" value="Asesor" />
-                        <div class="flex gap-3">
+                <div class="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <label class="flex items-center cursor-pointer flex-1">
+                        <input type="radio" wire:model.live="action_type" value="approve"
+                            class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500">
+                        <div class="ml-3">
+                            <span class="block text-sm font-medium text-gray-900">Lanjutkan Proses</span>
+                            <span class="block text-xs text-gray-500">Pilih asesor dan jadwal assessment</span>
+                        </div>
+                    </label>
+                    <label class="flex items-center cursor-pointer flex-1">
+                        <input type="radio" wire:model.live="action_type" value="reject"
+                            class="w-4 h-4 text-red-600 border-gray-300 focus:ring-red-500">
+                        <div class="ml-3">
+                            <span class="block text-sm font-medium text-gray-900">Tolak Pengajuan</span>
+                            <span class="block text-xs text-gray-500">Berikan catatan penolakan</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Form Approve: Pilih Asesor -->
+                <div x-show="$wire.action_type === 'approve'" x-transition class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="asesor_id1" value="Ketua Asesor" />
                             <select wire:model="asesor_id1" id="asesor_id1"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-                                <option value="">Ketua</option>
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">Pilih Ketua Asesor</option>
                                 @foreach ($this->asesors as $asesor)
                                 <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
                                 @endforeach
                             </select>
                             <x-input-error :messages="$errors->get('asesor_id1')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="asesor_id2" value="Anggota Asesor (Opsional)" />
                             <select wire:model="asesor_id2" id="asesor_id2"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-                                <option value="">Anggota</option>
+                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                <option value="">Pilih Anggota Asesor</option>
                                 @foreach ($this->asesors as $asesor)
                                 <option value="{{ $asesor->id }}">{{ $asesor->user->name }}</option>
                                 @endforeach
                             </select>
+                            <x-input-error :messages="$errors->get('asesor_id2')" class="mt-2" />
                         </div>
-                        <x-input-error :messages="$errors->get('asesor_id2')" class="mt-2" />
                     </div>
-
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="tanggal_mulai" value="Tanggal Mulai Assessment" />
+                            <x-text-input wire:model="tanggal_mulai" id="tanggal_mulai" type="date"
+                                class="mt-1 block w-full" />
+                            <x-input-error :messages="$errors->get('tanggal_mulai')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="tanggal_berakhir" value="Tanggal Berakhir Assessment" />
+                            <x-text-input wire:model="tanggal_berakhir" id="tanggal_berakhir" type="date"
+                                class="mt-1 block w-full" />
+                            <x-input-error :messages="$errors->get('tanggal_berakhir')" class="mt-2" />
+                        </div>
+                    </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <!-- Form Reject: Catatan Penolakan -->
+                <div x-show="$wire.action_type === 'reject'" x-transition class="space-y-4">
                     <div>
-                        <x-input-label for="tanggal_mulai" value="Tanggal Mulai Assesment" />
-                        <x-text-input wire:model="tanggal_mulai" id="tanggal_mulai" type="date"
-                            class="mt-1 block w-full" required />
-                        <x-input-error :messages="$errors->get('tanggal_mulai')" class="mt-2" />
+                        <x-input-label for="catatan_penolakan" value="Catatan Penolakan" />
+                        <textarea wire:model="catatan_penolakan" id="catatan_penolakan" rows="4"
+                            class="mt-1 block w-full border-gray-300 focus:border-red-500 focus:ring-red-500 rounded-md shadow-sm"
+                            placeholder="Jelaskan alasan penolakan pengajuan akreditasi ini..."></textarea>
+                        <x-input-error :messages="$errors->get('catatan_penolakan')" class="mt-2" />
+                        <p class="mt-1 text-xs text-gray-500">Minimal 10 karakter</p>
                     </div>
-                    <div>
-                        <x-input-label for="tanggal_berakhir" value="Tanggal Berakhir Assesment" />
-                        <x-text-input wire:model="tanggal_berakhir" id="tanggal_berakhir" type="date"
-                            class="mt-1 block w-full" required />
-                        <x-input-error :messages="$errors->get('tanggal_berakhir')" class="mt-2" />
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                        <p class="text-xs text-red-800">
+                            <strong>Perhatian:</strong> Pengajuan akan ditolak dan status akan dikembalikan ke "Ditolak".
+                            Pesantren akan menerima notifikasi beserta catatan penolakan.
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end">
+            <div class="mt-6 flex justify-end gap-3">
                 <x-secondary-button x-on:click="$dispatch('close')">
                     Batal
                 </x-secondary-button>
 
-                <x-primary-button class="ms-3">
-                    Simpan
+                <x-primary-button
+                    x-bind:class="$wire.action_type === 'reject' ? 'bg-red-600 hover:bg-red-700 focus:bg-red-700 active:bg-red-900' : ''">
+                    <span x-show="$wire.action_type === 'approve'">Verifikasi & Lanjutkan</span>
+                    <span x-show="$wire.action_type === 'reject'">Tolak Pengajuan</span>
                 </x-primary-button>
             </div>
         </form>

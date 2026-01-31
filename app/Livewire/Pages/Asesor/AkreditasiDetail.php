@@ -153,7 +153,7 @@ class AkreditasiDetail extends Component
         return $attributes;
     }
 
-    public function saveAsesorEdpm()
+    public function saveAsesorEdpm($isFinal = false)
     {
         if ($this->akreditasi->status != 5) {
             session()->flash('error', 'Data tidak dapat diubah karena status sudah bukan Assesment.');
@@ -161,14 +161,46 @@ class AkreditasiDetail extends Component
         }
 
         $rules = [
-            'asesorEvaluasis.*' => 'required|integer|between:1,4',
+            'asesorEvaluasis.*' => ($isFinal ? 'required' : 'nullable') . '|integer|between:1,4',
             'asesorCatatans.*' => 'nullable|string',
             'asesorButirCatatans.*' => 'nullable|string',
         ];
 
         if ($this->asesorTipe == 1) {
-            $rules['asesorNks.*'] = 'required|integer|between:1,4';
-            $rules['asesorCatatanNks.*'] = 'nullable|integer|between:1,4';
+            foreach ($this->komponens as $komponen) {
+                foreach ($komponen->butirs as $butir) {
+                    $hasSelf = !empty($this->asesorEvaluasis[$butir->id]);
+                    $hasOther = !empty($this->otherAsesorEvaluasis[$butir->id]);
+
+                    if ($isFinal) {
+                        if (!$hasOther) {
+                            $this->dispatch(
+                                'validation-failed',
+                                title: 'Validasi Gagal',
+                                html: "Syarat <b>Verifikasi Final</b> belum terpenuhi: Asesor 1 belum menyelesaikan penilaian (Penilaian NA 2 untuk Butir {$butir->nomor_butir} masih kosong)."
+                            );
+                            return false;
+                        }
+                        if (!$hasSelf) {
+                            $this->dispatch(
+                                'validation-failed',
+                                title: 'Validasi Gagal',
+                                html: "Syarat <b>Verifikasi Final</b> belum terpenuhi: Anda belum mengisi penilaian NA untuk Butir {$butir->nomor_butir}."
+                            );
+                            return false;
+                        }
+                        $rules["asesorNks.{$butir->id}"] = 'required|integer|between:1,4';
+                    } else {
+                        // Draft mode: NK required only for butirs where BOTH NA 1 (self) and NA 2 (other) are filled
+                        if ($hasSelf && $hasOther) {
+                            $rules["asesorNks.{$butir->id}"] = 'required|integer|between:1,4';
+                        } else {
+                            $rules["asesorNks.{$butir->id}"] = 'nullable|integer|between:1,4';
+                        }
+                    }
+                }
+            }
+            $rules['asesorCatatanNks.*'] = 'nullable|string';
         }
 
         try {
@@ -179,10 +211,9 @@ class AkreditasiDetail extends Component
 
             foreach ($errors as $key => $messages) {
                 if (preg_match('/(asesorEvaluasis|asesorNks)\.(\d+)/', $key, $matches)) {
-                    $type = $matches[1] == 'asesorEvaluasis' ? 'NA' : 'NK';
+                    $type = $matches[1] == 'asesorEvaluasis' ? 'NA 1' : 'NK';
                     $butirId = $matches[2];
 
-                    // Find butir info from our komponens collection
                     foreach ($this->komponens as $komponen) {
                         $butir = $komponen->butirs->firstWhere('id', $butirId);
                         if ($butir) {
@@ -193,13 +224,16 @@ class AkreditasiDetail extends Component
                 }
             }
 
-            $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-sm">' . implode('', array_unique($missingItems)) . '</ul>';
+            if (!empty($missingItems)) {
+                $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-sm">' . implode('', array_unique($missingItems)) . '</ul>';
 
-            $this->dispatch(
-                'validation-failed',
-                title: 'Data Belum Lengkap',
-                html: "Mohon lengkapi penilaian berikut sebelum menyimpan:<br>" . $htmlList
-            );
+                $this->dispatch(
+                    'validation-failed',
+                    title: 'Data Belum Lengkap',
+                    html: ($isFinal ? "Mohon lengkapi penilaian wajib berikut sebelum verifikasi final:" : "Mohon lengkapi penilaian berikut sebelum menyimpan:") . "<br>" . $htmlList
+                );
+                throw $e;
+            }
             throw $e;
         }
 
@@ -232,11 +266,16 @@ class AkreditasiDetail extends Component
             title: 'Berhasil!',
             message: 'Instrumen Akreditasi berhasil disimpan.'
         );
+
+        return true;
     }
 
     public function finalizeVerification()
     {
-        $this->saveAsesorEdpm();
+        // For finalization, we enforce strict validation
+        if (!$this->saveAsesorEdpm(isFinal: true)) {
+            return;
+        }
 
         $this->akreditasi->update(['status' => 4]); // 4. Visitasi
 

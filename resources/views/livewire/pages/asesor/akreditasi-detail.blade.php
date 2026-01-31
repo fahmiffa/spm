@@ -99,8 +99,8 @@
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         @foreach($pesantren->units as $unit)
                                         <tr>
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-gray-900 uppercase">{{ $unit->unit }}</td>
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-center text-gray-700">{{ $unit->jumlah_rombel }}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-xs md:text-sm font-bold text-gray-900 uppercase">{{ $unit->unit }}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-xs md:text-sm text-center text-gray-700">{{ $unit->jumlah_rombel }}</td>
                                         </tr>
                                         @endforeach
                                     </tbody>
@@ -224,7 +224,7 @@
                         <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">REKAPITULASI
                             DATA SDM</h3>
                         <div class="overflow-x-auto">
-                            <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
+                            <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                 <thead class="bg-gray-100 uppercase font-bold text-nowrap">
                                     <tr>
                                         <th rowspan="2" class="border border-gray-300 px-2 py-2 text-center">NO</th>
@@ -284,7 +284,7 @@
                     @if ($activeTab === 'edpm_pesantren')
                     <div class="space-y-6">
                         <div class="overflow-x-auto">
-                            <table class="min-w-full border-collapse border border-gray-300 text-xs">
+                            <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                 <thead class="bg-gray-100 uppercase">
                                     <tr>
                                         <th class="border border-gray-300 px-2 py-2">No Butir</th>
@@ -343,7 +343,7 @@
 
                         <form wire:submit="saveAsesorEdpm">
                             <div class="overflow-x-auto overflow-y-hidden mt-4">
-                                <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
+                                <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                     <thead class="bg-gray-100 font-bold uppercase">
                                         <tr>
                                             <th class="border border-gray-300 px-2 py-3 w-24">Komponen</th>
@@ -408,8 +408,8 @@
                                             <td class="border border-gray-300 p-0 bg-amber-50/10">
                                                 <select
                                                     wire:model.live="asesorNks.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
+                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                    {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
                                                     <option value="">Pilih...</option>
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>

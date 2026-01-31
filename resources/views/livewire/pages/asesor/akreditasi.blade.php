@@ -36,55 +36,65 @@ new #[Layout('layouts.app')] class extends Component {
                                 <th class="py-3 px-6 text-left">No</th>
                                 <th class="py-3 px-6 text-left">Nama Pesantren</th>
                                 <th class="py-3 px-6 text-center">Tanggal Assesment</th>
-                                <th class="py-3 px-6 text-center">Status</th>
+                                <th class="py-3 px-6 text-center">Status Alur</th>
+                                <th class="py-3 px-6 text-center">Akreditasi</th>
                                 <th class="py-3 px-6 text-center">Catatan</th>
                                 <th class="py-3 px-6 text-center">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-sm font-light">
+                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
                             @forelse ($this->assessments as $index => $item)
-                                <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                    <td class="py-3 px-6 text-left whitespace-nowrap">
-                                        {{ $index + 1 }}
-                                    </td>
-                                    <td class="py-3 px-6 text-left font-medium">
-                                        {{ $item->akreditasi->user->pesantren->nama_pesantren ?? $item->akreditasi->user->name }}
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        {{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d M Y') }} s/d
-                                        {{ \Carbon\Carbon::parse($item->tanggal_berakhir)->format('d M Y') }}
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        <span
-                                            class="{{ Akreditasi::getStatusBadgeClass($item->akreditasi->status) }} py-1 px-3 rounded-full text-xs font-semibold">
-                                            {{ Akreditasi::getStatusLabel($item->akreditasi->status) }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-6 text-left font-medium">
-                                        {{ $item->akreditasi->catatan }}
-                                    </td>
-                                    <td class="py-3 px-6 text-center">
-                                        @if ($item->akreditasi->status == 5)
-                                            <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
-                                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
-                                                Verifikasi
-                                            </a>
-                                        @elseif ($item->akreditasi->status == 4)
-                                            <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
-                                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
-                                                Data
-                                            </a>
-                                        @else
-                                            <span class="text-gray-400 italic">Selesai</span>
-                                        @endif
-                                    </td>
-                                </tr>
+                            <tr class="border-b border-gray-200 hover:bg-gray-100">
+                                <td class="py-3 px-6 text-left whitespace-nowrap">
+                                    {{ $index + 1 }}
+                                </td>
+                                <td class="py-3 px-6 text-left font-medium">
+                                    {{ $item->akreditasi->user->pesantren->nama_pesantren ?? $item->akreditasi->user->name }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    {{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d M Y') }} s/d
+                                    {{ \Carbon\Carbon::parse($item->tanggal_berakhir)->format('d M Y') }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    <span
+                                        class="{{ Akreditasi::getStatusBadgeClass($item->akreditasi->status) }} py-1 px-3 rounded-full text-xs font-semibold">
+                                        {{ Akreditasi::getStatusLabel($item->akreditasi->status) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    @if ($item->akreditasi->status == 1)
+                                    <span class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-xs font-bold uppercase">{{ $item->akreditasi->peringkat ?? 'Berhasil' }}</span>
+                                    @elseif (in_array($item->akreditasi->status, [3, 4, 5, 6]))
+                                    <span class="bg-amber-100 text-amber-700 py-1 px-3 rounded-full text-xs font-bold uppercase tracking-wider">Proses</span>
+                                    @else
+                                    <span class="text-gray-400">-</span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-6 text-left font-medium">
+                                    {{ $item->akreditasi->catatan }}
+                                </td>
+                                <td class="py-3 px-6 text-center">
+                                    @if ($item->akreditasi->status == 5)
+                                    <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
+                                        Verifikasi
+                                    </a>
+                                    @elseif ($item->akreditasi->status == 4)
+                                    <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
+                                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
+                                        Data
+                                    </a>
+                                    @else
+                                    <span class="text-gray-400 italic">Selesai</span>
+                                    @endif
+                                </td>
+                            </tr>
                             @empty
-                                <tr>
-                                    <td colspan="5" class="py-10 text-center text-gray-500">
-                                        Belum ada tugas akreditasi yang ditugaskan kepada Anda.
-                                    </td>
-                                </tr>
+                            <tr>
+                                <td colspan="5" class="py-10 text-center text-gray-500">
+                                    Belum ada tugas akreditasi yang ditugaskan kepada Anda.
+                                </td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>

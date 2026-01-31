@@ -39,62 +39,69 @@ new class extends Component {
 
                     <!-- Admin Menu -->
                     @if (auth()->user()->isAdmin())
-                        <div class="pt-4 pb-2 px-3">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Administrator</span>
-                        </div>
-                        <div class="space-y-1">
-                            <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
-                                {{ __('Roles') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
-                                {{ __('Accounts') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
-                                {{ __('Master Komponen') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" icon="shield">
-                                {{ __('Akreditasi') }}
-                            </x-sidebar-link>
-                        </div>
+                    <div class="space-y-1">
+                        <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi*')" icon="shield">
+                            {{ __('Akreditasi') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('admin.pesantren.index')" :active="request()->routeIs('admin.pesantren.*')" icon="users">
+                            {{ __('Pesantren') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('admin.asesor.index')" :active="request()->routeIs('admin.asesor.*')" icon="user-circle">
+                            {{ __('Asesor') }}
+                        </x-sidebar-link>
+                    </div>
+
+                    <div class="pt-4 pb-2 px-3">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Master</span>
+                    </div>
+                    <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
+                        {{ __('Roles') }}
+                    </x-sidebar-link>
+                    <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
+                        {{ __('Accounts') }}
+                    </x-sidebar-link>
+                    <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
+                        {{ __('Komponen') }}
+                    </x-sidebar-link>
                     @endif
 
                     <!-- Pesantren Menu -->
                     @if (auth()->user()->isPesantren())
-                        <div class="pt-4 pb-2 px-3">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
-                        </div>
-                        <div class="space-y-1">
-                            <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
-                                {{ __('Profil Pesantren') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
-                                {{ __('IPM') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
-                                {{ __('Data SDM') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
-                                {{ __('EDPM') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
-                                {{ __('Akreditasi') }}
-                            </x-sidebar-link>
-                        </div>
+                    <div class="pt-4 pb-2 px-3">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
+                    </div>
+                    <div class="space-y-1">
+                        <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
+                            {{ __('Profil Pesantren') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
+                            {{ __('IPM') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
+                            {{ __('Data SDM') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
+                            {{ __('EDPM') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
+                            {{ __('Akreditasi') }}
+                        </x-sidebar-link>
+                    </div>
                     @endif
 
                     <!-- Asesor Menu -->
                     @if (auth()->user()->isAsesor())
-                        <div class="pt-4 pb-2 px-3">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
-                        </div>
-                        <div class="space-y-1">
-                            <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
-                                {{ __('My Profile') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
-                                {{ __('Akreditasi') }}
-                            </x-sidebar-link>
-                        </div>
+                    <div class="pt-4 pb-2 px-3">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
+                    </div>
+                    <div class="space-y-1">
+                        <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
+                            {{ __('My Profile') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
+                            {{ __('Akreditasi') }}
+                        </x-sidebar-link>
+                    </div>
                     @endif
                 </nav>
             </div>
@@ -102,12 +109,11 @@ new class extends Component {
             <!-- Sidebar Footer User Profile (Fixed Bottom) -->
             <div class="mt-auto flex-shrink-0 border-t border-gray-200 bg-white p-4" x-data="{ userOpen: false }">
                 <div class="relative">
-                    <button 
-                        @mouseenter="userOpen = true" 
+                    <button
+                        @mouseenter="userOpen = true"
                         @mouseleave="userOpen = false"
                         @click="userOpen = !userOpen"
-                        class="flex group w-full items-center focus:outline-none overflow-hidden rounded-lg p-1 hover:bg-gray-50 transition-colors"
-                    >
+                        class="flex group w-full items-center focus:outline-none overflow-hidden rounded-lg p-1 hover:bg-gray-50 transition-colors">
                         <div class="flex items-center">
                             <div class="ih-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
                                 {{ substr(auth()->user()->name, 0, 1) }}
@@ -120,7 +126,7 @@ new class extends Component {
                     </button>
 
                     <!-- Profile Dropdown Card (Hover/Click) -->
-                    <div 
+                    <div
                         x-show="userOpen"
                         @mouseenter="userOpen = true"
                         @mouseleave="userOpen = false"
@@ -131,8 +137,7 @@ new class extends Component {
                         x-transition:leave-start="opacity-100 translate-y-0"
                         x-transition:leave-end="opacity-0 translate-y-4"
                         class="absolute bottom-full left-0 mb-4 w-72 bg-white rounded-2xl shadow-[0_20px_50px_rgba(8,_112,_184,_0.1)] border border-gray-100 overflow-hidden z-[60]"
-                        style="display: none;"
-                    >
+                        style="display: none;">
                         <div class="p-6">
                             <div class="flex items-center space-x-4 mb-6">
                                 <div class="h-14 w-14 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 overflow-hidden shadow-inner border border-indigo-100 flex-shrink-0 font-bold text-xl uppercase">
@@ -146,7 +151,7 @@ new class extends Component {
                                     </span>
                                 </div>
                             </div>
-                            
+
                             <div class="space-y-1">
                                 <a href="{{ route('profile') }}" wire:navigate class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all group">
                                     <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -175,27 +180,27 @@ new class extends Component {
     <template x-teleport="body">
         <div x-show="$store.sidebar.open" class="relative z-50 lg:hidden" x-ref="dialog" role="dialog" aria-modal="true" style="display: none;">
             <!-- Backdrop -->
-            <div x-show="$store.sidebar.open" 
-                 x-transition:enter="transition-opacity ease-linear duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="transition-opacity ease-linear duration-300"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm" @click="$store.sidebar.open = false"></div>
+            <div x-show="$store.sidebar.open"
+                x-transition:enter="transition-opacity ease-linear duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity ease-linear duration-300"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm" @click="$store.sidebar.open = false"></div>
 
             <div class="fixed inset-0 flex" @click="$store.sidebar.open = false">
                 <!-- Sidebar UI -->
                 <div x-show="$store.sidebar.open"
-                     @click.stop
-                     x-transition:enter="transition ease-in-out duration-300 transform"
-                     x-transition:enter-start="-translate-x-full"
-                     x-transition:enter-end="translate-x-0"
-                     x-transition:leave="transition ease-in-out duration-300 transform"
-                     x-transition:leave-start="translate-x-0"
-                     x-transition:leave-end="-translate-x-full"
-                     class="relative flex flex-col max-w-xs w-full bg-white shadow-2xl">
-                    
+                    @click.stop
+                    x-transition:enter="transition ease-in-out duration-300 transform"
+                    x-transition:enter-start="-translate-x-full"
+                    x-transition:enter-end="translate-x-0"
+                    x-transition:leave="transition ease-in-out duration-300 transform"
+                    x-transition:leave-start="translate-x-0"
+                    x-transition:leave-end="-translate-x-full"
+                    class="relative flex flex-col max-w-xs w-full bg-white shadow-2xl">
+
                     <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
                         <div class="flex-shrink-0 flex items-center px-6">
                             <x-application-logo class="h-8 w-auto text-indigo-600" />
@@ -205,65 +210,71 @@ new class extends Component {
                             <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">
                                 {{ __('Home') }}
                             </x-sidebar-link>
-                            
+
                             <!-- Admin Menu -->
                             @if (auth()->user()->isAdmin())
-                                <div class="pt-4 pb-2 px-3">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Administrator</span>
-                                </div>
-                                <div class="space-y-1">
-                                    <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
-                                        {{ __('Roles') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
-                                        {{ __('Accounts') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
-                                        {{ __('Master EDPM') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi')" icon="shield">
-                                        {{ __('Akreditasi') }}
-                                    </x-sidebar-link>
-                                </div>
+                            <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi*')" icon="shield">
+                                {{ __('Akreditasi') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('admin.pesantren.index')" :active="request()->routeIs('admin.pesantren.*')" icon="users">
+                                {{ __('Pesantren') }}
+                            </x-sidebar-link>
+                            <x-sidebar-link :href="route('admin.asesor.index')" :active="request()->routeIs('admin.asesor.*')" icon="user-circle">
+                                {{ __('Asesor') }}
+                            </x-sidebar-link>
+                            <div class="pt-4 pb-2 px-3">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Master</span>
+                            </div>
+                            <div class="space-y-1">
+                                <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
+                                    {{ __('Roles') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
+                                    {{ __('Accounts') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
+                                    {{ __('EDPM') }}
+                                </x-sidebar-link>
+                            </div>
                             @endif
 
                             <!-- Pesantren Menu -->
                             @if (auth()->user()->isPesantren())
-                                <div class="pt-4 pb-2 px-3">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
-                                </div>
-                                <div class="space-y-1">
-                                    <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
-                                        {{ __('Profil Pesantren') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
-                                        {{ __('IPM') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
-                                        {{ __('Data SDM') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
-                                        {{ __('EDPM') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
-                                        {{ __('Akreditasi') }}
-                                    </x-sidebar-link>
-                                </div>
+                            <div class="pt-4 pb-2 px-3">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Pesantren</span>
+                            </div>
+                            <div class="space-y-1">
+                                <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
+                                    {{ __('Profil Pesantren') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
+                                    {{ __('IPM') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('pesantren.sdm')" :active="request()->routeIs('pesantren.sdm')" icon="users">
+                                    {{ __('Data SDM') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="document">
+                                    {{ __('EDPM') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
+                                    {{ __('Akreditasi') }}
+                                </x-sidebar-link>
+                            </div>
                             @endif
 
                             <!-- Asesor Menu -->
                             @if (auth()->user()->isAsesor())
-                                <div class="pt-4 pb-2 px-3">
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
-                                </div>
-                                <div class="space-y-1">
-                                    <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
-                                        {{ __('My Profile') }}
-                                    </x-sidebar-link>
-                                    <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
-                                        {{ __('Akreditasi') }}
-                                    </x-sidebar-link>
-                                </div>
+                            <div class="pt-4 pb-2 px-3">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Asesor</span>
+                            </div>
+                            <div class="space-y-1">
+                                <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
+                                    {{ __('My Profile') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
+                                    {{ __('Akreditasi') }}
+                                </x-sidebar-link>
+                            </div>
                             @endif
                         </nav>
                     </div>
@@ -271,10 +282,9 @@ new class extends Component {
                     <!-- Mobile Sidebar Footer User Profile -->
                     <div class="flex-shrink-0 border-t border-gray-200 p-4 bg-gray-50/50" x-data="{ userOpenMobile: false }">
                         <div class="relative">
-                            <button 
+                            <button
                                 @click="userOpenMobile = !userOpenMobile"
-                                class="flex w-full items-center focus:outline-none p-1 rounded-lg hover:bg-white transition-colors"
-                            >
+                                class="flex w-full items-center focus:outline-none p-1 rounded-lg hover:bg-white transition-colors">
                                 <div class="flex items-center">
                                     <div class="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold border-2 border-white shadow-sm overflow-hidden text-lg uppercase flex-shrink-0">
                                         {{ substr(auth()->user()->name, 0, 1) }}
@@ -287,7 +297,7 @@ new class extends Component {
                             </button>
 
                             <!-- Profile Popover (Mobile) -->
-                            <div 
+                            <div
                                 x-show="userOpenMobile"
                                 @click.away="userOpenMobile = false"
                                 x-transition:enter="transition ease-out duration-200"
@@ -297,8 +307,7 @@ new class extends Component {
                                 x-transition:leave-start="opacity-100 translate-y-0"
                                 x-transition:leave-end="opacity-0 translate-y-4"
                                 class="absolute bottom-full left-0 mb-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[80]"
-                                style="display: none;"
-                            >
+                                style="display: none;">
                                 <div class="p-5">
                                     <div class="flex items-center space-x-3 mb-4">
                                         <div class="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold uppercase transition-transform">

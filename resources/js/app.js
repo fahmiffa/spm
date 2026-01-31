@@ -4,7 +4,14 @@ import Swal from "sweetalert2";
 // Make Swal globally available
 window.Swal = Swal;
 
+import { fileManagement, wilayahSelector } from "./alpine/profile";
+import { akreditasiPesantren } from "./alpine/akreditasi";
+
 document.addEventListener("alpine:init", () => {
+    Alpine.data("fileManagement", fileManagement);
+    Alpine.data("wilayahSelector", wilayahSelector);
+    Alpine.data("akreditasiPesantren", akreditasiPesantren);
+
     Alpine.data("deleteConfirmation", () => ({
         confirmDelete(id, methodName, text = "Hapus data ini?") {
             Swal.fire({
@@ -42,41 +49,6 @@ document.addEventListener("alpine:init", () => {
                     this.$wire.call(methodName, id);
                 }
             });
-        },
-    }));
-
-    Alpine.data("fileManagement", () => ({
-        validate(e) {
-            const file = e.target.files[0];
-            if (!file) return true;
-
-            const isPdf = file.type === "application/pdf";
-            const isSmallEnough = file.size <= 2 * 1024 * 1024; // 2MB
-
-            if (!isPdf) {
-                Swal.fire({
-                    icon: "error",
-                    title: "Format Salah",
-                    text: "Hanya file PDF yang diperbolehkan.",
-                    confirmButtonColor: "#4f46e5",
-                });
-                e.target.value = "";
-                e.stopImmediatePropagation();
-                return false;
-            }
-
-            if (!isSmallEnough) {
-                Swal.fire({
-                    icon: "error",
-                    title: "File Terlalu Besar",
-                    text: "Maksimal ukuran file adalah 2MB.",
-                    confirmButtonColor: "#4f46e5",
-                });
-                e.target.value = "";
-                e.stopImmediatePropagation();
-                return false;
-            }
-            return true;
         },
     }));
 

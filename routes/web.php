@@ -60,6 +60,22 @@ Route::get('asesor/akreditasi/{uuid}', \App\Livewire\Pages\Asesor\AkreditasiDeta
     ->middleware(['auth', 'verified'])
     ->name('admin.akreditasi');
 
+\Livewire\Volt\Volt::route('admin/asesor', 'pages.admin.asesor.index')
+    ->middleware(['auth', 'verified'])
+    ->name('admin.asesor.index');
+
+\Livewire\Volt\Volt::route('admin/asesor/{uuid}', 'pages.admin.asesor.detail')
+    ->middleware(['auth', 'verified'])
+    ->name('admin.asesor.detail');
+
+\Livewire\Volt\Volt::route('admin/pesantren', 'pages.admin.pesantren.index')
+    ->middleware(['auth', 'verified'])
+    ->name('admin.pesantren.index');
+
+\Livewire\Volt\Volt::route('admin/pesantren/{uuid}', 'pages.admin.pesantren.detail')
+    ->middleware(['auth', 'verified'])
+    ->name('admin.pesantren.detail');
+
 \Livewire\Volt\Volt::route('admin/akreditasi/{uuid}', 'pages.admin.akreditasi-detail')
     ->middleware(['auth', 'verified'])
     ->name('admin.akreditasi-detail');

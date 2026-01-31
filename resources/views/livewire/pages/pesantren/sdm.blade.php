@@ -87,7 +87,7 @@ new #[Layout('layouts.app')] class extends Component {
                 </header>
 
                 <form wire:submit="save">
-                    <table class="min-w-full border-collapse border border-gray-300 text-sm">
+                    <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                         <thead class="bg-gray-100 text-nowrap">
                             <tr>
                                 <th rowspan="2" class="border border-gray-300 px-2 py-2 text-center">NO</th>

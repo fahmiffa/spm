@@ -210,6 +210,62 @@ new #[Layout('layouts.app')] class extends Component {
         );
     }
 
+    private function determineResults()
+    {
+        $bobotKomponen = [
+            'MUTU LULUSAN' => 35,
+            'PROSES PEMBELAJARAN' => 29,
+            'MUTU USTAZ' => 18,
+            'MANAJEMEN PESANTREN' => 18,
+            'B. INDIKATOR PEMENUHAN RELATIF' => 97,
+        ];
+
+        $iprNullComponents = $this->komponens->filter(function ($k) {
+            return is_null($k->ipr);
+        });
+        $iprNotNullComponents = $this->komponens->filter(function ($k) {
+            return !is_null($k->ipr);
+        });
+
+        $totalSkorIprNull = 0;
+        foreach ($iprNullComponents as $k) {
+            $b = $bobotKomponen[$k->nama] ?? 0;
+            $c_total = count($k->butirs) * 4;
+            $c_ci = 0;
+            foreach ($k->butirs as $butir) {
+                $c_ci += (int)($this->adminNvs[$butir->id] ?? 0);
+            }
+            if ($c_total > 0) {
+                $totalSkorIprNull += round(($c_ci / $c_total) * $b);
+            }
+        }
+
+        $totalSkorIprNotNull = 0;
+        foreach ($iprNotNullComponents as $k) {
+            $c_total = count($k->butirs) * 4;
+            $c_ci = 0;
+            foreach ($k->butirs as $butir) {
+                $c_ci += (int)($this->adminNvs[$butir->id] ?? 0);
+            }
+            if ($c_total > 0) {
+                $totalSkorIprNotNull += round(($c_ci / $c_total) * 100);
+            }
+        }
+
+        $nilai = round((0.7 * $totalSkorIprNull) + (0.3 * $totalSkorIprNotNull));
+
+        $peringkat = 'NA';
+        if ($nilai >= 86) {
+            $peringkat = 'Unggul';
+        } elseif ($nilai >= 70) {
+            $peringkat = 'Baik';
+        } elseif ($nilai >= 0) {
+            $peringkat = 'Cukup';
+        }
+
+        return ['nilai' => $nilai, 'peringkat' => $peringkat];
+    }
+
     public function approve()
     {
         if (!$this->checkScores()) {
@@ -223,9 +279,13 @@ new #[Layout('layouts.app')] class extends Component {
             'nomor_sk.max' => 'Nomor SK maksimal 255 karakter.',
         ]);
 
+        $results = $this->determineResults();
+
         $this->akreditasi->update([
             'status' => 1,
             'nomor_sk' => $this->nomor_sk,
+            'nilai' => $results['nilai'],
+            'peringkat' => $results['peringkat'],
         ]);
 
         // Notify Pesantren
@@ -263,6 +323,14 @@ new #[Layout('layouts.app')] class extends Component {
             'status' => 2,
             'catatan' => $this->catatan_admin,
         ]);
+
+        // Notify Pesantren
+        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
+            'ditolak',
+            'Akreditasi Ditolak',
+            'Pengajuan akreditasi Anda ditolak. Catatan: ' . $this->catatan_admin,
+            route('pesantren.akreditasi')
+        ));
 
         session()->flash('status', 'Akreditasi telah ditolak.');
         return redirect()->route('admin.akreditasi');
@@ -554,7 +622,7 @@ new #[Layout('layouts.app')] class extends Component {
                         @if ($activeTab === 'sdm')
                         <div class="space-y-6">
                             <div class="overflow-x-auto">
-                                <table class="min-w-full border-collapse border border-gray-300 text-xs">
+                                <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                     <thead class="bg-gray-100 uppercase font-bold text-[10px]">
                                         <tr>
                                             <th rowspan="2" class="border border-gray-300 px-2 py-2">NO.</th>
@@ -616,7 +684,7 @@ new #[Layout('layouts.app')] class extends Component {
                         @if ($activeTab === 'edpm_pesantren')
                         <div class="space-y-6">
                             <div class="overflow-x-auto">
-                                <table class="min-w-full border-collapse border border-gray-300 text-xs">
+                                <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                     <thead class="bg-gray-100 uppercase">
                                         <tr>
                                             <th class="border border-gray-300 px-2 py-2">No Butir</th>
@@ -661,7 +729,7 @@ new #[Layout('layouts.app')] class extends Component {
                         <div class="space-y-6">
 
                             <div class="overflow-x-auto mt-4">
-                                <table class="min-w-full border-collapse border border-gray-300 text-[10px]">
+                                <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
                                     <thead class="bg-gray-100 font-bold uppercase">
                                         <tr>
                                             <th class="border border-gray-300 px-2 py-3 w-24">Komponen</th>
@@ -751,6 +819,7 @@ new #[Layout('layouts.app')] class extends Component {
                                 </table>
                             </div>
 
+                            @if ($akreditasi->status == 4 || $akreditasi->status == 1)
                             @if ($akreditasi->status == 4)
                             <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                                 <div class="flex justify-between items-center">
@@ -770,6 +839,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </x-primary-button>
                                 </div>
                             </div>
+                            @endif
                             {{-- Ringkasan Data --}}
                             <div
                                 class="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
@@ -939,8 +1009,8 @@ new #[Layout('layouts.app')] class extends Component {
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                             </div>
+                            @if ($akreditasi->status == 4)
                             <div class="mt-8 pt-6 border-t border-gray-200">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <!-- Approve Form -->
@@ -995,6 +1065,8 @@ new #[Layout('layouts.app')] class extends Component {
                                     </div>
                                 </div>
                             </div>
+                            @endif
+                            @endif
                         </div>
                         <!-- Floating Navigation Buttons for NA Tab -->
                         <div class="fixed bottom-8 right-8 flex flex-col gap-3 z-50">

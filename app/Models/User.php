@@ -17,6 +17,12 @@ class User extends Authenticatable
     {
         parent::boot();
 
+        static::creating(function ($model) {
+            if (empty($model->uuid)) {
+                $model->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+
         static::deleting(function ($user) {
             // Delete related models that might have their own deleting events
             if ($user->pesantren) {
