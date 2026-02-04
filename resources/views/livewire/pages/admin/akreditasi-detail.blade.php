@@ -217,7 +217,7 @@ new #[Layout('layouts.app')] class extends Component {
             'PROSES PEMBELAJARAN' => 29,
             'MUTU USTAZ' => 18,
             'MANAJEMEN PESANTREN' => 18,
-            'B. INDIKATOR PEMENUHAN RELATIF' => 97,
+            'INDIKATOR PEMENUHAN RELATIF' => 97,
         ];
 
         $iprNullComponents = $this->komponens->filter(function ($k) {
@@ -873,7 +873,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             'PROSES PEMBELAJARAN' => 29,
                                             'MUTU USTAZ' => 18,
                                             'MANAJEMEN PESANTREN' => 18,
-                                            'B. INDIKATOR PEMENUHAN RELATIF' => 97,
+                                            'INDIKATOR PEMENUHAN RELATIF' => 97,
                                             ];
                                             @endphp
 

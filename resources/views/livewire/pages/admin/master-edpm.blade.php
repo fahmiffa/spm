@@ -77,7 +77,7 @@ new #[Layout('layouts.app')] class extends Component {
             ['id' => $this->komponen_id],
             [
                 'nama' => $this->komponen_nama,
-                'ipr' => $this->komponen_ipr ? 1 : 0
+                'ipr' => $this->komponen_ipr ? 1 : NULL
             ]
         );
 
