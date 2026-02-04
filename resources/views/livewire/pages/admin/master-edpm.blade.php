@@ -23,6 +23,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $modalTitle = '';
     public $activeModal = ''; // 'komponen' or 'butir'
 
+    public $activeTab = 'edpm'; // edpm or ipr
+
     public function mount()
     {
         if (!auth()->user()->isAdmin()) {
@@ -34,6 +36,11 @@ new #[Layout('layouts.app')] class extends Component {
     public function loadData()
     {
         $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+    }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
     }
 
     public function resetKomponenForm()
@@ -64,6 +71,8 @@ new #[Layout('layouts.app')] class extends Component {
             $this->modalTitle = 'Edit Komponen';
         } else {
             $this->modalTitle = 'Tambah Komponen';
+            // Set default IPR based on active tab
+            $this->komponen_ipr = ($this->activeTab === 'ipr');
         }
         $this->activeModal = 'komponen';
         $this->dispatch('open-modal', 'edpm-komponen-modal');
@@ -159,8 +168,36 @@ new #[Layout('layouts.app')] class extends Component {
                     </x-primary-button>
                 </div>
 
+                <!-- Tabs -->
+                <div class="mb-4 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
+                        <li class="me-2">
+                            <button wire:click="setTab('edpm')"
+                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'edpm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                KOMPONEN EDPM
+                            </button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab('ipr')"
+                                class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'ipr' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                KOMPONEN IPR
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <div class="space-y-8">
-                    @forelse ($komponens as $komponen)
+                    @php
+                    $filteredKomponens = $komponens->filter(function($k) use ($activeTab) {
+                    if ($activeTab === 'ipr') {
+                    return $k->nama === 'INDIKATOR PEMENUHAN RELATIF';
+                    } else {
+                    return $k->nama !== 'INDIKATOR PEMENUHAN RELATIF';
+                    }
+                    });
+                    @endphp
+
+                    @forelse ($filteredKomponens as $komponen)
                     <div class="border rounded-lg overflow-hidden shadow-sm">
                         <div class="bg-gray-100 px-4 py-3 flex justify-between items-center border-b">
                             <div class="flex items-center gap-3">
@@ -177,8 +214,6 @@ new #[Layout('layouts.app')] class extends Component {
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                     </svg>
-                                </button>
-                                </svg>
                                 </button>
                                 <button @click="confirmDelete({{ $komponen->id }}, 'deleteKomponen', 'Hapus seluruh komponen dan butir di dalamnya?')" class="text-red-600 hover:text-red-900">
                                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -217,7 +252,7 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
                     @empty
                     <div class="text-center py-10 text-gray-500 border-2 border-dashed rounded-lg">
-                        Belum ada master data EDPM. Klik "Tambah Komponen" untuk memulai.
+                        Belum ada master data untuk tab ini ({{ $activeTab == 'edpm' ? 'Komponen EDPM' : 'Komponen IPR' }}).
                     </div>
                     @endforelse
                 </div>
@@ -236,13 +271,15 @@ new #[Layout('layouts.app')] class extends Component {
                     <x-input-error :messages="$errors->get('komponen_nama')" class="mt-2" />
                 </div>
 
-                <div class="flex items-center gap-3 bg-gray-50 border rounded-lg p-3">
+                @if($activeTab === 'ipr')
+                <div class="flex items-center gap-3 bg-gray-50 border rounded-lg p-3 hidden">
                     <input type="checkbox" wire:model="komponen_ipr" id="komponen_ipr" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 w-5 h-5">
                     <div>
                         <x-input-label for="komponen_ipr" value="Komponen IPR" class="font-bold text-gray-800" />
                         <p class="text-[10px] text-gray-500">Centang jika komponen ini termasuk dalam Indikator Pemenuhan Relatif (IPR)</p>
                     </div>
                 </div>
+                @endif
             </div>
             <div class="mt-6 flex justify-end">
                 <x-secondary-button x-on:click="$dispatch('close')">Batal</x-secondary-button>
