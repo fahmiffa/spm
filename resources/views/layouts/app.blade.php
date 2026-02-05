@@ -17,13 +17,6 @@
 </head>
 
 <body class="font-sans antialiased text-gray-900 bg-gray-50" x-data>
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.store('sidebar', {
-                open: false,
-            })
-        })
-    </script>
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <livewire:layout.navigation />
