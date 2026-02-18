@@ -57,6 +57,9 @@ class AkreditasiDetail extends Component
     public $asesorTipe;
     public $activeTab = 'profil';
 
+    // Overall Accreditation Scores
+
+
     public function mount($uuid)
     {
         if (!auth()->user()->isAsesor()) {
@@ -155,8 +158,8 @@ class AkreditasiDetail extends Component
 
     public function saveAsesorEdpm($isFinal = false)
     {
-        if ($this->akreditasi->status != 5) {
-            session()->flash('error', 'Data tidak dapat diubah karena status sudah bukan Assesment.');
+        if ($this->akreditasi->status != 4) {
+            session()->flash('error', 'Data tidak dapat diubah karena status bukan Visitasi.');
             return;
         }
 
@@ -164,76 +167,52 @@ class AkreditasiDetail extends Component
             'asesorEvaluasis.*' => ($isFinal ? 'required' : 'nullable') . '|integer|between:1,4',
             'asesorCatatans.*' => 'nullable|string',
             'asesorButirCatatans.*' => 'nullable|string',
+
         ];
 
-        if ($this->asesorTipe == 1) {
-            foreach ($this->komponens as $komponen) {
-                foreach ($komponen->butirs as $butir) {
-                    $hasSelf = !empty($this->asesorEvaluasis[$butir->id]);
-                    $hasOther = !empty($this->otherAsesorEvaluasis[$butir->id]);
+        // Check for missing items
+        $missingItems = [];
+        foreach ($this->komponens as $komponen) {
+            foreach ($komponen->butirs as $butir) {
+                // Check current assessor's NA
+                if (empty($this->asesorEvaluasis[$butir->id])) {
+                    $missingItems[] = "<li><b>NA {$this->asesorTipe}</b>: Butir {$butir->nomor_butir} ({$komponen->nama})</li>";
+                }
 
-                    if ($isFinal) {
-                        if (!$hasOther) {
-                            $this->dispatch(
-                                'validation-failed',
-                                title: 'Validasi Gagal',
-                                html: "Syarat <b>Verifikasi Final</b> belum terpenuhi: Asesor 1 belum menyelesaikan penilaian (Penilaian NA 2 untuk Butir {$butir->nomor_butir} masih kosong)."
-                            );
-                            return false;
-                        }
-                        if (!$hasSelf) {
-                            $this->dispatch(
-                                'validation-failed',
-                                title: 'Validasi Gagal',
-                                html: "Syarat <b>Verifikasi Final</b> belum terpenuhi: Anda belum mengisi penilaian NA untuk Butir {$butir->nomor_butir}."
-                            );
-                            return false;
-                        }
-                        $rules["asesorNks.{$butir->id}"] = 'required|integer|between:1,4';
-                    } else {
-                        // Draft mode: NK required only for butirs where BOTH NA 1 (self) and NA 2 (other) are filled
-                        if ($hasSelf && $hasOther) {
-                            $rules["asesorNks.{$butir->id}"] = 'required|integer|between:1,4';
-                        } else {
-                            $rules["asesorNks.{$butir->id}"] = 'nullable|integer|between:1,4';
-                        }
+                if ($this->asesorTipe == 1) {
+                    // Asesor 1 needs to ensure Asesor 2 (other) has filled their part for finalization
+                    if ($isFinal && empty($this->otherAsesorEvaluasis[$butir->id])) {
+                        $this->dispatch(
+                            'validation-failed',
+                            title: 'Validasi Gagal',
+                            html: "Asesor 2 belum menyelesaikan penilaian (Butir {$butir->nomor_butir} masih kosong)."
+                        );
+                        return false;
+                    }
+
+                    // Asesor 1 needs to fill NK if both NA are filled OR if finalizing
+                    $hasAllNa = !empty($this->asesorEvaluasis[$butir->id]) && !empty($this->otherAsesorEvaluasis[$butir->id]);
+                    if (($isFinal || $hasAllNa) && empty($this->asesorNks[$butir->id])) {
+                        $missingItems[] = "<li><b>NK</b>: Butir {$butir->nomor_butir} ({$komponen->nama})</li>";
                     }
                 }
             }
-            $rules['asesorCatatanNks.*'] = 'nullable|string';
+        }
+
+        if ($isFinal && !empty($missingItems)) {
+            $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-[11px]">' . implode('', array_unique($missingItems)) . '</ul>';
+            $this->dispatch(
+                'validation-failed',
+                title: 'Data Belum Lengkap',
+                html: "Mohon lengkapi seluruh penilaian sebelum menyelesaikan:<br>" . $htmlList
+            );
+            return false;
         }
 
         try {
             $this->validate($rules);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            $missingItems = [];
-            $errors = $e->validator->errors()->messages();
-
-            foreach ($errors as $key => $messages) {
-                if (preg_match('/(asesorEvaluasis|asesorNks)\.(\d+)/', $key, $matches)) {
-                    $type = $matches[1] == 'asesorEvaluasis' ? 'NA 1' : 'NK';
-                    $butirId = $matches[2];
-
-                    foreach ($this->komponens as $komponen) {
-                        $butir = $komponen->butirs->firstWhere('id', $butirId);
-                        if ($butir) {
-                            $missingItems[] = "<li><b>{$type}</b>: Butir {$butir->nomor_butir} ({$komponen->nama})</li>";
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!empty($missingItems)) {
-                $htmlList = '<ul class="text-left list-disc pl-5 mt-2 space-y-1 text-sm">' . implode('', array_unique($missingItems)) . '</ul>';
-
-                $this->dispatch(
-                    'validation-failed',
-                    title: 'Data Belum Lengkap',
-                    html: ($isFinal ? "Mohon lengkapi penilaian wajib berikut sebelum verifikasi final:" : "Mohon lengkapi penilaian berikut sebelum menyimpan:") . "<br>" . $htmlList
-                );
-                throw $e;
-            }
+            // Fallback for Laravel validation errors
             throw $e;
         }
 
@@ -260,6 +239,8 @@ class AkreditasiDetail extends Component
             AkreditasiEdpmCatatan::updateOrCreate(['akreditasi_id' => $this->akreditasi->id, 'komponen_id' => $komponenId, 'asesor_id' => $asesorId], $data);
         }
 
+        // No longer updating overall na1, na2, nk from assessor manual inputs as requested
+
         $this->dispatch(
             'notification-received',
             type: 'success',
@@ -272,12 +253,16 @@ class AkreditasiDetail extends Component
 
     public function finalizeVerification()
     {
+        if ($this->asesorTipe != 1) {
+            abort(403);
+        }
+
         // For finalization, we enforce strict validation
         if (!$this->saveAsesorEdpm(isFinal: true)) {
             return;
         }
 
-        $this->akreditasi->update(['status' => 4]); // 4. Visitasi
+        $this->akreditasi->update(['status' => 3]); // 3. Validasi
 
         // Notify Admin
         $admins = \App\Models\User::whereHas('role', function ($q) {
@@ -286,9 +271,9 @@ class AkreditasiDetail extends Component
         \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . auth()->user()->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
 
         // Notify Pesantren
-        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('visitasi', 'Update Status: Visitasi', 'Assessment telah selesai. Status pengajuan Anda kini adalah Visitasi.', route('pesantren.akreditasi')));
+        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('validasi', 'Update Status: Validasi', 'Assessment telah selesai. Silakan unggah Kartu Kendali untuk melanjutkan proses validasi.', route('pesantren.akreditasi')));
 
-        session()->flash('status', 'Verifikasi berhasil diselesaikan. Status berubah menjadi Visitasi.');
+        session()->flash('status', 'Assessment berhasil diselesaikan. Status berubah menjadi Validasi Admin.');
         return redirect()->route('asesor.akreditasi');
     }
 

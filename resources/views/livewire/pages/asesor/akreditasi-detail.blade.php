@@ -42,10 +42,12 @@
                             <button wire:click="setTab('edpm_pesantren')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'edpm_pesantren' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">EDPM</button>
                         </li>
+                        @if($akreditasi->status != 5)
                         <li class="me-2">
                             <button wire:click="setTab('instrumen')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
+                        @endif
                     </ul>
                 </div>
 
@@ -84,6 +86,12 @@
                                 <p class="text-xs font-bold text-gray-500 uppercase">Tahun Pendirian</p>
                                 <p class="text-gray-900">{{ $pesantren->tahun_pendirian ?? '-' }}</p>
                             </div>
+                            @if($akreditasi->tgl_visitasi)
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Visitasi</p>
+                                <p class="text-indigo-600 font-bold">{{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi)->format('d F Y') }}</p>
+                            </div>
+                            @endif
                         </div>
                         <div class="md:col-span-2 mt-4">
                             <p class="text-xs font-bold text-gray-500 uppercase mb-2">Layanan Satuan Pendidikan</p>
@@ -389,8 +397,8 @@
                                             <td class="border border-gray-300 p-0">
                                                 <select
                                                     wire:model.live="asesorEvaluasis.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 5 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 5 ? '' : 'disabled' }}>
+                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 3 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}>
                                                     <option value="">Pilih...</option>
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>
@@ -408,8 +416,8 @@
                                             <td class="border border-gray-300 p-0 bg-amber-50/10">
                                                 <select
                                                     wire:model.live="asesorNks.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 5 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
+                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                    {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
                                                     <option value="">Pilih...</option>
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>
@@ -422,16 +430,16 @@
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-blue-50/10">
                                                 <textarea wire:model.live="asesorButirCatatans.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 5 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
                                                     placeholder="Catatan butir..."
-                                                    {{ $akreditasi->status == 5 ? '' : 'disabled' }}></textarea>
+                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @if ($index === 0)
                                             <td rowspan="{{ $butirsCount }}"
                                                 class="border border-gray-300 p-0 align-top h-px bg-blue-50/20">
                                                 <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 5 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 5 ? '' : 'disabled' }}></textarea>
+                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @endif
                                             @endif
@@ -441,6 +449,8 @@
                                     </tbody>
                                 </table>
                             </div>
+
+
                         </form>
 
                         <div
@@ -451,9 +461,8 @@
                                     Evaluasi Asesor</h3>
                                 <p class="text-[10px] text-indigo-700 mt-1">Pastikan semua data sudah terisi sebelum melakukan verifikasi final.</p>
                             </div>
-                            @if ($akreditasi->status == 5)
+                            @if ($akreditasi->status == 4)
                             <div class="flex gap-2">
-                                @if ($this->asesorTipe == 1)
                                 <x-secondary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
                                     <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan Draft</span>
                                     <span wire:loading wire:target="saveAsesorEdpm">
@@ -464,7 +473,9 @@
                                         Menyimpan...
                                     </span>
                                 </x-secondary-button>
-                                <x-primary-button @click="confirmAction('finalizeVerification', 'Selesaikan verifikasi? Status akan berubah menjadi Visitasi.', 'Ya, Selesaikan')" wire:loading.attr="disabled" wire:target="finalizeVerification">
+
+                                @if($asesorTipe == 1)
+                                <x-primary-button wire:click="finalizeVerification" wire:loading.attr="disabled" wire:target="finalizeVerification">
                                     <span wire:loading.remove wire:target="finalizeVerification">Selesaikan & Verifikasi</span>
                                     <span wire:loading wire:target="finalizeVerification">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -475,14 +486,14 @@
                                     </span>
                                 </x-primary-button>
                                 @else
-                                <x-primary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
-                                    <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan</span>
-                                    <span wire:loading wire:target="saveAsesorEdpm">
+                                <x-primary-button wire:click="saveAsesorEdpm(true)" wire:loading.attr="disabled" wire:target="saveAsesorEdpm(true)">
+                                    <span wire:loading.remove wire:target="saveAsesorEdpm(true)">Selesaikan (Final)</span>
+                                    <span wire:loading wire:target="saveAsesorEdpm(true)">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Menyimpan...
+                                        Memproses...
                                     </span>
                                 </x-primary-button>
                                 @endif

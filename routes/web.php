@@ -40,6 +40,10 @@ Route::view('profile', 'profile')
     ->middleware(['auth', 'verified'])
     ->name('pesantren.akreditasi');
 
+\Livewire\Volt\Volt::route('pesantren/akreditasi/{uuid}', 'pages.pesantren.akreditasi-detail')
+    ->middleware(['auth', 'verified'])
+    ->name('pesantren.akreditasi-detail');
+
 \Livewire\Volt\Volt::route('asesor/profile', 'pages.asesor.profile')
     ->middleware(['auth', 'verified'])
     ->name('asesor.profile');
@@ -55,6 +59,14 @@ Route::get('asesor/akreditasi/{uuid}', \App\Livewire\Pages\Asesor\AkreditasiDeta
 \Livewire\Volt\Volt::route('admin/master-edpm', 'pages.admin.master-edpm')
     ->middleware(['auth', 'verified'])
     ->name('admin.master-edpm');
+
+\Livewire\Volt\Volt::route('admin/master-document', 'pages.admin.master.dokumen')
+    ->middleware(['auth', 'verified'])
+    ->name('admin.master-dokumen');
+
+\Livewire\Volt\Volt::route('documents', 'pages.dokumen.index')
+    ->middleware(['auth', 'verified'])
+    ->name('documents.index');
 
 \Livewire\Volt\Volt::route('admin/akreditasi', 'pages.admin.akreditasi')
     ->middleware(['auth', 'verified'])

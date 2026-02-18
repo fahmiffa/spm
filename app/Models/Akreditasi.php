@@ -20,8 +20,16 @@ class Akreditasi extends Model
         'nomor_sk',
         'catatan',
         'status',
+        'tgl_visitasi',
         'nilai',
         'peringkat',
+        'na1',
+        'na2',
+        'nk',
+        'nv',
+        'sertifikat_path',
+        'kartu_kendali',
+        'masa_berlaku',
     ];
 
     protected static function boot()
@@ -59,15 +67,18 @@ class Akreditasi extends Model
     {
         return $this->hasOne(Assessment::class)->where('tipe', 2);
     }
-
+    public function catatans()
+    {
+        return $this->hasMany(AkreditasiCatatan::class);
+    }
     public static function getStatusLabel($status)
     {
         return match ($status) {
             1 => 'Berhasil',
             2 => 'Di Tolak',
-            3 => 'Verifikasi',
-            4 => 'Validasi',
-            5 => 'Assesment',
+            3 => 'Validasi',
+            4 => 'Visitasi',
+            5 => 'Assessment',
             6 => 'Pengajuan',
             default => 'Unknown',
         };
@@ -78,9 +89,9 @@ class Akreditasi extends Model
         return match ($status) {
             1 => 'bg-green-100 text-green-800',
             2 => 'bg-red-100 text-red-800',
-            3 => 'bg-blue-100 text-blue-800',
-            4 => 'bg-indigo-100 text-indigo-800',
-            5 => 'bg-purple-100 text-purple-800',
+            3 => 'bg-indigo-100 text-indigo-800',
+            4 => 'bg-purple-100 text-purple-800',
+            5 => 'bg-amber-100 text-amber-800',
             6 => 'bg-gray-100 text-gray-800',
             default => 'bg-gray-100 text-gray-800',
         };

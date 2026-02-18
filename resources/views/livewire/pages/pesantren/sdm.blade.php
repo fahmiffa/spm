@@ -49,6 +49,16 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        if (auth()->user()->pesantren->is_locked) {
+            $this->js("Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak',
+                text: 'Data terkunci karena sedang dalam proses akreditasi.',
+                confirmButtonColor: '#d33'
+            })");
+            return;
+        }
+
         foreach ($this->levels as $level) {
             $unitId = $this->unitIds[$level] ?? null;
 
@@ -78,6 +88,22 @@ new #[Layout('layouts.app')] class extends Component {
 
 <div class="py-12">
     <div class="max-w-full mx-auto sm:px-6 lg:px-8">
+        @if(auth()->user()->pesantren->is_locked)
+        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">
+                        <span class="font-bold">DATA TERKUNCI!</span> Data SDM tidak dapat diubah karena sedang dalam proses akreditasi.
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900 overflow-x-auto">
                 <header class="mb-6">

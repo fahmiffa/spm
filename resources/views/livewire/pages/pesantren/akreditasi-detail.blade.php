@@ -1,0 +1,406 @@
+<?php
+
+use App\Models\Akreditasi;
+use App\Models\Pesantren;
+use App\Models\Ipm;
+use App\Models\SdmPesantren;
+use App\Models\MasterEdpmKomponen;
+use App\Models\Edpm;
+use App\Models\EdpmCatatan;
+use App\Models\AkreditasiEdpm;
+use App\Models\AkreditasiEdpmCatatan;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
+use Livewire\Volt\Component;
+
+new #[Layout('layouts.app')] class extends Component {
+    public $akreditasi;
+    public $pesantren;
+    public $ipm;
+    public $sdm;
+    public $komponens;
+    public $levels = [];
+    public $fields = [
+        'santri_l',
+        'santri_p',
+        'ustadz_dirosah_l',
+        'ustadz_dirosah_p',
+        'ustadz_non_dirosah_l',
+        'ustadz_non_dirosah_p',
+        'pamong_l',
+        'pamong_p',
+        'musyrif_l',
+        'musyrif_p',
+        'tendik_l',
+        'tendik_p',
+    ];
+
+    public $pesantrenEvaluasis = [];
+    public $pesantrenCatatans = [];
+
+    public $asesor1Evaluasis = [];
+    public $asesor2Evaluasis = [];
+    public $asesor1Nks = [];
+    public $adminNvs = [];
+    public $asesorButirCatatans = [];
+
+    public $activeTab = 'profil';
+
+    public function mount($uuid)
+    {
+        $this->akreditasi = Akreditasi::with(['assessments.asesor.user', 'assessment1', 'assessment2'])
+            ->where('uuid', $uuid)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        $userId = $this->akreditasi->user_id;
+        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
+        $this->ipm = Ipm::where('user_id', $userId)->first();
+        $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+
+        if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
+            $this->levels = $this->pesantren->units->pluck('unit')->toArray();
+        }
+
+        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+
+        // Load Pesantren EDPM
+        $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
+        $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
+
+        // Load Assessor/Admin data if available (status 1, 2, 3, 4, 5)
+        $asesor1Id = $this->akreditasi->assessment1->asesor_id ?? null;
+        if ($asesor1Id) {
+            $a1Edpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor1Id)->get();
+            $this->asesor1Evaluasis = $a1Edpms->pluck('isian', 'butir_id');
+            $this->asesor1Nks = $a1Edpms->pluck('nk', 'butir_id');
+            $this->adminNvs = $a1Edpms->pluck('nv', 'butir_id');
+            $this->asesorButirCatatans = $a1Edpms->pluck('catatan', 'butir_id');
+        }
+
+        $asesor2Id = $this->akreditasi->assessment2->asesor_id ?? null;
+        if ($asesor2Id) {
+            $this->asesor2Evaluasis = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)
+                ->where('asesor_id', $asesor2Id)
+                ->get()
+                ->pluck('isian', 'butir_id');
+        }
+
+        foreach ($this->komponens as $komponen) {
+            $this->pesantrenCatatans[$komponen->id] = $pCatatans[$komponen->id] ?? '';
+            foreach ($komponen->butirs as $butir) {
+                $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '';
+            }
+        }
+    }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+    }
+
+    public function getTotal($field)
+    {
+        $total = 0;
+        foreach ($this->levels as $level) {
+            $total += (int)($this->sdm[$level]->$field ?? 0);
+        }
+        return $total;
+    }
+}; ?>
+
+<div class="py-12">
+    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6 text-gray-900">
+                <div class="mb-6 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Detail Pengajuan Akreditasi</h2>
+                        <p class="text-sm text-gray-500">Status:
+                            <span class="font-semibold {{ Akreditasi::getStatusBadgeClass($akreditasi->status) }} px-2 py-0.5 rounded text-[10px]">
+                                {{ Akreditasi::getStatusLabel($akreditasi->status) }}
+                            </span>
+                        </p>
+                    </div>
+                    <a href="{{ route('pesantren.akreditasi') }}" class="text-indigo-600 hover:text-indigo-900 font-medium">&larr; Kembali</a>
+                </div>
+
+                <!-- Tabs -->
+                <div class="mb-4 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-500">
+                        <li class="me-2">
+                            <button wire:click="setTab('profil')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'profil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Profil</button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab('ipm')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'ipm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">IPM</button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab('sdm')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'sdm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">SDM</button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab('edpm')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'edpm' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">EDPM</button>
+                        </li>
+                        @if($akreditasi->status == 1 || $akreditasi->status == 2 || $akreditasi->status == 3)
+                        <li class="me-2">
+                            <button wire:click="setTab('hasil')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'hasil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Hasil Penilaian</button>
+                        </li>
+                        @endif
+                    </ul>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="mt-6">
+                    @if ($activeTab === 'profil')
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Nama Pesantren</p>
+                                <p class="text-gray-900">{{ $pesantren->nama_pesantren ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">NSP</p>
+                                <p class="text-gray-900">{{ $pesantren->ns_pesantren ?? '-' }}</p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <p class="text-xs font-bold text-gray-500 uppercase">Alamat</p>
+                                <p class="text-gray-900">{{ $pesantren->alamat ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Kota/Kabupaten</p>
+                                <p class="text-gray-900">{{ $pesantren->kota_kabupaten ?? '-' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500 uppercase">Provinsi</p>
+                                <p class="text-gray-900">{{ $pesantren->provinsi ?? '-' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'ipm')
+                    <div class="space-y-4">
+                        @php
+                        $ipmItems = [
+                        'nsp_file' => '1. Izin operasional Kementerian Agama (NSP)',
+                        'lulus_santri_file' => '2. Pernah meluluskan santri / memiliki santri kelas akhir',
+                        'kurikulum_file' => '3. Menyelenggarakan kurikulum Dirasah Islamiyah',
+                        'buku_ajar_file' => '4. Menggunakan buku ajar terbitan LP2 PPM',
+                        ];
+                        @endphp
+                        @foreach ($ipmItems as $field => $label)
+                        <div class="p-4 border rounded-lg bg-gray-50 flex justify-between items-center">
+                            <span class="text-sm text-gray-700 font-medium">{{ $label }}</span>
+                            <div>
+                                @if ($ipm && $ipm->$field)
+                                <a href="{{ Storage::url($ipm->$field) }}" target="_blank" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-200">Lihat Dokumen</a>
+                                @else
+                                <span class="text-red-500 text-xs italic">Belum diunggah</span>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'sdm')
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
+                            <thead class="bg-gray-100 uppercase font-bold text-[10px]">
+                                <tr>
+                                    <th rowspan="2" class="border border-gray-300 px-2 py-2">NO.</th>
+                                    <th rowspan="2" class="border border-gray-300 px-2 py-2">BENTUK</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-green-50">SANTRI</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-blue-50">USTADZ DIROSAH</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-indigo-50">USTADZ NON DIROSAH</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-yellow-50">PAMONG</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-orange-50">MUSYRIF/AH</th>
+                                    <th colspan="2" class="border border-gray-300 px-2 py-1 bg-purple-50">TENAGA KEPENDIDIKAN</th>
+                                </tr>
+                                <tr class="bg-gray-50 text-center">
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                    <th class="border border-gray-300">L</th>
+                                    <th class="border border-gray-300">P</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($levels as $index => $level)
+                                <tr class="text-center">
+                                    <td class="border border-gray-300 px-2 py-1 font-bold">{{ $index + 1 }}</td>
+                                    <td class="border border-gray-300 px-2 py-1 font-bold text-left uppercase">{{ $level }}</td>
+                                    @foreach($fields as $field)
+                                    <td class="border border-gray-300 px-2 py-1">{{ $sdm[$level]->$field ?? 0 }}</td>
+                                    @endforeach
+                                </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="bg-blue-50 font-bold text-center">
+                                <tr>
+                                    <td colspan="2" class="border border-gray-300 px-4 py-2 uppercase">JUMLAH</td>
+                                    @foreach($fields as $field)
+                                    <td class="border border-gray-300 px-2 py-2">{{ $this->getTotal($field) }}</td>
+                                    @endforeach
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'edpm')
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
+                            <thead class="bg-gray-100 uppercase">
+                                <tr>
+                                    <th class="border border-gray-300 px-2 py-2">No Butir</th>
+                                    <th class="border border-gray-300 px-4 py-2 text-left">Pernyataan</th>
+                                    <th class="border border-gray-300 px-4 py-2">Isian Pesantren</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($komponens as $komponen)
+                                @foreach ($komponen->butirs as $butir)
+                                <tr>
+                                    <td class="border border-gray-300 px-2 py-2 text-center font-bold">{{ $butir->nomor_butir }}</td>
+                                    <td class="border border-gray-300 px-4 py-2">{{ $butir->butir_pernyataan }}</td>
+                                    <td class="border border-gray-300 px-4 py-2 font-medium bg-yellow-50 text-indigo-700">{{ $pesantrenEvaluasis[$butir->id] ?? '-' }}</td>
+                                </tr>
+                                @endforeach
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'hasil')
+                    <div class="space-y-6">
+                        @if($akreditasi->status == 1)
+                        <div class="bg-green-50 border border-green-200 p-6 rounded-lg">
+                            <h3 class="text-lg font-bold text-green-800 mb-4">Hasil Akreditasi Akhir</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-xs font-bold text-green-600 uppercase">Nilai Akhir</p>
+                                    <p class="text-3xl font-black text-green-900">{{ $akreditasi->nilai }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-green-600 uppercase">Peringkat</p>
+                                    <p class="text-3xl font-black text-green-900">{{ $akreditasi->peringkat }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-green-600 uppercase">Nomor SK</p>
+                                    <p class="text-gray-900 font-bold">{{ $akreditasi->nomor_sk }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-bold text-green-600 uppercase">Masa Berlaku</p>
+                                    <p class="text-gray-900 font-bold">{{ \Carbon\Carbon::parse($akreditasi->masa_berlaku)->format('d F Y') }}</p>
+                                </div>
+                                @if($akreditasi->sertifikat_path)
+                                <div class="md:col-span-2">
+                                    <a href="{{ Storage::url($akreditasi->sertifikat_path) }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 focus:bg-green-700 active:bg-green-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                        Unduh Sertifikat
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                        @elseif($akreditasi->status == 2)
+                        <div class="bg-red-50 border border-red-200 p-6 rounded-lg">
+                            <h3 class="text-lg font-bold text-red-800 mb-2">Pengajuan Ditolak</h3>
+                            <p class="text-gray-700">Catatan: {{ $akreditasi->catatan }}</p>
+                        </div>
+                        @endif
+
+                        <div class="mt-8 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
+                            <h3 class="text-lg font-bold text-indigo-900 mb-4 border-b-2 border-indigo-300 pb-2">
+                                📊 DATA PENILAIAN
+                            </h3>
+
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                                <table class="min-w-full text-xs">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Komponen</th>
+                                            <th class="border border-gray-300 px-3 py-2 text-center font-bold">Skor Komponen</th>
+                                            <th class="border border-gray-300 px-3 py-2 text-center font-bold">Total Skor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                        $bobotKomponen = [
+                                        'MUTU LULUSAN' => 35,
+                                        'PROSES PEMBELAJARAN' => 29,
+                                        'MUTU USTAZ' => 18,
+                                        'MANAJEMEN PESANTREN' => 18,
+                                        'INDIKATOR PEMENUHAN RELATIF' => 97,
+                                        ];
+
+                                        $iprNullComponents = $komponens->filter(function($k) { return is_null($k->ipr); });
+                                        $iprNotNullComponents = $komponens->filter(function($k) { return !is_null($k->ipr); });
+
+                                        $totalSkorIprNull = 0;
+                                        foreach ($iprNullComponents as $k) {
+                                        $b = $bobotKomponen[$k->nama] ?? 0;
+                                        $c_total = count($k->butirs) * 4;
+                                        $c_ci = 0;
+                                        foreach ($k->butirs as $butir) {
+                                        $c_ci += (int)($adminNvs[$butir->id] ?? 0);
+                                        }
+                                        if ($c_total > 0) {
+                                        $totalSkorIprNull += round(($c_ci / $c_total) * $b);
+                                        }
+                                        }
+                                        @endphp
+
+                                        @foreach ($komponens as $index => $komponen)
+                                        @php
+                                        $totalButir = count($komponen->butirs);
+                                        $cmaksKomponen = $totalButir * 4;
+                                        $sumNvKomponen = 0;
+                                        foreach ($komponen->butirs as $butir) {
+                                        $sumNvKomponen += (int) ($adminNvs[$butir->id] ?? 0);
+                                        }
+                                        $bkValue = $bobotKomponen[$komponen->nama] ?? 0;
+                                        $isIpr = !is_null($komponen->ipr);
+                                        $faktor = $isIpr ? 100 : $bkValue;
+                                        $skorKomponen = 0;
+                                        if ($cmaksKomponen > 0) {
+                                        $skorKomponen = round(($sumNvKomponen / $cmaksKomponen) * $faktor);
+                                        }
+                                        @endphp
+
+                                        <tr class="hover:bg-gray-50 text-center">
+                                            <td class="border border-gray-300 px-3 py-2 font-medium text-gray-700 text-left uppercase">
+                                                {{ $komponen->nama }}
+                                            </td>
+                                            <td class="border border-gray-300 px-3 py-2 text-blue-700 font-bold">
+                                                {{ $skorKomponen }}
+                                            </td>
+                                            @if ($index === 0)
+                                            <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-50 align-middle">
+                                                {{ $totalSkorIprNull }}
+                                            </td>
+                                            @elseif ($index === $iprNullComponents->count())
+                                            <td class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-100 align-middle">
+                                                {{ $skorKomponen }}
+                                            </td>
+                                            @endif
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

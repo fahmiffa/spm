@@ -21,7 +21,7 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 {{ auth()->user()->isAdmin() ? 'lg:grid-cols-5' : 'lg:grid-cols-3' }} gap-6">
         <!-- Proses Pengajuan -->
         <div class="bg-white rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 group hover:-translate-y-1 transition-all duration-300">
             <div class="flex justify-between items-start">
@@ -70,6 +70,7 @@
             </div>
         </div>
 
+        @if(auth()->user()->isAdmin())
         <!-- Total Pesantren -->
         <div class="bg-white rounded-2xl shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)] border border-gray-100 p-6 group hover:-translate-y-1 transition-all duration-300">
             <div class="flex justify-between items-start">
@@ -101,5 +102,6 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 </div>

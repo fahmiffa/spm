@@ -946,9 +946,9 @@ new #[Layout('layouts.app')] class extends Component {
                             <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Akreditasi</span>
                             <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">
                                 @php
-                                $assessments = auth()->user()->asesor->assessments ?? collect();
+                                $assessments = auth()->user()->asesor?->assessments ?? collect();
                                 $activeProcess = $assessments->contains(function ($a) {
-                                return !in_array($a->akreditasi->status, [1, 2]);
+                                return $a->akreditasi && !in_array($a->akreditasi->status, [1, 2]);
                                 });
                                 @endphp
                                 @if ($assessments->isEmpty())

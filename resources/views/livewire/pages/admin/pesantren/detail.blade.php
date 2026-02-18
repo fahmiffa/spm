@@ -15,6 +15,17 @@ new #[Layout('layouts.app')] class extends Component {
         $this->user = User::where('uuid', $uuid)->with(['pesantren', 'pesantren.units'])->firstOrFail();
         $this->pesantren = $this->user->pesantren;
     }
+
+    public function toggleLock()
+    {
+        if ($this->pesantren) {
+            $this->pesantren->is_locked = !$this->pesantren->is_locked;
+            $this->pesantren->save();
+
+            $status = $this->pesantren->is_locked ? 'terkunci' : 'terbuka';
+            $this->dispatch('notification-received', title: 'Berhasil', message: "Akses data pesantren berhasil diubah menjadi $status.");
+        }
+    }
 }; ?>
 
 <div class="py-12">
@@ -82,6 +93,32 @@ new #[Layout('layouts.app')] class extends Component {
                             </div>
                         </div>
                     </div>
+                    @if($pesantren)
+                    <div class="mt-4 border-t pt-4">
+                        <button wire:click="toggleLock" wire:loading.attr="disabled"
+                            class="w-full justify-center inline-flex items-center px-4 py-2 border border-transparent rounded-md font-semibold text-xs uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 {{ $pesantren->is_locked ? 'bg-amber-500 hover:bg-amber-600 focus:ring-amber-500 text-white' : 'bg-gray-800 hover:bg-gray-700 focus:ring-gray-500 text-white' }}">
+
+                            <svg wire:loading.remove wire:target="toggleLock" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                @if($pesantren->is_locked)
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                @else
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0 0v2m0-2h2m-2 0H10" opacity="0" /> <!-- Spacer -->
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7a2 2 0 012 2" />
+                                @endif
+                            </svg>
+                            <svg wire:loading wire:target="toggleLock" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+
+                            {{ $pesantren->is_locked ? 'Buka Kunci Data' : 'Kunci Data Pesantren' }}
+                        </button>
+                        <p class="mt-2 text-[10px] text-center text-gray-400">
+                            {{ $pesantren->is_locked ? 'Data pesantren saat ini terkunci (Read Only).' : 'Data pesantren dapat diedit oleh user.' }}
+                        </p>
+                    </div>
+                    @endif
                 </div>
             </div>
 

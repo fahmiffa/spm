@@ -63,6 +63,9 @@ new class extends Component {
                     <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
                         {{ __('Komponen') }}
                     </x-sidebar-link>
+                    <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="document">
+                        {{ __('Dokumen') }}
+                    </x-sidebar-link>
                     @endif
 
                     <!-- Pesantren Menu -->
@@ -86,6 +89,9 @@ new class extends Component {
                         <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
                             {{ __('Akreditasi') }}
                         </x-sidebar-link>
+                        <x-sidebar-link :href="route('documents.index')" :active="request()->routeIs('documents.index')" icon="document">
+                            {{ __('Dokumen Pesantren') }}
+                        </x-sidebar-link>
                     </div>
                     @endif
 
@@ -100,6 +106,9 @@ new class extends Component {
                         </x-sidebar-link>
                         <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
                             {{ __('Akreditasi') }}
+                        </x-sidebar-link>
+                        <x-sidebar-link :href="route('documents.index')" :active="request()->routeIs('documents.index')" icon="document">
+                            {{ __('Dokumen Asesor') }}
                         </x-sidebar-link>
                     </div>
                     @endif
@@ -259,6 +268,9 @@ new class extends Component {
                                 <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi')" icon="shield">
                                     {{ __('Akreditasi') }}
                                 </x-sidebar-link>
+                                <x-sidebar-link :href="route('documents.index')" :active="request()->routeIs('documents.index')" icon="document">
+                                    {{ __('Dokumen Pesantren') }}
+                                </x-sidebar-link>
                             </div>
                             @endif
 
@@ -273,6 +285,9 @@ new class extends Component {
                                 </x-sidebar-link>
                                 <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
                                     {{ __('Akreditasi') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('documents.index')" :active="request()->routeIs('documents.index')" icon="document">
+                                    {{ __('Dokumen Asesor') }}
                                 </x-sidebar-link>
                             </div>
                             @endif

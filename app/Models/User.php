@@ -142,4 +142,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Profile::class, 'user_id', 'id');
     }
+
+    public function documents()
+    {
+        return $this->belongsToMany(Document::class);
+    }
 }

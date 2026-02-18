@@ -64,9 +64,9 @@ new #[Layout('layouts.app')] class extends Component {
                                 </td>
                                 <td class="py-3 px-6 text-center">
                                     @php
-                                    $assessments = $user->asesor->assessments ?? collect();
+                                    $assessments = $user->asesor?->assessments ?? collect();
                                     $activeProcess = $assessments->contains(function ($a) {
-                                    return !in_array($a->akreditasi->status, [1, 2]);
+                                    return $a->akreditasi && !in_array($a->akreditasi->status, [1, 2]);
                                     });
                                     @endphp
                                     @if ($assessments->isEmpty())

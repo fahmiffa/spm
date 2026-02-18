@@ -10,9 +10,11 @@ use App\Models\EdpmCatatan;
 use App\Models\AkreditasiEdpm;
 use App\Models\AkreditasiEdpmCatatan;
 use Livewire\Attributes\Layout;
+use Livewire\WithFileUploads;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component {
+    use WithFileUploads;
     public $akreditasi;
     public $pesantren;
     public $ipm;
@@ -36,6 +38,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesor2ButirCatatans = [];
 
     public $nomor_sk;
+    public $sertifikat_file;
+    public $masa_berlaku;
     public $catatan_admin;
 
     // Admin NV (Nilai Verifikasi)
@@ -120,6 +124,9 @@ new #[Layout('layouts.app')] class extends Component {
             }
             $this->asesor1CatatanNks[$komponen->id] = $a1CatatanNks[$komponen->id] ?? '';
         }
+
+        $this->nomor_sk = $this->akreditasi->nomor_sk;
+        $this->masa_berlaku = $this->akreditasi->masa_berlaku;
     }
 
     public function setTab($tab)
@@ -149,7 +156,7 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function saveAdminNv()
     {
-        if ($this->akreditasi->status != 4) {
+        if ($this->akreditasi->status != 3) {
             session()->flash('error', 'Data tidak dapat diubah karena status bukan Validasi.');
             return;
         }
@@ -274,16 +281,24 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->validate([
             'nomor_sk' => 'required|string|max:255',
+            'sertifikat_file' => 'required|file|mimes:pdf|max:10240',
+            'masa_berlaku' => 'required|date',
         ], [
             'nomor_sk.required' => 'Nomor SK wajib diisi.',
-            'nomor_sk.max' => 'Nomor SK maksimal 255 karakter.',
+            'sertifikat_file.required' => 'File Sertifikat wajib diunggah.',
+            'sertifikat_file.mimes' => 'Format file sertifikat harus PDF.',
+            'masa_berlaku.required' => 'Masa berlaku wajib diisi.',
         ]);
+
+        $sertifikatPath = $this->sertifikat_file->store('akreditasi/sertifikat', 'public');
 
         $results = $this->determineResults();
 
         $this->akreditasi->update([
             'status' => 1,
             'nomor_sk' => $this->nomor_sk,
+            'sertifikat_path' => $sertifikatPath,
+            'masa_berlaku' => $this->masa_berlaku,
             'nilai' => $results['nilai'],
             'peringkat' => $results['peringkat'],
         ]);
@@ -783,7 +798,7 @@ new #[Layout('layouts.app')] class extends Component {
                                                 {{ $asesor1Nks[$butir->id] ?? '' }}
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-purple-50/10">
-                                                @if ($akreditasi->status == 4)
+                                                @if ($akreditasi->status == 3)
                                                 <select wire:model.live="adminNvs.{{ $butir->id }}"
                                                     class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-purple-500 bg-white">
                                                     <option value="">Pilih...</option>
@@ -819,8 +834,8 @@ new #[Layout('layouts.app')] class extends Component {
                                 </table>
                             </div>
 
-                            @if ($akreditasi->status == 4 || $akreditasi->status == 1)
-                            @if ($akreditasi->status == 4)
+                            @if ($akreditasi->status == 3 || $akreditasi->status == 1)
+                            @if ($akreditasi->status == 3)
                             <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
                                 <div class="flex justify-between items-center">
                                     <div>
@@ -1010,7 +1025,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </div>
                                 </div>
                             </div>
-                            @if ($akreditasi->status == 4)
+                            @if ($akreditasi->status == 3)
                             <div class="mt-8 pt-6 border-t border-gray-200">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <!-- Approve Form -->
@@ -1021,9 +1036,25 @@ new #[Layout('layouts.app')] class extends Component {
                                                 <div>
                                                     <x-input-label for="nomor_sk" value="Nomor SK" />
                                                     <x-text-input wire:model="nomor_sk" id="nomor_sk" type="text"
-                                                        class="mt-1 block w-full border-green-300 focus:border-green-500 focus:ring-green-500"
+                                                        class="mt-1 block w-full"
                                                         required placeholder="Masukkan nomor SK resmi..." />
                                                     <x-input-error :messages="$errors->get('nomor_sk')" class="mt-2" />
+                                                </div>
+                                                <div>
+                                                    <x-input-label for="sertifikat_file" value="Upload Sertifikat (PDF)" />
+                                                    <x-text-input wire:model="sertifikat_file" id="sertifikat_file" type="file"
+                                                        accept="application/pdf"
+                                                        class="mt-1 block w-full p-1"
+                                                        required />
+                                                    <div wire:loading wire:target="sertifikat_file" class="text-[10px] text-indigo-600 font-bold mt-1">Mengunggah...</div>
+                                                    <x-input-error :messages="$errors->get('sertifikat_file')" class="mt-2" />
+                                                </div>
+                                                <div>
+                                                    <x-input-label for="masa_berlaku" value="Masa Berlaku" />
+                                                    <x-text-input wire:model="masa_berlaku" id="masa_berlaku" type="date"
+                                                        class="mt-1 block w-full"
+                                                        required />
+                                                    <x-input-error :messages="$errors->get('masa_berlaku')" class="mt-2" />
                                                 </div>
                                                 <div class="flex justify-end">
                                                     <x-primary-button wire:loading.attr="disabled" class="bg-green-600 hover:bg-green-700">
@@ -1089,7 +1120,42 @@ new #[Layout('layouts.app')] class extends Component {
                         </div>
                         @endif
                     </div>
+
+                    {{-- Kartu Kendali Section --}}
+                    @if($akreditasi->status >= 3)
+                    <div class="mt-6 bg-amber-50 p-6 rounded-lg border border-amber-200">
+                        <h4 class="text-sm font-bold text-amber-900 uppercase mb-3 border-b border-amber-200 pb-1 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Kartu Kendali
+                        </h4>
+                        <div class="flex justify-between items-center bg-white p-3 rounded border border-amber-100 shadow-sm">
+                            <div class="text-xs">
+                                <p class="font-bold text-gray-700">Dokumen Kartu Kendali</p>
+                                <p class="text-gray-500">Diunggah oleh pesantren untuk validasi.</p>
+                            </div>
+                            @if($akreditasi->kartu_kendali)
+                            <a href="{{ Storage::url($akreditasi->kartu_kendali) }}" target="_blank"
+                                class="bg-amber-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-amber-700 shadow-sm flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                </svg>
+                                UNDUH KARTU KENDALI
+                            </a>
+                            @else
+                            <span class="text-xs text-red-500 italic font-medium flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Belum diunggah oleh pesantren
+                            </span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+</div>

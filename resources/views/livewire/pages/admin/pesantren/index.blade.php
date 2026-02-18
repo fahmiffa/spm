@@ -39,7 +39,6 @@ new #[Layout('layouts.app')] class extends Component {
                                 <th class="py-3 px-6 text-left">No</th>
                                 <th class="py-3 px-6 text-left">Nama Pesantren</th>
                                 <th class="py-3 px-6 text-left">Email</th>
-                                <th class="py-3 px-6 text-center">No. HP</th>
                                 <th class="py-3 px-6 text-center">Akreditasi</th>
                                 <th class="py-3 px-6 text-center">Status</th>
                                 <th class="py-3 px-6 text-center">Aksi</th>
@@ -61,9 +60,6 @@ new #[Layout('layouts.app')] class extends Component {
                                 </td>
                                 <td class="py-3 px-6 text-left">
                                     {{ $user->email }}
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    {{ $user->pesantren->no_hp_pesantren ?? '-' }}
                                 </td>
                                 <td class="py-3 px-6 text-center">
                                     @php

@@ -17,6 +17,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $role_id;
     public $status = true; // Default to true (active)
     public $userId;
+    public $search = '';
+    public $activeTab = 1; // Default to Admin role (ID 1)
 
     public $isEditing = false;
 
@@ -31,7 +33,20 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function loadUsers()
     {
-        $this->users = User::with('role')->orderBy('id', 'desc')->get();
+        $this->users = User::with('role')
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhere('email', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
+    public function updatedSearch()
+    {
+        $this->loadUsers();
     }
 
     public function resetForm()
@@ -129,6 +144,11 @@ new #[Layout('layouts.app')] class extends Component {
         $this->loadUsers();
         $this->dispatch('swal:success', title: 'Berhasil!', text: 'Status akun berhasil diubah.');
     }
+
+    public function setTab($tab)
+    {
+        $this->activeTab = $tab;
+    }
 }; ?>
 
 <div>
@@ -145,11 +165,69 @@ new #[Layout('layouts.app')] class extends Component {
                 </div>
                 @endif
 
-                <div class="mb-4 flex justify-between items-center">
-                    <h3 class="text-lg font-medium text-gray-900">Users</h3>
+                <div class="mb-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-900">Manajemen Akun</h3>
+                    </div>
                     <x-primary-button wire:click="createUser">
                         {{ __('Add Account') }}
                     </x-primary-button>
+                </div>
+
+                <!-- Search Input -->
+                <div class="mb-6">
+                    <div class="relative max-w-md">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input wire:model.live.debounce.300ms="search" type="text"
+                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
+                            placeholder="Cari berdasarkan nama atau email...">
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div class="mb-6 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
+                        <li class="me-2">
+                            <button wire:click="setTab(1)"
+                                class="inline-block p-4 border-b-2 rounded-t-lg transition-colors {{ $activeTab == 1 ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                    </svg>
+                                    Admin
+                                    <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-[10px] font-bold">{{ $users->where('role_id', 1)->count() }}</span>
+                                </div>
+                            </button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab(2)"
+                                class="inline-block p-4 border-b-2 rounded-t-lg transition-colors {{ $activeTab == 2 ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    Asesor
+                                    <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-[10px] font-bold">{{ $users->where('role_id', 2)->count() }}</span>
+                                </div>
+                            </button>
+                        </li>
+                        <li class="me-2">
+                            <button wire:click="setTab(3)"
+                                class="inline-block p-4 border-b-2 rounded-t-lg transition-colors {{ $activeTab == 3 ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    </svg>
+                                    Pesantren
+                                    <span class="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-[10px] font-bold">{{ $users->where('role_id', 3)->count() }}</span>
+                                </div>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -177,9 +255,9 @@ new #[Layout('layouts.app')] class extends Component {
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse ($users as $user)
-                            <tr wire:key="{{ $user->id }}">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loop->iteration }}
+                            @forelse ($users->where('role_id', $activeTab) as $index => $user)
+                            <tr wire:key="user-{{ $user->id }}" class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $index + 1 }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $user->name }}
                                 </td>
