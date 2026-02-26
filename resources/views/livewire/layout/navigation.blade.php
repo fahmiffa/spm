@@ -23,7 +23,6 @@ new class extends Component {
             <div class="flex items-center h-16 px-6 border-b border-gray-200">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3">
                     <x-application-logo class="h-8 w-auto text-indigo-600" />
-                    <span class="font-bold text-lg text-gray-800 tracking-tight">SPM Pesantren</span>
                 </a>
             </div>
 
