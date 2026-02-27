@@ -10,8 +10,20 @@ new #[Layout('layouts.app')] class extends Component {
     use WithPagination;
 
     public $search = '';
+    public $filterStatus = '';
+    public $filterAkreditasi = '';
 
     public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterStatus()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedFilterAkreditasi()
     {
         $this->resetPage();
     }
@@ -29,9 +41,29 @@ new #[Layout('layouts.app')] class extends Component {
                         });
                 });
             })
+            ->when($this->filterStatus !== '', function ($query) {
+                $query->where('status', $this->filterStatus);
+            })
+            ->when($this->filterAkreditasi, function ($query) {
+                if ($this->filterAkreditasi === 'belum') {
+                    $query->whereDoesntHave('akreditasis');
+                } elseif ($this->filterAkreditasi === 'proses') {
+                    $query->whereHas('akreditasis', function ($q) {
+                        $q->whereNotIn('status', [1, 2]);
+                    });
+                } elseif ($this->filterAkreditasi === 'terakreditasi') {
+                    $query->whereHas('akreditasis', function ($q) {
+                        $q->where('status', 1);
+                    });
+                } elseif ($this->filterAkreditasi === 'ditolak') {
+                    $query->whereHas('akreditasis', function ($q) {
+                        $q->where('status', 2);
+                    });
+                }
+            })
             ->with(['pesantren', 'akreditasis'])
             ->orderBy('name', 'asc')
-            ->get();
+            ->paginate(10);
     }
 }; ?>
 
@@ -43,76 +75,89 @@ new #[Layout('layouts.app')] class extends Component {
     </x-slot>
 
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-gray-100">
             <div class="p-6 text-gray-900">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <h2 class="text-2xl font-semibold text-gray-800">Pesantren</h2>
+                <!-- Header Actions -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <h2 class="text-xl font-extrabold text-[#111827]">Pesantren</h2>
 
-                    <div class="relative w-full md:w-72">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="relative">
+                            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari Pesantren"
+                                class="pl-9 pr-4 py-2 text-xs border border-gray-100 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 w-48 bg-gray-50/50 placeholder-gray-400">
+                            <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
-                        <input wire:model.live.debounce.300ms="search" type="text"
-                            class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out"
-                            placeholder="Cari pesantren...">
+                        <select wire:model.live="filterAkreditasi" class="text-xs border border-gray-100 rounded-lg bg-gray-50/50 py-2 pl-3 pr-8 focus:ring-1 focus:ring-green-500 focus:border-green-500 text-gray-500">
+                            <option value="">Semua Akreditasi</option>
+                            <option value="terakreditasi">Unggul</option>
+                            <option value="proses">Proses Akreditasi</option>
+                            <option value="belum">Belum Terakreditasi</option>
+                            <option value="ditolak">Tidak Terakreditasi</option>
+                        </select>
+                        <select wire:model.live="filterStatus" class="text-xs border border-gray-100 rounded-lg bg-gray-50/50 py-2 pl-3 pr-8 focus:ring-1 focus:ring-green-500 focus:border-green-500 text-gray-500">
+                            <option value="">Semua Status</option>
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
+                        <button class="bg-[#1e3a5f] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-[#162d4a] transition-colors shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Export Data
+                        </button>
                     </div>
                 </div>
 
+                <!-- Table Content -->
                 <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-100">
                         <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left">No</th>
-                                <th class="py-3 px-6 text-left">Nama Pesantren</th>
-                                <th class="py-3 px-6 text-left">Email</th>
-                                <th class="py-3 px-6 text-center">Akreditasi</th>
-                                <th class="py-3 px-6 text-center">Status</th>
-                                <th class="py-3 px-6 text-center">Aksi</th>
+                            <tr class="bg-white">
+                                <th class="w-12 py-3 px-4">
+                                    <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
+                                </th>
+                                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">NAMA PESANTREN</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">AKREDITASI</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-wider">STATUS</th>
+                                <th class="py-3 px-4 text-right text-[11px] font-bold text-gray-400 uppercase tracking-wider pr-8">AKSI</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
+                        <tbody class="divide-y divide-gray-50">
                             @forelse ($this->pesantrens as $index => $user)
-                            <tr class="border-b border-gray-200 hover:bg-gray-100 transition duration-150">
-                                <td class="py-3 px-6 text-left whitespace-nowrap">
-                                    {{ $index + 1 }}
+                            <tr class="hover:bg-gray-50/30 transition-colors duration-150 group">
+                                <td class="py-5 px-4">
+                                    <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
                                 </td>
-                                <td class="py-3 px-6 text-left font-medium">
-                                    <div class="flex items-center">
-                                        <div>
-                                            <div class="text-gray-900 font-bold">{{ $user->pesantren->nama_pesantren ?? $user->name }}</div>
-                                            <div class="text-[10px] text-gray-400 uppercase tracking-widest">{{ $user->pesantren->ns_pesantren ?? '-' }}</div>
-                                        </div>
-                                    </div>
+                                <td class="py-5 px-4">
+                                    <span class="text-sm font-bold text-[#374151]">{{ $user->pesantren->nama_pesantren ?? $user->name }}</span>
                                 </td>
-                                <td class="py-3 px-6 text-left">
-                                    {{ $user->email }}
-                                </td>
-                                <td class="py-3 px-6 text-center">
+                                <td class="py-5 px-4 text-center">
                                     @php
                                     $latestAkreditasi = $user->akreditasis->sortByDesc('created_at')->first();
                                     @endphp
                                     @if (!$latestAkreditasi)
-                                    <span class="text-gray-400">-</span>
+                                    <span class="text-[11px] font-bold text-gray-400">Belum Teakreditasi</span>
                                     @elseif ($latestAkreditasi->status == 1)
-                                    <span class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-xs font-bold">{{ $latestAkreditasi->peringkat ?? 'Berhasil' }}</span>
+                                    <span class="text-[11px] font-bold text-green-500">{{ $latestAkreditasi->peringkat ?? 'Unggul' }}</span>
+                                    @elseif ($latestAkreditasi->status == 2)
+                                    <span class="text-[11px] font-bold text-rose-500">Tidak Terakreditasi</span>
                                     @else
-                                    <span class="bg-amber-100 text-amber-700 py-1 px-3 rounded-full text-xs font-bold uppercase tracking-wider">Proses</span>
+                                    <span class="bg-yellow-50 text-yellow-600 px-3 py-1 rounded text-[11px] font-bold">Proses Akreditasi</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-6 text-center">
+                                <td class="py-5 px-4 text-center">
                                     @if($user->status == 1)
-                                    <span class="bg-green-100 text-green-800 py-1 px-3 rounded-full text-xs font-semibold">Aktif</span>
+                                    <span class="text-[11px] font-bold text-green-500">Aktif</span>
                                     @else
-                                    <span class="bg-red-100 text-red-800 py-1 px-3 rounded-full text-xs font-semibold">Tidak Aktif</span>
+                                    <span class="text-[11px] font-bold text-rose-500">Tidak Aktif</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-6 text-center">
-                                    <a href="{{ route('admin.pesantren.detail', $user->uuid) }}"
-                                        class="text-indigo-600 hover:text-indigo-900 font-medium inline-flex items-center"
-                                        wire:navigate>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <td class="py-5 px-4 text-right pr-6">
+                                    <a href="{{ route('admin.pesantren.detail', $user->uuid) }}" wire:navigate
+                                        class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors bg-gray-50/80 rounded-lg group-hover:bg-gray-100">
+                                        <svg class="w-4 h-4 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
@@ -122,14 +167,26 @@ new #[Layout('layouts.app')] class extends Component {
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="py-10 text-center text-gray-500 italic">
-                                    Belum ada data pesantren.
+                                <td colspan="5" class="py-16 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                        </svg>
+                                        <p class="text-sm text-gray-400 font-medium">Belum ada data pesantren.</p>
+                                    </div>
                                 </td>
                             </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                @if($this->pesantrens instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <div class="mt-8">
+                    {{ $this->pesantrens->links() }}
+                </div>
+                @endif
             </div>
         </div>
     </div>
