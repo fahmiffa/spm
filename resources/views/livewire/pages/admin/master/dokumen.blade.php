@@ -128,22 +128,21 @@ new #[Layout('layouts.app')] class extends Component {
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-100">
                         <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left w-10">No</th>
-                                <th class="py-3 px-6 text-left">Dokumen</th>
-                                <th class="py-3 px-6 text-center">Akses</th>
-                                <th class="py-3 px-6 text-center">Status Dokumen</th>
-                                <th class="py-3 px-6 text-center w-32">Aksi</th>
+                            <tr class="bg-gray-50/50">
+                                <th class="py-4 px-6 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">NAMA DOKUMEN</th>
+                                <th class="py-4 px-6 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">AKSES</th>
+                                <th class="py-4 px-6 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS DOKUMEN</th>
+                                <th class="py-4 px-6 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">TERAKHIR DIPERBARUI</th>
+                                <th class="py-4 px-6 text-right text-[11px] font-bold text-gray-400 uppercase tracking-widest pr-10">AKSI</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-sm font-light">
-                            @forelse ($this->documents as $index => $doc)
-                            <tr class="border-b border-gray-200 hover:bg-gray-50">
-                                <td class="py-3 px-6 text-left whitespace-nowrap">{{ $index + 1 }}</td>
-                                <td class="py-3 px-6 text-left font-medium text-gray-800">
-                                    <div>{{ $doc->title }}</div>
+                        <tbody class="divide-y divide-gray-50 bg-white">
+                            @forelse ($this->documents as $doc)
+                            <tr class="hover:bg-gray-50/50 transition-all duration-200">
+                                <td class="py-5 px-6">
+                                    <span class="text-sm font-bold text-gray-700 tracking-tight">{{ $doc->title }}</span>
                                 </td>
                                 <td class="py-5 px-6 text-center">
                                     <div class="flex items-center justify-center gap-1.5 flex-wrap">
@@ -153,43 +152,79 @@ new #[Layout('layouts.app')] class extends Component {
                                         @if($doc->is_asesor)
                                         <span class="bg-indigo-600 text-white px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-wider shadow-sm">Asesor</span>
                                         @endif
+                                        @if(!$doc->is_pesantren && !$doc->is_asesor)
+                                        <span class="text-[10px] font-bold text-gray-300 italic tracking-wider">NONE</span>
+                                        @endif
                                     </div>
                                 </td>
-                                <td class="py-5 px-4 text-center">
+                                <td class="py-5 px-6 text-center">
                                     @if($doc->status == 1)
-                                    <span class="bg-emerald-50 text-emerald-600 px-2.5 py-0.5 rounded text-[10px] font-bold border border-emerald-100 uppercase">Aktif</span>
+                                    <div class="inline-flex items-center">
+                                        <span class="bg-[#f0fdf4] text-[#16a34a] px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-[#dcfce7]">Aktif</span>
+                                    </div>
                                     @else
-                                    <span class="bg-slate-50 text-slate-400 px-2.5 py-0.5 rounded text-[10px] font-bold border border-slate-100 uppercase">Tidak Aktif</span>
+                                    <div class="inline-flex items-center">
+                                        <span class="bg-slate-50 text-slate-400 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider border border-slate-100">Tidak Aktif</span>
+                                    </div>
                                     @endif
                                 </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex item-center justify-center gap-2">
-                                        <button wire:click="edit({{ $doc->id }})" class="w-8 h-8 rounded bg-yellow-100 text-yellow-600 hover:bg-yellow-200 flex items-center justify-center transition" title="Edit">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                <td class="py-5 px-6 text-center">
+                                    <span class="text-[11px] font-bold text-gray-500 tracking-tight whitespace-nowrap">{{ $doc->updated_at->translatedFormat('d M Y • H:i') }} WIB</span>
+                                </td>
+                                <td class="py-5 px-6 text-right pr-8">
+                                    <div class="relative inline-block text-left" x-data="{ open: false }">
+                                        <button @click="open = !open" @click.away="open = false" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-black text-gray-400 hover:text-gray-700 transition-colors bg-gray-50/50 rounded-lg group">
+                                            Aksi
+                                            <svg class="w-2.5 h-2.5 transition-transform duration-300 group-hover:translate-y-0.5" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
                                             </svg>
                                         </button>
-                                        <button x-on:click="
-                                            Swal.fire({
-                                                title: 'Apakah Anda yakin?',
-                                                text: 'Dokumen ini akan dihapus secara permanen!',
-                                                icon: 'warning',
-                                                showCancelButton: true,
-                                                confirmButtonColor: '#ef4444',
-                                                cancelButtonColor: '#6b7280',
-                                                confirmButtonText: 'Ya, Hapus!',
-                                                cancelButtonText: 'Batal'
-                                            }).then((result) => {
-                                                if (result.isConfirmed) {
-                                                    $wire.delete({{ $doc->id }})
-                                                }
-                                            })
-                                        "
-                                            class="w-8 h-8 rounded bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition" title="Hapus">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
+                                        <div x-show="open" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 scale-95 translate-y-1" x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-transition:leave="transition ease-in duration-100" x-transition:leave-start="opacity-100 scale-100 translate-y-0" x-transition:leave-end="opacity-0 scale-95 translate-y-1"
+                                            class="absolute right-0 z-[100] mt-2 w-48 bg-white rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-gray-100 py-2 origin-top-right overflow-hidden" x-cloak>
+                                            <a href="{{ Storage::url($doc->file_path) }}" target="_blank"
+                                                class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-[#374151] hover:bg-[#f8fafc] hover:text-[#1e3a5f] transition-all gap-3 text-left">
+                                                <div class="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
+                                                </div>
+                                                Lihat Detail
+                                            </a>
+                                            <button wire:click="edit({{ $doc->id }})" @click="open = false"
+                                                class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-[#374151] hover:bg-[#f8fafc] hover:text-[#1e3a5f] transition-all gap-3 border-t border-gray-50 text-left">
+                                                <div class="p-1.5 bg-slate-50 rounded-lg text-slate-500">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </div>
+                                                Edit Dokumen
+                                            </button>
+                                            <button @click="open = false; 
+                                                Swal.fire({
+                                                    title: 'Apakah Anda yakin?',
+                                                    text: 'Dokumen ini akan dihapus secara permanen!',
+                                                    icon: 'warning',
+                                                    showCancelButton: true,
+                                                    confirmButtonColor: '#ef4444',
+                                                    cancelButtonColor: '#6b7280',
+                                                    confirmButtonText: 'Ya, Hapus!',
+                                                    cancelButtonText: 'Batal'
+                                                }).then((result) => {
+                                                    if (result.isConfirmed) {
+                                                        $wire.delete({{ $doc->id }})
+                                                    }
+                                                })
+                                            "
+                                                class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-all gap-3 border-t border-gray-50 text-left">
+                                                <div class="p-1.5 bg-rose-50 rounded-lg text-rose-600">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </div>
+                                                Hapus Dokumen
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
