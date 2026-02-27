@@ -37,8 +37,25 @@
                     </button>
 
                     <!-- Page Title/Breadcrumbs -->
-                    <div class="ml-4 lg:ml-0 flex items-center h-16">
-                        <h2 class="font-bold text-lg text-gray-800 tracking-tight leading-none uppercase">@isset($header){{ $header }}@else Dashboard @endisset</h2>
+                    <div class="ml-4 lg:ml-0 flex flex-col justify-center h-16">
+                        <h2 class="font-extrabold text-xl text-gray-900 tracking-tight leading-none">
+                            Dashboard
+                        </h2>
+                        @if(!request()->routeIs('dashboard'))
+                        <div class="flex items-center text-[11px] text-gray-400 mt-1.5 font-bold tracking-wider">
+                            <a href="{{ route('dashboard') }}" wire:navigate class="hover:text-indigo-600 transition-colors">
+                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                                </svg>
+                            </a>
+                            @isset($header)
+                            <svg class="w-2.5 h-2.5 mx-2 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span class="text-gray-500">{{ $header }}</span>
+                            @endisset
+                        </div>
+                        @endif
                     </div>
                 </div>
 

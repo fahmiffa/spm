@@ -37,8 +37,8 @@ new #[Layout('layouts.app')] class extends Component {
 
 <div class="py-12">
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Daftar Asesor') }}
+        <h2 class="font-semibold text-gray-800 leading-tight">
+            {{ __('Asesor') }}
         </h2>
     </x-slot>
 

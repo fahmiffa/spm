@@ -74,10 +74,10 @@ new class extends Component {
                                 </svg>
                             </button>
                             <div x-show="openMaster" x-transition x-cloak class="space-y-1 ml-8">
-                                <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="none" class="!bg-transparent !px-0">
+                                <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="document" class="!bg-transparent">
                                     {{ __('Komponen') }}
                                 </x-sidebar-link>
-                                <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="none" class="!bg-transparent !px-0">
+                                <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="document" class="!bg-transparent">
                                     {{ __('Dokumen') }}
                                 </x-sidebar-link>
                             </div>
@@ -98,10 +98,10 @@ new class extends Component {
                                 </svg>
                             </button>
                             <div x-show="openManajemen" x-transition x-cloak class="space-y-1 ml-8">
-                                <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="none" class="!bg-transparent !px-0">
+                                <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users" class="!bg-transparent">
                                     {{ __('Role') }}
                                 </x-sidebar-link>
-                                <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="none" class="!bg-transparent !px-0">
+                                <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="users" class="!bg-transparent">
                                     {{ __('Accounts') }}
                                 </x-sidebar-link>
                                 <x-sidebar-link :href="route('accounts.index')" :active="false" icon="none" class="!bg-transparent !px-0 opacity-50 cursor-not-allowed">
