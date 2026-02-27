@@ -6,11 +6,13 @@ window.Swal = Swal;
 
 import { fileManagement, wilayahSelector } from "./alpine/profile";
 import { akreditasiPesantren } from "./alpine/akreditasi";
+import { dashboardCharts } from "./alpine/dashboard";
 
 document.addEventListener("alpine:init", () => {
     Alpine.data("fileManagement", fileManagement);
     Alpine.data("wilayahSelector", wilayahSelector);
     Alpine.data("akreditasiPesantren", akreditasiPesantren);
+    Alpine.data("dashboardCharts", dashboardCharts);
 
     Alpine.data("deleteConfirmation", () => ({
         confirmDelete(id, methodName, text = "Hapus data ini?") {

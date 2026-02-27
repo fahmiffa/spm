@@ -15,6 +15,8 @@ new #[Layout('layouts.app')] class extends Component {
     public $tanggal_berakhir;
     public $catatan_penolakan;
     public $action_type = 'approve'; // 'approve' or 'reject'
+    public $statusFilter = 'pengajuan';
+    public $search = '';
 
     public function mount()
     {
@@ -25,7 +27,41 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getAkreditasisProperty()
     {
-        return Akreditasi::with(['user.pesantren', 'assessments'])->orderBy('created_at', 'desc')->get();
+        $query = Akreditasi::with(['user.pesantren', 'assessments'])->orderBy('created_at', 'desc');
+
+        if ($this->statusFilter === 'pengajuan') {
+            $query->where('status', 6);
+        } elseif ($this->statusFilter === 'assessment') {
+            $query->where('status', 5);
+        } elseif ($this->statusFilter === 'visitasi') {
+            $query->where('status', '<=', 4);
+        }
+
+        if ($this->search) {
+            $query->whereHas('user', function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('pesantren', function ($q2) {
+                        $q2->where('nama_pesantren', 'like', '%' . $this->search . '%');
+                    });
+            });
+        }
+
+        return $query->paginate(10);
+    }
+
+    public function getCountPengajuanProperty()
+    {
+        return Akreditasi::where('status', 6)->count();
+    }
+
+    public function getCountAssessmentProperty()
+    {
+        return Akreditasi::where('status', 5)->count();
+    }
+
+    public function getCountVisitasiProperty()
+    {
+        return Akreditasi::where('status', '<=', 4)->count();
     }
 
     public function getAsesorsProperty()
@@ -157,144 +193,166 @@ new #[Layout('layouts.app')] class extends Component {
 <div class="py-12" x-data="deleteConfirmation">
     <x-slot name="header">{{ __('Akreditasi') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+        <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-gray-100">
             <div class="p-6 text-gray-900">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Akreditasi</h2>
+                <!-- Header -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Akreditasi</h2>
                 </div>
 
                 @if (session('status'))
-                <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+                <div class="mb-4 p-4 bg-green-50 text-green-700 rounded-xl border border-green-100 text-sm font-medium">
                     {{ session('status') }}
                 </div>
                 @endif
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
+                <!-- Filter Tabs -->
+                <div class="flex flex-wrap items-center gap-2 mb-6 border-b border-gray-100 pb-4">
+                    <button wire:click="$set('statusFilter', 'pengajuan')"
+                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200
+                        {{ $statusFilter === 'pengajuan' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
+                        Pengajuan <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] {{ $statusFilter === 'pengajuan' ? 'bg-indigo-500' : 'bg-gray-200 text-gray-500' }}">{{ $this->countPengajuan }}</span>
+                    </button>
+                    <button wire:click="$set('statusFilter', 'assessment')"
+                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200
+                        {{ $statusFilter === 'assessment' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
+                        Assessment <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] {{ $statusFilter === 'assessment' ? 'bg-indigo-500' : 'bg-gray-200 text-gray-500' }}">{{ $this->countAssessment }}</span>
+                    </button>
+                    <button wire:click="$set('statusFilter', 'visitasi')"
+                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200
+                        {{ $statusFilter === 'visitasi' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-50 text-gray-600 hover:bg-gray-100' }}">
+                        Visitasi <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] {{ $statusFilter === 'visitasi' ? 'bg-indigo-500' : 'bg-gray-200 text-gray-500' }}">{{ $this->countVisitasi }}</span>
+                    </button>
+
+                    <div class="ml-auto relative">
+                        <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari pesantren..."
+                            class="pl-9 pr-4 py-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-48 sm:w-64 bg-gray-50">
+                        <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="overflow-x-auto rounded-xl border border-gray-100">
+                    <table class="min-w-full">
                         <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left">No</th>
-                                <th class="py-3 px-6 text-left">Pesantren</th>
-                                <th class="py-3 px-6 text-center">Catatan</th>
-                                <th class="py-3 px-6 text-center">Status</th>
-                                <th class="py-3 px-6 text-center">Nilai</th>
-                                <th class="py-3 px-6 text-center">Peringkat</th>
-                                <th class="py-3 px-6 text-center">Tanggal</th>
-                                <th class="py-3 px-6 text-center">Aksi</th>
+                            <tr class="bg-gray-50/80">
+                                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Pesantren</th>
+                                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Catatan</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Nilai</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Peringkat</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-500 uppercase tracking-wider">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
+                        <tbody class="divide-y divide-gray-50">
                             @forelse ($this->akreditasis as $index => $item)
-                            <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                <td class="py-3 px-6 text-left whitespace-nowrap">
-                                    {{ $index + 1 }}
+                            <tr class="hover:bg-gray-50/50 transition-colors duration-150">
+                                <td class="py-3.5 px-4">
+                                    <span class="text-sm font-semibold text-gray-800">{{ $item->user->pesantren->nama_pesantren ?? $item->user->name }}</span>
                                 </td>
-                                <td class="py-3 px-6 text-left font-medium">
-                                    {{ $item->user->pesantren->nama_pesantren ?? $item->user->name }}
-                                </td>
-                                <td class="py-3 px-6 text-left font-medium">
+                                <td class="py-3.5 px-4 max-w-[200px]">
                                     <div class="space-y-1">
                                         @foreach($item->catatans as $catatan)
-                                        <div class="text-xs p-1 rounded border {{ $catatan->tipe == 'visitasi' ? 'bg-orange-50 border-orange-200 text-orange-800' : ($catatan->tipe == 'pengajuan' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-gray-50 border-gray-200 text-gray-800') }}">
-                                            <span class="font-bold uppercase">{{ $catatan->tipe }}:</span> {{ $catatan->catatan }}
-                                            <div class="text-[10px] text-gray-500 mt-0.5">{{ $catatan->created_at->format('d M Y H:i') }}</div>
+                                        <div class="text-[11px] p-1.5 rounded-md border {{ $catatan->tipe == 'visitasi' ? 'bg-orange-50 border-orange-100 text-orange-700' : ($catatan->tipe == 'pengajuan' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-gray-50 border-gray-100 text-gray-700') }}">
+                                            <span class="font-bold uppercase">{{ $catatan->tipe }}:</span> {{ Str::limit($catatan->catatan, 50) }}
                                         </div>
                                         @endforeach
-                                        @if($item->catatan && $item->catatans->isEmpty())
-                                        <div class="text-xs mt-1 text-gray-600 border-t pt-1">Logs Lama: {{ $item->catatan }}</div>
-                                        @endif
                                         @if($item->catatans->isEmpty() && !$item->catatan)
-                                        <span class="text-gray-400 italic">-</span>
+                                        <span class="text-gray-300 text-xs">-</span>
                                         @endif
                                     </div>
                                 </td>
-                                <td class="py-3 px-6 text-center">
-                                    <span
-                                        class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold text-nowrap">
+                                <td class="py-3.5 px-4 text-center">
+                                    <span class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-[11px] font-bold text-nowrap">
                                         {{ Akreditasi::getStatusLabel($item->status) }}
                                     </span>
                                 </td>
-                                <td class="py-3 px-6 text-center font-bold text-indigo-600">
-                                    {{ $item->nilai ?? '-' }}
+                                <td class="py-3.5 px-4 text-center">
+                                    <span class="font-bold text-sm {{ $item->nilai ? 'text-indigo-600' : 'text-gray-300' }}">{{ $item->nilai ?? '-' }}</span>
                                 </td>
-                                <td class="py-3 px-6 text-center">
+                                <td class="py-3.5 px-4 text-center">
                                     @if($item->peringkat)
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold 
-                                        {{ $item->peringkat == 'Unggul' ? 'bg-green-100 text-green-700' : 
-                                           ($item->peringkat == 'Baik' ? 'bg-blue-100 text-blue-700' : 
-                                           'bg-yellow-100 text-yellow-700') }}">
+                                    <span class="px-2.5 py-1 rounded-md text-[10px] font-bold 
+                                        {{ $item->peringkat == 'Unggul' ? 'bg-green-50 text-green-700 border border-green-200' : 
+                                           ($item->peringkat == 'Baik' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 
+                                           'bg-yellow-50 text-yellow-700 border border-yellow-200') }}">
                                         {{ $item->peringkat }}
                                     </span>
                                     @else
-                                    -
+                                    <span class="text-gray-300 text-xs">-</span>
                                     @endif
                                 </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex flex-col items-center gap-1">
-                                        {{-- 1. Pengajuan --}}
-                                        <div class="flex items-center gap-1 text-[11px] text-gray-500 whitespace-nowrap" title="Tanggal Pengajuan">
-                                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span class="font-medium uppercase tracking-tighter">Pengajuan:</span>
-                                            <span>{{ $item->created_at->format('d/m/y') }}</span>
-                                        </div>
-
-                                        {{-- 2. Assessment --}}
+                                <td class="py-3.5 px-4 text-center">
+                                    <div class="flex flex-col items-center gap-0.5">
+                                        <div class="text-[11px] text-gray-500 whitespace-nowrap">{{ $item->created_at->format('d/m/Y') }}</div>
                                         @php $firstAss = $item->assessments->first(); @endphp
                                         @if($firstAss)
-                                        <div class="flex items-center gap-1 text-[11px] text-purple-600 font-bold whitespace-nowrap" title="Jadwal Assessment">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Assessment:</span>
-                                            <span>{{ \Carbon\Carbon::parse($firstAss->tanggal_mulai)->format('d/m/y') }} - {{ \Carbon\Carbon::parse($firstAss->tanggal_berakhir)->format('d/m/y') }}</span>
-                                        </div>
-                                        @endif
-
-                                        {{-- 3. Visitasi --}}
-                                        @if($item->tgl_visitasi)
-                                        <div class="flex items-center gap-1 text-[11px] text-indigo-600 font-bold whitespace-nowrap" title="Tanggal Visitasi">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Visitasi:</span>
-                                            <span>{{ \Carbon\Carbon::parse($item->tgl_visitasi)->format('d/m/y') }}</span>
+                                        <div class="text-[10px] text-purple-600 font-semibold whitespace-nowrap">
+                                            {{ \Carbon\Carbon::parse($firstAss->tanggal_mulai)->format('d/m') }} - {{ \Carbon\Carbon::parse($firstAss->tanggal_berakhir)->format('d/m/y') }}
                                         </div>
                                         @endif
                                     </div>
                                 </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex item-center justify-center gap-4">
-                                        @if ($item->status == 6)
-                                        <button wire:click="openVerifikasiModal({{ $item->id }})"
-                                            class="text-blue-600 hover:text-blue-900 font-medium">
-                                            Verifikasi
+                                <td class="py-3.5 px-4 text-center">
+                                    <div class="relative" x-data="{ open: false }">
+                                        <button @click="open = !open" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200">
+                                            Aksi
+                                            <svg class="w-3.5 h-3.5 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
                                         </button>
-                                        @endif
-                                        <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}"
-                                            class="text-indigo-600 hover:text-indigo-900 font-medium"
-                                            wire:navigate>
-                                            Detail
-                                        </a>
-
-                                        <button @click="confirmDelete({{ $item->id }}, 'delete', 'Pengajuan akreditasi yang dihapus tidak dapat dikembalikan!')"
-                                            class="text-red-600 hover:text-red-900 font-medium">
-                                            Hapus
-                                        </button>
+                                        <div x-show="open" @click.away="open = false" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                                            class="absolute right-0 z-20 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-100 py-1" x-cloak>
+                                            @if ($item->status == 6)
+                                            <button wire:click="openVerifikasiModal({{ $item->id }})" @click="open = false"
+                                                class="flex items-center w-full px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-50 transition-colors gap-2">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Verifikasi
+                                            </button>
+                                            @endif
+                                            <a href="{{ route('admin.akreditasi-detail', $item->uuid) }}" wire:navigate
+                                                class="flex items-center w-full px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50 transition-colors gap-2">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                Detail
+                                            </a>
+                                            <button @click="open = false; confirmDelete({{ $item->id }}, 'delete', 'Pengajuan akreditasi yang dihapus tidak dapat dikembalikan!')"
+                                                class="flex items-center w-full px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors gap-2">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                Hapus
+                                            </button>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="8" class="py-10 text-center text-gray-500">
-                                    Belum ada data pengajuan akreditasi.
+                                <td colspan="7" class="py-16 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <p class="text-sm text-gray-400 font-medium">Belum ada data pengajuan akreditasi</p>
+                                    </div>
                                 </td>
                             </tr>
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="mt-6">
+                    {{ $this->akreditasis->links() }}
                 </div>
             </div>
         </div>

@@ -32,13 +32,20 @@ new class extends Component {
                     <!-- General Menu -->
                     <div class="space-y-1">
                         <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">
-                            {{ __('Home') }}
+                            {{ __('Dashboards') }}
                         </x-sidebar-link>
                     </div>
 
                     <!-- Admin Menu -->
-                    @if (auth()->user()->isAdmin())
-                    <div class="space-y-1">
+                    @php
+                    $isAdmin = auth()->user()->isAdmin();
+                    @endphp
+
+                    @if ($isAdmin)
+                    <div x-data="{ 
+                        openMaster: @json(request()->routeIs('admin.master-edpm') || request()->routeIs('admin.master-dokumen')), 
+                        openManajemen: @json(request()->routeIs('roles.*') || request()->routeIs('accounts.*')) 
+                    }" class="space-y-1">
                         <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi*')" icon="shield">
                             {{ __('Akreditasi') }}
                         </x-sidebar-link>
@@ -48,23 +55,61 @@ new class extends Component {
                         <x-sidebar-link :href="route('admin.asesor.index')" :active="request()->routeIs('admin.asesor.*')" icon="user-circle">
                             {{ __('Asesor') }}
                         </x-sidebar-link>
-                    </div>
 
-                    <div class="pt-4 pb-2 px-3">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Master</span>
+                        <div class="pt-4 pb-2 px-3">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MASTER DATA</span>
+                        </div>
+
+                        <!-- Referensi Data Group -->
+                        <div class="space-y-1">
+                            <button @click="openMaster = !openMaster" class="group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition duration-150">
+                                <div class="flex items-center">
+                                    <svg class="mr-3 flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                    </svg>
+                                    <span>Referensi Data</span>
+                                </div>
+                                <svg class="h-4 w-4 transform transition-transform duration-200" :class="{ 'rotate-180': openMaster }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div x-show="openMaster" x-transition x-cloak class="space-y-1 ml-8">
+                                <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="none" class="!bg-transparent !px-0">
+                                    {{ __('Komponen') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="none" class="!bg-transparent !px-0">
+                                    {{ __('Dokumen') }}
+                                </x-sidebar-link>
+                            </div>
+                        </div>
+
+                        <!-- Manajemen Group -->
+                        <div class="space-y-1">
+                            <button @click="openManajemen = !openManajemen" class="group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition duration-150">
+                                <div class="flex items-center">
+                                    <svg class="mr-3 flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span>Manajemen</span>
+                                </div>
+                                <svg class="h-4 w-4 transform transition-transform duration-200" :class="{ 'rotate-180': openManajemen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div x-show="openManajemen" x-transition x-cloak class="space-y-1 ml-8">
+                                <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="none" class="!bg-transparent !px-0">
+                                    {{ __('Role') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="none" class="!bg-transparent !px-0">
+                                    {{ __('Accounts') }}
+                                </x-sidebar-link>
+                                <x-sidebar-link :href="route('accounts.index')" :active="false" icon="none" class="!bg-transparent !px-0 opacity-50 cursor-not-allowed">
+                                    {{ __('Pengguna') }}
+                                </x-sidebar-link>
+                            </div>
+                        </div>
                     </div>
-                    <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
-                        {{ __('Roles') }}
-                    </x-sidebar-link>
-                    <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
-                        {{ __('Accounts') }}
-                    </x-sidebar-link>
-                    <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
-                        {{ __('Komponen') }}
-                    </x-sidebar-link>
-                    <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="document">
-                        {{ __('Dokumen') }}
-                    </x-sidebar-link>
                     @endif
 
                     <!-- Pesantren Menu -->
@@ -212,37 +257,81 @@ new class extends Component {
                     <div class="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
                         <div class="flex-shrink-0 flex items-center px-6">
                             <x-application-logo class="h-8 w-auto text-indigo-600" />
-                            <span class="ml-3 font-bold text-lg text-gray-800 tracking-tight">SPM Pesantren</span>
                         </div>
-                        <nav class="mt-5 px-4 space-y-1" @click="$store.sidebar.open = false">
+                        <nav class="mt-5 px-4 space-y-1" @click="if ($event.target.closest('a')) $store.sidebar.open = false">
                             <x-sidebar-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" icon="home">
-                                {{ __('Home') }}
+                                {{ __('Dashboards') }}
                             </x-sidebar-link>
 
                             <!-- Admin Menu -->
                             @if (auth()->user()->isAdmin())
-                            <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi*')" icon="shield">
-                                {{ __('Akreditasi') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('admin.pesantren.index')" :active="request()->routeIs('admin.pesantren.*')" icon="users">
-                                {{ __('Pesantren') }}
-                            </x-sidebar-link>
-                            <x-sidebar-link :href="route('admin.asesor.index')" :active="request()->routeIs('admin.asesor.*')" icon="user-circle">
-                                {{ __('Asesor') }}
-                            </x-sidebar-link>
-                            <div class="pt-4 pb-2 px-3">
-                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Master</span>
-                            </div>
-                            <div class="space-y-1">
-                                <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="users">
-                                    {{ __('Roles') }}
+                            <div x-data="{ 
+                                openMaster: @json(request()->routeIs('admin.master-edpm') || request()->routeIs('admin.master-dokumen')), 
+                                openManajemen: @json(request()->routeIs('roles.*') || request()->routeIs('accounts.*')) 
+                            }" class="space-y-1">
+                                <x-sidebar-link :href="route('admin.akreditasi')" :active="request()->routeIs('admin.akreditasi*')" icon="shield">
+                                    {{ __('Akreditasi') }}
                                 </x-sidebar-link>
-                                <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="account">
-                                    {{ __('Accounts') }}
+                                <x-sidebar-link :href="route('admin.pesantren.index')" :active="request()->routeIs('admin.pesantren.*')" icon="users">
+                                    {{ __('Pesantren') }}
                                 </x-sidebar-link>
-                                <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="database">
-                                    {{ __('EDPM') }}
+                                <x-sidebar-link :href="route('admin.asesor.index')" :active="request()->routeIs('admin.asesor.*')" icon="user-circle">
+                                    {{ __('Asesor') }}
                                 </x-sidebar-link>
+
+                                <div class="pt-4 pb-2 px-3">
+                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MASTER DATA</span>
+                                </div>
+
+                                <!-- Referensi Data Group -->
+                                <div class="space-y-1">
+                                    <button @click="openMaster = !openMaster" class="group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition duration-150">
+                                        <div class="flex items-center">
+                                            <svg class="mr-3 flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                                            </svg>
+                                            <span>Referensi Data</span>
+                                        </div>
+                                        <svg class="h-4 w-4 transform transition-transform duration-200" :class="{ 'rotate-180': openMaster }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div x-show="openMaster" x-transition x-cloak class="space-y-1 ml-8">
+                                        <x-sidebar-link :href="route('admin.master-edpm')" :active="request()->routeIs('admin.master-edpm')" icon="none" class="!bg-transparent !px-0">
+                                            {{ __('Komponen') }}
+                                        </x-sidebar-link>
+                                        <x-sidebar-link :href="route('admin.master-dokumen')" :active="request()->routeIs('admin.master-dokumen')" icon="none" class="!bg-transparent !px-0">
+                                            {{ __('Dokumen') }}
+                                        </x-sidebar-link>
+                                    </div>
+                                </div>
+
+                                <!-- Manajemen Group -->
+                                <div class="space-y-1">
+                                    <button @click="openManajemen = !openManajemen" class="group flex items-center justify-between w-full px-3 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition duration-150">
+                                        <div class="flex items-center">
+                                            <svg class="mr-3 flex-shrink-0 h-5 w-5 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span>Manajemen</span>
+                                        </div>
+                                        <svg class="h-4 w-4 transform transition-transform duration-200" :class="{ 'rotate-180': openManajemen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div x-show="openManajemen" x-transition x-cloak class="space-y-1 ml-8">
+                                        <x-sidebar-link :href="route('roles.index')" :active="request()->routeIs('roles.*')" icon="none" class="!bg-transparent !px-0">
+                                            {{ __('Role') }}
+                                        </x-sidebar-link>
+                                        <x-sidebar-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" icon="none" class="!bg-transparent !px-0">
+                                            {{ __('Accounts') }}
+                                        </x-sidebar-link>
+                                        <x-sidebar-link :href="route('accounts.index')" :active="false" icon="none" class="!bg-transparent !px-0 opacity-50 cursor-not-allowed">
+                                            {{ __('Pengguna') }}
+                                        </x-sidebar-link>
+                                    </div>
+                                </div>
                             </div>
                             @endif
 
