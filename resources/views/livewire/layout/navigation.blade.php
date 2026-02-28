@@ -119,7 +119,7 @@ new class extends Component {
                     </div>
                     <div class="space-y-1">
                         <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
-                            {{ __('Profil Pesantren') }}
+                            {{ __('Profil') }}
                         </x-sidebar-link>
                         <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
                             {{ __('IPM') }}
@@ -146,7 +146,7 @@ new class extends Component {
                     </div>
                     <div class="space-y-1">
                         <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
-                            {{ __('My Profile') }}
+                            {{ __('Profil') }}
                         </x-sidebar-link>
                         <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
                             {{ __('Akreditasi') }}
@@ -210,7 +210,7 @@ new class extends Component {
                                     <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
-                                    Profile Settings
+                                    Pengaturan Profil
                                 </a>
                                 <form method="POST" action="{{ route('logout') }}">
                                     @csrf
@@ -218,7 +218,7 @@ new class extends Component {
                                         <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                         </svg>
-                                        Sign Out
+                                        Keluar
                                     </button>
                                 </form>
                             </div>
@@ -342,7 +342,7 @@ new class extends Component {
                             </div>
                             <div class="space-y-1">
                                 <x-sidebar-link :href="route('pesantren.profile')" :active="request()->routeIs('pesantren.profile')" icon="user-circle">
-                                    {{ __('Profil Pesantren') }}
+                                    {{ __('Profil') }}
                                 </x-sidebar-link>
                                 <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="chart">
                                     {{ __('IPM') }}
@@ -369,7 +369,7 @@ new class extends Component {
                             </div>
                             <div class="space-y-1">
                                 <x-sidebar-link :href="route('asesor.profile')" :active="request()->routeIs('asesor.profile')" icon="user-circle">
-                                    {{ __('My Profile') }}
+                                    {{ __('Profil') }}
                                 </x-sidebar-link>
                                 <x-sidebar-link :href="route('asesor.akreditasi')" :active="request()->routeIs('asesor.akreditasi*')" icon="shield">
                                     {{ __('Akreditasi') }}
@@ -423,12 +423,12 @@ new class extends Component {
                                     </div>
                                     <div class="space-y-1">
                                         <a href="{{ route('profile') }}" wire:navigate class="flex items-center px-3 py-2 text-xs font-medium text-gray-700 rounded-lg hover:bg-indigo-50 transition-all">
-                                            Profile Settings
+                                            Pengaturan Profil
                                         </a>
                                         <form method="POST" action="{{ route('logout') }}">
                                             @csrf
                                             <button type="submit" class="flex items-center w-full px-3 py-2 text-xs font-medium text-red-600 rounded-lg hover:bg-red-50 transition-all">
-                                                Sign Out
+                                                Keluar
                                             </button>
                                         </form>
                                     </div>

@@ -11,6 +11,12 @@ use App\Models\Edpm;
 use App\Models\EdpmCatatan;
 use App\Models\AkreditasiEdpm;
 use App\Models\AkreditasiEdpmCatatan;
+use App\Models\User;
+use App\Models\Assessment;
+use App\Notifications\AkreditasiNotification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -56,22 +62,27 @@ class AkreditasiDetail extends Component
 
     public $asesorTipe;
     public $activeTab = 'profil';
+    public $isLocked = false;
 
     // Overall Accreditation Scores
 
 
     public function mount($uuid)
     {
-        if (!auth()->user()->isAsesor()) {
+        /** @var User $user */
+        $user = Auth::user();
+        if (!$user->isAsesor()) {
             abort(403);
         }
 
-        $this->akreditasi = Akreditasi::with(['user.pesantren', 'assessments'])
+        $this->akreditasi = Akreditasi::with(['user.pesantren', 'assessments.asesor.user', 'assessment1.asesor.user', 'assessment2.asesor.user'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
+        /** @var User $user */
+        $user = Auth::user();
         // Security check: only assigned assessor can see this
-        $currentAssessment = $this->akreditasi->assessments->where('asesor_id', auth()->user()->asesor->id)->first();
+        $currentAssessment = $this->akreditasi->assessments->where('asesor_id', $user->asesor->id)->first();
         if (!$currentAssessment) {
             abort(403);
         }
@@ -90,8 +101,10 @@ class AkreditasiDetail extends Component
         $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
         $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
 
+        /** @var User $user */
+        $user = Auth::user();
         // Load Assessor EDPM (filtered by current assessor)
-        $asesorId = auth()->user()->asesor->id;
+        $asesorId = $user->asesor->id;
         $aEdpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
         $aEvaluasis = $aEdpms->pluck('isian', 'butir_id');
         $aNks = $aEdpms->pluck('nk', 'butir_id');
@@ -100,6 +113,10 @@ class AkreditasiDetail extends Component
         $aCatatansModels = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesorId)->get();
         $aCatatans = $aCatatansModels->pluck('catatan', 'komponen_id');
         $aCatatanNks = $aCatatansModels->pluck('nk', 'komponen_id');
+
+        if ($this->asesorTipe == 1 && $aEdpms->isNotEmpty()) {
+            $this->isLocked = true;
+        }
 
         // Load the other assessor's data if current is Asesor 1
         $otherEvaluasis = collect();
@@ -216,7 +233,9 @@ class AkreditasiDetail extends Component
             throw $e;
         }
 
-        $asesorId = auth()->user()->asesor->id;
+        /** @var User $user */
+        $user = Auth::user();
+        $asesorId = $user->asesor->id;
         foreach ($this->asesorEvaluasis as $butirId => $isian) {
             if (empty($isian)) continue;
 
@@ -241,6 +260,69 @@ class AkreditasiDetail extends Component
 
         // No longer updating overall na1, na2, nk from assessor manual inputs as requested
 
+        // Notify Admin and Assessor 2 when Asesor 1 saves draft
+        if ($this->asesorTipe == 1) {
+            $this->isLocked = true;
+            try {
+                $admins = User::whereHas('role', function ($q) {
+                    $q->where('id', 1);
+                })->get();
+
+                $message = 'Asesor 1 (' . Auth::user()->name . ') telah mengisi draf nilai NA untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name);
+
+                Notification::send($admins, new AkreditasiNotification(
+                    'na1_diisi',
+                    'Nilai NA 1 diisi',
+                    $message,
+                    route('admin.akreditasi-detail', $this->akreditasi->uuid)
+                ));
+
+                $assessor2 = $this->akreditasi->assessment2;
+                if ($assessor2 && $assessor2->asesor && $assessor2->asesor->user) {
+                    $assessor2->asesor->user->notify(new AkreditasiNotification(
+                        'na1_diisi',
+                        'Nilai NA 1 diisi',
+                        $message,
+                        route('asesor.akreditasi-detail', $this->akreditasi->uuid)
+                    ));
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send NA1 notification: ' . $e->getMessage());
+            }
+        }
+
+        // Notify Admin and Assessor 1 when Asesor 2 fills NA
+        if ($this->asesorTipe == 2 && $isFinal) {
+            try {
+                $admins = User::whereHas('role', function ($q) {
+                    $q->where('id', 1);
+                })->get();
+
+                /** @var User $user */
+                $user = Auth::user();
+                $message = 'Asesor 2 (' . $user->name . ') telah mengisi nilai NA untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name);
+
+                Notification::send($admins, new AkreditasiNotification(
+                    'na2_diisi',
+                    'Nilai NA 2 diisi',
+                    $message,
+                    route('admin.akreditasi-detail', $this->akreditasi->uuid)
+                ));
+
+                $assessor1 = $this->akreditasi->assessment1;
+                if ($assessor1 && $assessor1->asesor && $assessor1->asesor->user) {
+                    $assessor1->asesor->user->notify(new AkreditasiNotification(
+                        'na2_diisi',
+                        'Nilai NA 2 diisi',
+                        $message,
+                        route('asesor.akreditasi-detail', $this->akreditasi->uuid)
+                    ));
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to send NA2 notification: ' . $e->getMessage());
+            }
+        }
+
         $this->dispatch(
             'notification-received',
             type: 'success',
@@ -264,14 +346,16 @@ class AkreditasiDetail extends Component
 
         $this->akreditasi->update(['status' => 3]); // 3. Validasi
 
+        /** @var User $user */
+        $user = Auth::user();
         // Notify Admin
-        $admins = \App\Models\User::whereHas('role', function ($q) {
+        $admins = User::whereHas('role', function ($q) {
             $q->where('id', 1);
         })->get();
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . auth()->user()->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
+        Notification::send($admins, new AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . $user->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
 
         // Notify Pesantren
-        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('validasi', 'Update Status: Validasi', 'Assessment telah selesai. Silakan unggah Kartu Kendali untuk melanjutkan proses validasi.', route('pesantren.akreditasi')));
+        $this->akreditasi->user->notify(new AkreditasiNotification('validasi', 'Update Status: Validasi', 'Assessment telah selesai. Silakan unduh Kartu Kendali di menu dokumen, kemudian unggah kembali di menu akreditasi untuk melanjutkan proses validasi.', route('pesantren.akreditasi')));
 
         session()->flash('status', 'Assessment berhasil diselesaikan. Status berubah menjadi Validasi Admin.');
         return redirect()->route('asesor.akreditasi');

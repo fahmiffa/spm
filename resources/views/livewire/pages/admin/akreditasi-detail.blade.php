@@ -12,6 +12,7 @@ use App\Models\AkreditasiEdpmCatatan;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads;
 use Livewire\Volt\Component;
+use Illuminate\Support\Facades\Auth;
 
 new #[Layout('layouts.app')] class extends Component {
     use WithFileUploads;
@@ -37,9 +38,13 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesor2Catatans = [];
     public $asesor2ButirCatatans = [];
 
+    public $tgl_visitasi;
+    public $tgl_visitasi_akhir;
+
     public $nomor_sk;
     public $sertifikat_file;
     public $masa_berlaku;
+    public $masa_berlaku_akhir;
     public $catatan_admin;
 
     // Admin NV (Nilai Verifikasi)
@@ -64,7 +69,9 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function mount($uuid)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             abort(403);
         }
 
@@ -127,6 +134,86 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->nomor_sk = $this->akreditasi->nomor_sk;
         $this->masa_berlaku = $this->akreditasi->masa_berlaku;
+        $this->masa_berlaku_akhir = $this->akreditasi->masa_berlaku_akhir;
+        $this->tgl_visitasi = $this->akreditasi->tgl_visitasi;
+        $this->tgl_visitasi_akhir = $this->akreditasi->tgl_visitasi_akhir;
+    }
+
+    public function toggleLock()
+    {
+        if ($this->pesantren) {
+            $prevLocked = $this->pesantren->is_locked;
+            $this->pesantren->is_locked = !$this->pesantren->is_locked;
+            $this->pesantren->save();
+
+            $status = $this->pesantren->is_locked ? 'terkunci' : 'terbuka';
+
+            if ($prevLocked && !$this->pesantren->is_locked) {
+                // Notifikasi ke pesantren saat data dibuka kuncinya
+                $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
+                    'buka_kunci',
+                    'Akses Data Dibuka',
+                    'Administrator telah membuka kunci data Anda. Anda sekarang dapat memperbarui profil dan dokumen.',
+                    route('pesantren.profile')
+                ));
+            }
+
+            $this->dispatch('notification-received', title: 'Berhasil', message: "Akses data pesantren berhasil diubah menjadi $status.");
+        }
+    }
+
+    public function openVisitasiEditModal()
+    {
+        $this->tgl_visitasi = $this->akreditasi->tgl_visitasi;
+        $this->tgl_visitasi_akhir = $this->akreditasi->tgl_visitasi_akhir ?? $this->akreditasi->tgl_visitasi;
+        $this->resetErrorBag();
+        $this->dispatch('open-modal', 'visitasi-edit-modal');
+    }
+
+    public function saveVisitasiReschedule()
+    {
+        $assessment = $this->akreditasi->assessment1; // Main range
+
+        $this->validate([
+            'tgl_visitasi' => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($assessment) {
+                    if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                        $fail('Tanggal visitasi harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
+                    }
+                },
+            ],
+            'tgl_visitasi_akhir' => [
+                'required',
+                'date',
+                'after_or_equal:tgl_visitasi',
+                function ($attribute, $value, $fail) use ($assessment) {
+                    if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                        $fail('Tanggal visitasi akhir harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
+                    }
+
+                    $start = \Carbon\Carbon::parse($this->tgl_visitasi);
+                    $end = \Carbon\Carbon::parse($value);
+                    if ($start->diffInDays($end) >= 4) {
+                        $fail('Rentang visitasi maksimal adalah 4 hari.');
+                    }
+                },
+            ],
+        ]);
+
+        $this->akreditasi->update([
+            'tgl_visitasi' => $this->tgl_visitasi,
+            'tgl_visitasi_akhir' => $this->tgl_visitasi_akhir,
+        ]);
+
+        $this->dispatch('close-modal', 'visitasi-edit-modal');
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Jadwal Visitasi berhasil diperbarui.'
+        );
     }
 
     public function setTab($tab)
@@ -283,11 +370,14 @@ new #[Layout('layouts.app')] class extends Component {
             'nomor_sk' => 'required|string|max:255',
             'sertifikat_file' => 'required|file|mimes:pdf|max:10240',
             'masa_berlaku' => 'required|date',
+            'masa_berlaku_akhir' => 'required|date|after:masa_berlaku',
         ], [
             'nomor_sk.required' => 'Nomor SK wajib diisi.',
             'sertifikat_file.required' => 'File Sertifikat wajib diunggah.',
             'sertifikat_file.mimes' => 'Format file sertifikat harus PDF.',
-            'masa_berlaku.required' => 'Masa berlaku wajib diisi.',
+            'masa_berlaku.required' => 'Tanggal mulai berlaku wajib diisi.',
+            'masa_berlaku_akhir.required' => 'Tanggal akhir berlaku wajib diisi.',
+            'masa_berlaku_akhir.after' => 'Tanggal akhir harus setelah tanggal mulai.',
         ]);
 
         $sertifikatPath = $this->sertifikat_file->store('akreditasi/sertifikat', 'public');
@@ -299,6 +389,7 @@ new #[Layout('layouts.app')] class extends Component {
             'nomor_sk' => $this->nomor_sk,
             'sertifikat_path' => $sertifikatPath,
             'masa_berlaku' => $this->masa_berlaku,
+            'masa_berlaku_akhir' => $this->masa_berlaku_akhir,
             'nilai' => $results['nilai'],
             'peringkat' => $results['peringkat'],
         ]);
@@ -435,7 +526,22 @@ new #[Layout('layouts.app')] class extends Component {
                 <div class="mt-6">
                     @if ($activeTab === 'profil')
                     <div class="space-y-6 mb-3">
-                        <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3">PESANTREN</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-lg font-bold text-gray-800 border-l-4 border-indigo-500 pl-3 uppercase">Profil Pesantren</h3>
+                            @if($pesantren)
+                            <button wire:click="toggleLock" wire:loading.attr="disabled"
+                                class="inline-flex items-center px-3 py-1.5 border border-transparent rounded-lg font-bold text-[10px] uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-offset-2 transition ease-in-out duration-150 {{ $pesantren->is_locked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 focus:ring-amber-500' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500' }}">
+                                <svg wire:loading.remove wire:target="toggleLock" class="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                <svg wire:loading wire:target="toggleLock" class="animate-spin -ml-1 mr-2 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {{ $pesantren->is_locked ? 'Buka Kunci Data' : 'Kunci Data' }}
+                            </button>
+                            @endif
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-6 rounded-lg">
                             <div>
                                 <p class="text-xs font-bold text-gray-500 uppercase">Nama Pesantren</p>
@@ -589,16 +695,38 @@ new #[Layout('layouts.app')] class extends Component {
                             @if ($akreditasi->assessments->isNotEmpty())
                             @php $mainAssessment = $akreditasi->assessments->first(); @endphp
                             <div>
-                                <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Mulai</p>
-                                <p class="text-gray-900">
+                                <p class="text-xs font-bold text-gray-500 uppercase">Assessment Mulai</p>
+                                <p class="text-gray-900 font-medium">
                                     {{ \Carbon\Carbon::parse($mainAssessment->tanggal_mulai)->format('d M Y') }}
                                 </p>
                             </div>
                             <div>
-                                <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Berakhir</p>
-                                <p class="text-gray-900">
+                                <p class="text-xs font-bold text-gray-500 uppercase">Assessment Berakhir</p>
+                                <p class="text-gray-900 font-medium">
                                     {{ \Carbon\Carbon::parse($mainAssessment->tanggal_berakhir)->format('d M Y') }}
                                 </p>
+                            </div>
+                            @endif
+
+                            @if ($akreditasi->tgl_visitasi)
+                            <div class="col-span-2 mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                                <div class="flex gap-8">
+                                    <div>
+                                        <p class="text-xs font-bold text-indigo-500 uppercase">Visitasi Mulai</p>
+                                        <p class="text-indigo-700 font-bold">
+                                            {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi)->format('d M Y') }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-bold text-indigo-500 uppercase">Visitasi Berakhir</p>
+                                        <p class="text-indigo-700 font-bold">
+                                            {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi_akhir ?? $akreditasi->tgl_visitasi)->format('d M Y') }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button type="button" wire:click="openVisitasiEditModal" class="px-3 py-1.5 text-[10px] font-bold bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 uppercase tracking-wider">
+                                    Reschedule
+                                </button>
                             </div>
                             @endif
                         </div>
@@ -1049,12 +1177,21 @@ new #[Layout('layouts.app')] class extends Component {
                                                     <div wire:loading wire:target="sertifikat_file" class="text-[10px] text-indigo-600 font-bold mt-1">Mengunggah...</div>
                                                     <x-input-error :messages="$errors->get('sertifikat_file')" class="mt-2" />
                                                 </div>
-                                                <div>
-                                                    <x-input-label for="masa_berlaku" value="Masa Berlaku" />
-                                                    <x-text-input wire:model="masa_berlaku" id="masa_berlaku" type="date"
-                                                        class="mt-1 block w-full"
-                                                        required />
-                                                    <x-input-error :messages="$errors->get('masa_berlaku')" class="mt-2" />
+                                                <div class="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <x-input-label for="masa_berlaku" value="Mulai Berlaku" />
+                                                        <x-text-input wire:model="masa_berlaku" id="masa_berlaku" type="date"
+                                                            class="mt-1 block w-full"
+                                                            required />
+                                                        <x-input-error :messages="$errors->get('masa_berlaku')" class="mt-2" />
+                                                    </div>
+                                                    <div>
+                                                        <x-input-label for="masa_berlaku_akhir" value="Akhir Berlaku" />
+                                                        <x-text-input wire:model="masa_berlaku_akhir" id="masa_berlaku_akhir" type="date"
+                                                            class="mt-1 block w-full"
+                                                            required />
+                                                        <x-input-error :messages="$errors->get('masa_berlaku_akhir')" class="mt-2" />
+                                                    </div>
                                                 </div>
                                                 <div class="flex justify-end">
                                                     <x-primary-button wire:loading.attr="disabled" class="bg-green-600 hover:bg-green-700">
@@ -1154,6 +1291,42 @@ new #[Layout('layouts.app')] class extends Component {
                         </div>
                     </div>
                     @endif
+                    <!-- Modal Reschedule Visitasi -->
+                    <x-modal name="visitasi-edit-modal" focusable>
+                        <form wire:submit="saveVisitasiReschedule" class="p-6">
+                            <h2 class="text-lg font-medium text-gray-900">Reschedule Jadwal Visitasi</h2>
+                            <p class="mt-1 text-sm text-gray-600">
+                                Perbarui jadwal visitasi untuk pesantren ini. Pastikan berada dalam rentang assessment.
+                            </p>
+
+                            <div class="mt-6 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <x-input-label for="tgl_visitasi" value="Tanggal Mulai Visitasi" />
+                                        <x-text-input wire:model="tgl_visitasi" id="tgl_visitasi" type="date"
+                                            class="mt-1 block w-full" />
+                                        <x-input-error :messages="$errors->get('tgl_visitasi')" class="mt-2" />
+                                    </div>
+                                    <div>
+                                        <x-input-label for="tgl_visitasi_akhir" value="Tanggal Akhir Visitasi" />
+                                        <x-text-input wire:model="tgl_visitasi_akhir" id="tgl_visitasi_akhir" type="date"
+                                            class="mt-1 block w-full" />
+                                        <x-input-error :messages="$errors->get('tgl_visitasi_akhir')" class="mt-2" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <x-secondary-button x-on:click="$dispatch('close')">
+                                    Batal
+                                </x-secondary-button>
+
+                                <x-primary-button>
+                                    Simpan Perubahan
+                                </x-primary-button>
+                            </div>
+                        </form>
+                    </x-modal>
                 </div>
             </div>
         </div>

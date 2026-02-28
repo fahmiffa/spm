@@ -122,6 +122,45 @@ new #[Layout('layouts.app')] class extends Component {
         $this->dispatch('notification-received', title: 'Berhasil', message: 'Evaluasi EDPM berhasil disimpan.');
     }
 
+    public function saveDraft()
+    {
+        if (auth()->user()->pesantren->is_locked) {
+            $this->js("Swal.fire({
+                icon: 'error',
+                title: 'Akses Ditolak',
+                text: 'Data terkunci karena sedang dalam proses akreditasi.',
+                confirmButtonColor: '#d33'
+            })");
+            return;
+        }
+
+        // Validate formats if present, but don't require values
+        $this->validate([
+            'evaluasis.*' => 'nullable|numeric|min:1|max:4',
+            'catatans.*' => 'nullable|string',
+        ]);
+
+        foreach ($this->evaluasis as $butirId => $isian) {
+            if ($isian !== '' && $isian !== null) {
+                Edpm::updateOrCreate(
+                    ['user_id' => auth()->id(), 'butir_id' => $butirId],
+                    ['isian' => $isian]
+                );
+            }
+        }
+
+        foreach ($this->catatans as $komponenId => $catatan) {
+            if ($catatan !== '' && $catatan !== null) {
+                EdpmCatatan::updateOrCreate(
+                    ['user_id' => auth()->id(), 'komponen_id' => $komponenId],
+                    ['catatan' => $catatan]
+                );
+            }
+        }
+
+        $this->dispatch('notification-received', title: 'Draft Disimpan', message: 'Draft evaluasi EDPM berhasil disimpan.');
+    }
+
     public function isStepComplete($index)
     {
         if (!isset($this->komponens[$index])) return false;
@@ -137,6 +176,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div class="py-12">
+    <x-slot name="header">{{ __('Evaluasi Data Pesantren Muhammadiyah (EDPM)') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900 overflow-x-auto">
@@ -282,29 +322,46 @@ new #[Layout('layouts.app')] class extends Component {
                         @endif
                     </div>
 
-                    <div class="mt-8 flex items-center justify-between">
+                    <div class="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-6">
                         <!-- Prev Button -->
                         <button type="button" wire:click="prevStep"
-                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition-colors {{ $activeStep === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            class="w-full md:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg transition-all {{ $activeStep === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
                             {{ $activeStep === 0 ? 'disabled' : '' }}>
                             &laquo; Sebelumnya
                         </button>
 
-                        <!-- Next / Save Button -->
-                        @if ($activeStep === count($komponens) - 1)
-                        <div class="flex items-center gap-4">
-                            @if (session('status'))
-                            <p class="text-sm text-green-600 font-medium">{{ session('status') }}</p>
+                        <div class="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                            <!-- Draft Button -->
+                            @if(!auth()->user()->pesantren->is_locked)
+                            <button type="button" wire:click="saveDraft" wire:loading.attr="disabled"
+                                class="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2">
+                                <svg wire:loading.remove wire:target="saveDraft" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                <svg wire:loading wire:target="saveDraft" class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Simpan Draft</span>
+                            </button>
                             @endif
-                            <x-primary-button>
-                                {{ __('Simpan Evaluasi EDPM') }}
-                            </x-primary-button>
+
+                            <!-- Next / Save Button -->
+                            @if ($activeStep === count($komponens) - 1)
+                            <button type="submit" wire:loading.attr="disabled"
+                                class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                                <span>Simpan Permanen EDPM</span>
+                            </button>
+                            @else
+                            <button type="button" onclick="validateAndNext()"
+                                class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                                <span>Selanjutnya</span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            </button>
+                            @endif
                         </div>
-                        @else
-                        <button type="button" onclick="validateAndNext()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition-colors">
-                            Selanjutnya &raquo;
-                        </button>
-                        @endif
                     </div>
                 </form>
                 @else

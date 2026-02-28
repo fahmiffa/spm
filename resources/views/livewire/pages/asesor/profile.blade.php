@@ -251,8 +251,8 @@ new #[Layout('layouts.app')] class extends Component {
 
 <x-slot name="header">
     <div class="flex items-center justify-between">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Profil Asesor') }}
+        <h2 class="font-semibold text-gray-800 leading-tight">
+            {{ __('Profil') }}
         </h2>
     </div>
 </x-slot>

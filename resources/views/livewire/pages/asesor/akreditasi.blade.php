@@ -8,6 +8,34 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.app')] class extends Component {
+    use \Livewire\WithPagination;
+
+    public $search = '';
+    public $perPage = 10;
+    public $sortField = 'id';
+    public $sortAsc = false;
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage()
+    {
+        $this->resetPage();
+    }
+
+    public function sortBy($field)
+    {
+        if ($this->sortField === $field) {
+            $this->sortAsc = !$this->sortAsc;
+        } else {
+            $this->sortAsc = true;
+        }
+
+        $this->sortField = $field;
+    }
+
     public function mount()
     {
         if (!auth()->user()->isAsesor()) {
@@ -20,12 +48,23 @@ new #[Layout('layouts.app')] class extends Component {
         $asesor = auth()->user()->asesor;
         if (!$asesor) return collect();
 
-        return Assessment::with('akreditasi.user.pesantren')->where('asesor_id', $asesor->id)->get();
+        return Assessment::with(['akreditasi.user.pesantren', 'akreditasi.catatans'])
+            ->where('asesor_id', $asesor->id)
+            ->when($this->search, function ($query) {
+                $query->whereHas('akreditasi.user.pesantren', function ($q) {
+                    $q->where('nama_pesantren', 'like', '%' . $this->search . '%');
+                })->orWhereHas('akreditasi.user', function ($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
+            ->paginate($this->perPage);
     }
 
 
     public $visitasi_akreditasi_id;
     public $visitasi_tanggal;
+    public $visitasi_tanggal_akhir;
     public $visitasi_catatan;
     public $visitasi_action = 'terima';
 
@@ -34,6 +73,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->visitasi_akreditasi_id = $id;
         // Reset fields
         $this->visitasi_tanggal = date('Y-m-d');
+        $this->visitasi_tanggal_akhir = date('Y-m-d');
         $this->visitasi_catatan = '';
         $this->visitasi_action = 'terima';
         $this->resetErrorBag();
@@ -43,13 +83,47 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function submitVisitasi()
     {
-        $this->validate([
-            'visitasi_action' => 'required',
-            'visitasi_tanggal' => 'required_if:visitasi_action,terima',
-            'visitasi_catatan' => 'required_if:visitasi_action,tolak',
-        ]);
+        $akreditasi = Akreditasi::with('assessments')->find($this->visitasi_akreditasi_id);
+        $assessment = $akreditasi->assessments->first(); // Assuming all assessments share the same range
 
-        $akreditasi = Akreditasi::find($this->visitasi_akreditasi_id);
+        if ($this->visitasi_action == 'terima') {
+            $this->validate([
+                'visitasi_action' => 'required',
+                'visitasi_tanggal' => [
+                    'required',
+                    'date',
+                    function ($attribute, $value, $fail) use ($assessment) {
+                        if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                            $fail('Tanggal visitasi harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
+                        }
+                    },
+                ],
+                'visitasi_tanggal_akhir' => [
+                    'required',
+                    'date',
+                    'after_or_equal:visitasi_tanggal',
+                    function ($attribute, $value, $fail) use ($assessment) {
+                        if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                            $fail('Tanggal visitasi akhir harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
+                        }
+
+                        $start = \Carbon\Carbon::parse($this->visitasi_tanggal);
+                        $end = \Carbon\Carbon::parse($value);
+                        if ($start->diffInDays($end) >= 4) {
+                            $fail('Rentang visitasi maksimal adalah 4 hari.');
+                        }
+                    },
+                ],
+            ]);
+        } else {
+            $this->validate([
+                'visitasi_action' => 'required',
+                'visitasi_catatan' => 'required|min:10',
+            ], [
+                'visitasi_catatan.required' => 'Catatan penolakan wajib diisi.',
+                'visitasi_catatan.min' => 'Catatan penolakan minimal 10 karakter.',
+            ]);
+        }
 
         // Identify active user (Asesor)
         $asesorName = auth()->user()->name;
@@ -62,13 +136,19 @@ new #[Layout('layouts.app')] class extends Component {
             $akreditasi->update([
                 'status' => 4, // 4. Visitasi
                 'tgl_visitasi' => $this->visitasi_tanggal,
+                'tgl_visitasi_akhir' => $this->visitasi_tanggal_akhir,
             ]);
+
+            $rangeStr = \Carbon\Carbon::parse($this->visitasi_tanggal)->format('d/m/Y');
+            if ($this->visitasi_tanggal != $this->visitasi_tanggal_akhir) {
+                $rangeStr .= ' s/d ' . \Carbon\Carbon::parse($this->visitasi_tanggal_akhir)->format('d/m/Y');
+            }
 
             // Notify Pesantren: Visitasi Scheduled
             $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
                 'visitasi_diterima',
                 'Jadwal Visitasi Ditetapkan',
-                'Asesor ' . $asesorName . ' telah menjadwalkan visitasi pada tanggal ' . $this->visitasi_tanggal . '.',
+                'Asesor ' . $asesorName . ' telah menjadwalkan visitasi pada tanggal ' . $rangeStr . '.',
                 route('pesantren.akreditasi')
             ));
 
@@ -76,7 +156,7 @@ new #[Layout('layouts.app')] class extends Component {
             \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
                 'visitasi_diterima',
                 'Jadwal Visitasi Ditetapkan',
-                'Asesor ' . $asesorName . ' telah menetapkan jadwal visitasi untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name) . ' pada tanggal ' . $this->visitasi_tanggal . '.',
+                'Asesor ' . $asesorName . ' telah menetapkan jadwal visitasi untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name) . ' pada tanggal ' . $rangeStr . '.',
                 route('admin.akreditasi')
             ));
         } else {
@@ -112,141 +192,142 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div class="py-12">
+    <x-slot name="header">
+        <h2 class="font-semibold text-gray-800 leading-tight">
+            {{ __('Akreditasi') }}
+        </h2>
+    </x-slot>
+
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="p-6 text-gray-900">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Akreditasi</h2>
-                </div>
+        <x-datatable.layout title="Akreditasi" :records="$this->assessments">
+            <x-slot name="filters">
+                <x-datatable.search placeholder="Cari Pesantren..." />
+            </x-slot>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left">No</th>
-                                <th class="py-3 px-6 text-left">Pesantren</th>
-                                <th class="py-3 px-6 text-center">Status</th>
-                                <th class="py-3 px-6 text-center">Akreditasi</th>
-                                <th class="py-3 px-6 text-center">Tanggal</th>
-                                <th class="py-3 px-6 text-center">Catatan</th>
-                                <th class="py-3 px-6 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
-                            @forelse ($this->assessments as $index => $item)
-                            <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                <td class="py-3 px-6 text-left whitespace-nowrap">
-                                    {{ $index + 1 }}
-                                </td>
-                                @if($item->akreditasi)
-                                <td class="py-3 px-6 text-left font-medium">
-                                    {{ $item->akreditasi->user?->pesantren?->nama_pesantren ?? $item->akreditasi->user?->name ?? 'N/A' }}
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    <span
-                                        class="{{ Akreditasi::getStatusBadgeClass($item->akreditasi->status) }} py-1 px-3 rounded-full text-xs font-semibold">
-                                        {{ Akreditasi::getStatusLabel($item->akreditasi->status) }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    @if ($item->akreditasi->status == 1)
-                                    <span class="bg-indigo-100 text-indigo-700 py-1 px-3 rounded-full text-xs font-bold uppercase">{{ $item->akreditasi->peringkat ?? 'Berhasil' }}</span>
-                                    @elseif (in_array($item->akreditasi->status, [3, 4, 5]))
-                                    <span class="bg-amber-100 text-amber-700 py-1 px-3 rounded-full text-xs font-bold uppercase tracking-wider">Proses</span>
-                                    @else
-                                    <span class="text-gray-400">-</span>
+            <x-slot name="thead">
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6">NO</th>
+                <x-datatable.th field="id" :sortField="$sortField" :sortAsc="$sortAsc">
+                    PESANTREN
+                </x-datatable.th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS</th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">AKREDITASI</th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">JADWAL</th>
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">CATATAN</th>
+                <th class="py-3 px-4 text-right text-[11px] font-bold text-gray-400 uppercase tracking-widest pr-8">AKSI</th>
+            </x-slot>
+
+            <x-slot name="tbody">
+                @forelse ($this->assessments as $index => $item)
+                @if($item->akreditasi)
+                <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="ass-{{ $item->id }}">
+                    <td class="py-5 px-4 pl-6">
+                        <span class="text-xs font-bold text-gray-400">{{ ($this->assessments->currentPage() - 1) * $this->assessments->perPage() + $index + 1 }}</span>
+                    </td>
+                    <td class="py-5 px-4">
+                        <span class="text-sm font-bold text-[#374151]">{{ $item->akreditasi->user?->pesantren?->nama_pesantren ?? $item->akreditasi->user?->name ?? 'N/A' }}</span>
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight {{ Akreditasi::getStatusBadgeClass($item->akreditasi->status) }}">
+                            {{ Akreditasi::getStatusLabel($item->akreditasi->status) }}
+                        </span>
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        @if ($item->akreditasi->status == 1)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-50 text-green-600 uppercase tracking-tight border border-green-100">{{ $item->akreditasi->peringkat ?? 'Berhasil' }}</span>
+                        @elseif (in_array($item->akreditasi->status, [3, 4, 5]))
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 uppercase tracking-tight border border-amber-100">Proses</span>
+                        @else
+                        <span class="text-xs font-bold text-gray-300">-</span>
+                        @endif
+                    </td>
+                    <td class="py-5 px-4">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight" title="Tanggal Pengajuan">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>Pengajuan: {{ $item->akreditasi->created_at->format('d/m/y') }}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-purple-600 uppercase tracking-tight" title="Jadwal Assessment">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                <span>Assesment: {{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d/m/y') }}</span>
+                            </div>
+                            @if($item->akreditasi->tgl_visitasi)
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-tight" title="Tanggal Visitasi">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                </svg>
+                                <span>Visitasi: {{ \Carbon\Carbon::parse($item->akreditasi->tgl_visitasi)->format('d/m/y') }}
+                                    @if($item->akreditasi->tgl_visitasi_akhir && $item->akreditasi->tgl_visitasi != $item->akreditasi->tgl_visitasi_akhir)
+                                    - {{ \Carbon\Carbon::parse($item->akreditasi->tgl_visitasi_akhir)->format('d/m/y') }}
                                     @endif
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex flex-col items-center gap-1">
-                                        {{-- 1. Pengajuan --}}
-                                        <div class="flex items-center gap-1 text-[11px] text-gray-500 whitespace-nowrap" title="Tanggal Pengajuan">
-                                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span class="font-medium uppercase tracking-tighter">Pengajuan:</span>
-                                            <span>{{ $item->akreditasi->created_at->format('d/m/y') }}</span>
-                                        </div>
-
-                                        {{-- 2. Assessment --}}
-                                        <div class="flex items-center gap-1 text-[11px] text-purple-600 font-bold whitespace-nowrap" title="Jadwal Assessment">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Assessment:</span>
-                                            <span>{{ \Carbon\Carbon::parse($item->tanggal_mulai)->format('d/m/y') }} - {{ \Carbon\Carbon::parse($item->tanggal_berakhir)->format('d/m/y') }}</span>
-                                        </div>
-
-                                        {{-- 3. Visitasi --}}
-                                        @if($item->akreditasi->tgl_visitasi)
-                                        <div class="flex items-center gap-1 text-[11px] text-indigo-600 font-bold whitespace-nowrap" title="Tanggal Visitasi">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Visitasi:</span>
-                                            <span>{{ \Carbon\Carbon::parse($item->akreditasi->tgl_visitasi)->format('d/m/y') }}</span>
-                                        </div>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="py-3 px-6 text-left font-medium">
-                                    <div class="space-y-1">
-                                        @php
-                                        $visitasiCatatans = $item->akreditasi->catatans->where('tipe', 'visitasi');
-                                        @endphp
-                                        @foreach($visitasiCatatans as $catatan)
-                                        <div class="text-xs p-1 rounded border bg-orange-50 border-orange-200 text-orange-800">
-                                            <span class="font-bold uppercase">{{ $catatan->tipe }}:</span> {{ $catatan->catatan }}
-                                            <div class="text-[10px] text-gray-500 mt-0.5">{{ $catatan->created_at->format('d M Y H:i') }}</div>
-                                        </div>
-                                        @endforeach
-                                        @if($visitasiCatatans->isEmpty())
-                                        <span class="text-gray-400 italic font-normal text-xs">-</span>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    @if ($item->akreditasi->status == 5)
-                                    <div class="flex gap-2 justify-center">
-                                        <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
-                                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
-                                            Detail
-                                        </a>
-                                        @if($item->tipe == 1)
-                                        <button wire:click="openVisitasiModal({{ $item->akreditasi->id }})"
-                                            class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
-                                            Visitasi
-                                        </button>
-                                        @endif
-                                    </div>
-                                    @elseif ($item->akreditasi->status == 4)
-                                    <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}"
-                                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-4 rounded text-xs transition duration-150 ease-in-out">
-                                        Input Nilai
-                                    </a>
-                                    @else
-                                    <span class="text-gray-400 italic">Selesai</span>
-                                    @endif
-                                </td>
-                                @else
-                                <td colspan="6" class="py-3 px-6 text-center text-gray-400 italic">
-                                    Data Akreditasi Tidak Tersedia
-                                </td>
-                                @endif
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="py-10 text-center text-gray-500">
-                                    Belum ada tugas akreditasi yang ditugaskan kepada Anda.
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+                                </span>
+                            </div>
+                            @endif
+                        </div>
+                    </td>
+                    <td class="py-5 px-4 max-w-xs">
+                        <div class="space-y-1.5">
+                            @php
+                            $visitasiCatatans = $item->akreditasi->catatans->where('tipe', 'visitasi');
+                            @endphp
+                            @foreach($visitasiCatatans as $catatan)
+                            <div class="text-[10px] font-medium p-1.5 rounded-lg border bg-amber-50/50 border-amber-100 text-amber-800 leading-tight">
+                                <span class="font-bold uppercase opacity-75">{{ $catatan->tipe }}:</span> {{ $catatan->catatan }}
+                            </div>
+                            @endforeach
+                            @if($visitasiCatatans->isEmpty())
+                            <span class="text-xs font-bold text-gray-300">-</span>
+                            @endif
+                        </div>
+                    </td>
+                    <td class="py-5 px-4 text-right pr-6">
+                        @if ($item->akreditasi->status == 5)
+                        <div class="flex gap-2 justify-end">
+                            <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}" wire:navigate
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors bg-gray-50/80 rounded-lg group-hover:bg-gray-100">
+                                Detail
+                            </a>
+                            @if($item->tipe == 1)
+                            <button wire:click="openVisitasiModal({{ $item->akreditasi->id }})"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-amber-600 hover:text-amber-800 transition-colors bg-amber-50/50 rounded-lg hover:bg-amber-100">
+                                Visitasi
+                            </button>
+                            @endif
+                        </div>
+                        @elseif ($item->akreditasi->status == 4)
+                        <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}" wire:navigate
+                            class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50/50 rounded-lg hover:bg-indigo-100">
+                            Input Nilai
+                        </a>
+                        @else
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1.5 rounded-lg">Selesai</span>
+                        @endif
+                    </td>
+                </tr>
+                @else
+                <tr>
+                    <td colspan="7" class="py-10 text-center text-gray-400 italic">
+                        Data Akreditasi Tidak Tersedia
+                    </td>
+                </tr>
+                @endif
+                @empty
+                <tr>
+                    <td colspan="7" class="py-16 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="w-10 h-10 text-gray-400/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p class="text-xs text-gray-400 font-bold">Belum ada tugas akreditasi ditugaskan.</p>
+                        </div>
+                    </td>
+                </tr>
+                @endforelse
+            </x-slot>
+        </x-datatable.layout>
     </div>
 
     <!-- Modal Visitasi -->
@@ -278,11 +359,19 @@ new #[Layout('layouts.app')] class extends Component {
                 </div>
 
                 <div x-show="$wire.visitasi_action === 'terima'" class="space-y-4">
-                    <div>
-                        <x-input-label for="visitasi_tanggal" value="Tanggal Visitasi" />
-                        <x-text-input wire:model="visitasi_tanggal" id="visitasi_tanggal" type="date"
-                            class="mt-1 block w-full" />
-                        <x-input-error :messages="$errors->get('visitasi_tanggal')" class="mt-2" />
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <x-input-label for="visitasi_tanggal" value="Tanggal Mulai Visitasi" />
+                            <x-text-input wire:model="visitasi_tanggal" id="visitasi_tanggal" type="date"
+                                class="mt-1 block w-full" />
+                            <x-input-error :messages="$errors->get('visitasi_tanggal')" class="mt-2" />
+                        </div>
+                        <div>
+                            <x-input-label for="visitasi_tanggal_akhir" value="Tanggal Akhir Visitasi" />
+                            <x-text-input wire:model="visitasi_tanggal_akhir" id="visitasi_tanggal_akhir" type="date"
+                                class="mt-1 block w-full" />
+                            <x-input-error :messages="$errors->get('visitasi_tanggal_akhir')" class="mt-2" />
+                        </div>
                     </div>
                 </div>
 

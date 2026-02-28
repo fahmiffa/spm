@@ -89,7 +89,12 @@
                             @if($akreditasi->tgl_visitasi)
                             <div>
                                 <p class="text-xs font-bold text-gray-500 uppercase">Tanggal Visitasi</p>
-                                <p class="text-indigo-600 font-bold">{{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi)->format('d F Y') }}</p>
+                                <p class="text-indigo-600 font-bold">
+                                    {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi)->format('d F Y') }}
+                                    @if($akreditasi->tgl_visitasi_akhir && $akreditasi->tgl_visitasi != $akreditasi->tgl_visitasi_akhir)
+                                    - {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi_akhir)->format('d F Y') }}
+                                    @endif
+                                </p>
                             </div>
                             @endif
                         </div>
@@ -397,8 +402,8 @@
                                             <td class="border border-gray-300 p-0">
                                                 <select
                                                     wire:model.live="asesorEvaluasis.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 3 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}>
+                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                    {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? '' : 'disabled' }}>
                                                     <option value="">Pilih...</option>
                                                     <option value="1">1</option>
                                                     <option value="2">2</option>
@@ -430,16 +435,16 @@
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-blue-50/10">
                                                 <textarea wire:model.live="asesorButirCatatans.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 && !$isLocked ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
                                                     placeholder="Catatan butir..."
-                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                                    {{ $akreditasi->status == 4 && !$isLocked ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @if ($index === 0)
                                             <td rowspan="{{ $butirsCount }}"
                                                 class="border border-gray-300 p-0 align-top h-px bg-blue-50/20">
                                                 <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 && !$isLocked ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 4 && !$isLocked ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @endif
                                             @endif
@@ -463,6 +468,7 @@
                             </div>
                             @if ($akreditasi->status == 4)
                             <div class="flex gap-2">
+                                @if(!$isLocked || $asesorTipe == 2)
                                 <x-secondary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
                                     <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan Draft</span>
                                     <span wire:loading wire:target="saveAsesorEdpm">
@@ -473,6 +479,7 @@
                                         Menyimpan...
                                     </span>
                                 </x-secondary-button>
+                                @endif
 
                                 @if($asesorTipe == 1)
                                 <x-primary-button wire:click="finalizeVerification" wire:loading.attr="disabled" wire:target="finalizeVerification">

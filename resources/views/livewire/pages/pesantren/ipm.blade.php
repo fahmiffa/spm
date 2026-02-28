@@ -107,6 +107,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div class="py-12">
+    <x-slot name="header">{{ __('Indek Pemenuhan Mutlak (IPM)') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         @if(auth()->user()->pesantren->is_locked)
         <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4">

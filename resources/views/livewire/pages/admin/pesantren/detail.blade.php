@@ -19,10 +19,22 @@ new #[Layout('layouts.app')] class extends Component {
     public function toggleLock()
     {
         if ($this->pesantren) {
+            $prevLocked = $this->pesantren->is_locked;
             $this->pesantren->is_locked = !$this->pesantren->is_locked;
             $this->pesantren->save();
 
             $status = $this->pesantren->is_locked ? 'terkunci' : 'terbuka';
+
+            if ($prevLocked && !$this->pesantren->is_locked) {
+                // Notifikasi ke pesantren saat data dibuka kuncinya
+                $this->user->notify(new \App\Notifications\AkreditasiNotification(
+                    'buka_kunci',
+                    'Akses Data Dibuka',
+                    'Administrator telah membuka kunci data Anda. Anda sekarang dapat memperbarui profil dan dokumen.',
+                    route('pesantren.profile')
+                ));
+            }
+
             $this->dispatch('notification-received', title: 'Berhasil', message: "Akses data pesantren berhasil diubah menjadi $status.");
         }
     }

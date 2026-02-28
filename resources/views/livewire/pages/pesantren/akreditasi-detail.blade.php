@@ -11,7 +11,9 @@ use App\Models\AkreditasiEdpm;
 use App\Models\AkreditasiEdpmCatatan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
+use Livewire\WithFileUploads;
 
 new #[Layout('layouts.app')] class extends Component {
     public $akreditasi;
@@ -44,7 +46,11 @@ new #[Layout('layouts.app')] class extends Component {
     public $adminNvs = [];
     public $asesorButirCatatans = [];
 
+    #[Url]
     public $activeTab = 'profil';
+    public $kartu_kendali_file;
+
+    use WithFileUploads;
 
     public function mount($uuid)
     {
@@ -107,6 +113,36 @@ new #[Layout('layouts.app')] class extends Component {
         }
         return $total;
     }
+
+    public function uploadKartuKendali()
+    {
+        if ($this->akreditasi->status != 3) {
+            return;
+        }
+
+        $this->validate([
+            'kartu_kendali_file' => 'required|file|mimes:pdf,docx|max:5120',
+        ], [
+            'kartu_kendali_file.required' => 'File Kartu Kendali wajib diunggah.',
+            'kartu_kendali_file.mimes' => 'Format file harus PDF atau DOCX.',
+            'kartu_kendali_file.max' => 'Ukuran file maksimal 5MB.',
+        ]);
+
+        $path = $this->kartu_kendali_file->store('akreditasi/kartu_kendali', 'public');
+
+        $this->akreditasi->update([
+            'kartu_kendali' => $path
+        ]);
+
+        $this->reset(['kartu_kendali_file']);
+
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Berhasil!',
+            message: 'Kartu Kendali berhasil diunggah.'
+        );
+    }
 }; ?>
 
 <div class="py-12">
@@ -144,6 +180,9 @@ new #[Layout('layouts.app')] class extends Component {
                         <li class="me-2">
                             <button wire:click="setTab('hasil')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'hasil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Hasil Penilaian</button>
                         </li>
+                        <li class="me-2">
+                            <button wire:click="setTab('kartu')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'kartu' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Kartu Kendali</button>
+                        </li>
                         @endif
                     </ul>
                 </div>
@@ -173,6 +212,22 @@ new #[Layout('layouts.app')] class extends Component {
                                 <p class="text-xs font-bold text-gray-500 uppercase">Provinsi</p>
                                 <p class="text-gray-900">{{ $pesantren->provinsi ?? '-' }}</p>
                             </div>
+                            @if($akreditasi->tgl_visitasi)
+                            <div class="md:col-span-2 pt-4 border-t border-gray-100 mt-2">
+                                <p class="text-xs font-bold text-indigo-500 uppercase flex items-center gap-1.5 mb-1">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    Jadwal Visitasi
+                                </p>
+                                <p class="text-indigo-700 font-extrabold text-lg">
+                                    {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi)->format('d F Y') }}
+                                    @if($akreditasi->tgl_visitasi_akhir && $akreditasi->tgl_visitasi != $akreditasi->tgl_visitasi_akhir)
+                                    - {{ \Carbon\Carbon::parse($akreditasi->tgl_visitasi_akhir)->format('d F Y') }}
+                                    @endif
+                                </p>
+                            </div>
+                            @endif
                         </div>
                     </div>
                     @endif
@@ -299,7 +354,12 @@ new #[Layout('layouts.app')] class extends Component {
                                 </div>
                                 <div>
                                     <p class="text-xs font-bold text-green-600 uppercase">Masa Berlaku</p>
-                                    <p class="text-gray-900 font-bold">{{ \Carbon\Carbon::parse($akreditasi->masa_berlaku)->format('d F Y') }}</p>
+                                    <p class="text-gray-900 font-bold">
+                                        {{ \Carbon\Carbon::parse($akreditasi->masa_berlaku)->format('d F Y') }}
+                                        @if($akreditasi->masa_berlaku_akhir && $akreditasi->masa_berlaku != $akreditasi->masa_berlaku_akhir)
+                                        - {{ \Carbon\Carbon::parse($akreditasi->masa_berlaku_akhir)->format('d F Y') }}
+                                        @endif
+                                    </p>
                                 </div>
                                 @if($akreditasi->sertifikat_path)
                                 <div class="md:col-span-2">
@@ -395,6 +455,93 @@ new #[Layout('layouts.app')] class extends Component {
                                         @endforeach
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'kartu')
+                    <div class="space-y-6">
+                        <div class="bg-indigo-50 border border-indigo-200 p-8 rounded-2xl shadow-sm">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-indigo-900">Instruksi Unggah Kartu Kendali</h3>
+                                    <p class="text-sm text-indigo-600">Silakan ikuti langkah-langkah di bawah ini untuk menyelesaikan proses validasi.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                                <!-- Step 1 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">1</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Unduh Berkas</h4>
+                                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">Pihak Asesor telah mengunggah Kartu Kendali Anda. Silakan unduh berkas tersebut di menu dokumen.</p>
+                                    <a href="{{ route('documents.index') }}" class="inline-flex items-center text-[10px] font-bold text-indigo-600 hover:text-indigo-800 gap-1 group">
+                                        Buka Menu Dokumen
+                                        <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                    </a>
+                                </div>
+
+                                <!-- Step 2 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">2</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Tinjau Dokumen</h4>
+                                    <p class="text-xs text-gray-600 leading-relaxed">Pastikan seluruh data dan tanda tangan pada Kartu Kendali sudah sesuai dengan hasil visitasi yang telah dilaksanakan.</p>
+                                </div>
+
+                                <!-- Step 3 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">3</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Unggah Kembali</h4>
+
+                                    @if($akreditasi->status == 3)
+                                    <form wire:submit.prevent="uploadKartuKendali" class="space-y-4">
+                                        <div>
+                                            <input wire:model="kartu_kendali_file" type="file" id="kartu_kendali_file" class="block w-full text-[10px] text-gray-900 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept=".pdf,.docx">
+                                            <div wire:loading wire:target="kartu_kendali_file" class="text-[10px] text-indigo-600 mt-1 font-bold">Mengunggah...</div>
+                                            <x-input-error :messages="$errors->get('kartu_kendali_file')" class="mt-1" />
+                                        </div>
+
+                                        @if($akreditasi->kartu_kendali)
+                                        <div class="flex items-center gap-2 mt-2 p-2 bg-green-50 rounded-lg border border-green-100">
+                                            <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            <span class="text-[9px] font-bold text-green-700 uppercase">Sudah diunggah</span>
+                                            <a href="{{ Storage::url($akreditasi->kartu_kendali) }}" target="_blank" class="text-[9px] font-bold text-indigo-600 hover:underline ml-auto">LIHAT</a>
+                                        </div>
+                                        @endif
+
+                                        <button type="submit" wire:loading.attr="disabled" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                            <span wire:loading.remove wire:target="uploadKartuKendali">Simpan Kartu Kendali</span>
+                                            <span wire:loading wire:target="uploadKartuKendali">
+                                                <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    </form>
+                                    @else
+                                    <p class="text-xs text-gray-500 italic">Menu upload akan muncul saat status pengajuan Anda adalah 'Validasi'.</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                                <svg class="w-5 h-5 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p class="text-xs text-amber-800 leading-relaxed">
+                                    <span class="font-bold">Penting:</span> Validasi Admin tidak dapat dilanjutkan sebelum Kartu Kendali diunggah kembali oleh pihak Pesantren. Pastikan format file adalah PDF atau DOCX dengan ukuran maksimal 5MB.
+                                </p>
                             </div>
                         </div>
                     </div>

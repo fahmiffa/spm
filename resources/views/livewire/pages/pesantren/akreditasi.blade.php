@@ -10,29 +10,63 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Illuminate\Support\Str;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\Auth;
 
 new #[Layout('layouts.app')] class extends Component {
     use WithFileUploads;
+    use \Livewire\WithPagination;
 
-    public $kartu_kendali_file;
-    public $selected_akreditasi_id;
+    public $search = '';
+    public $perPage = 10;
+    public $sortField = 'created_at';
+    public $sortAsc = false;
+
+    public function updatedSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatedPerPage()
+    {
+        $this->resetPage();
+    }
+
+    public function sortBy($field)
+    {
+        if ($this->sortField === $field) {
+            $this->sortAsc = !$this->sortAsc;
+        } else {
+            $this->sortAsc = true;
+        }
+
+        $this->sortField = $field;
+    }
+
     public function mount()
     {
-        if (!auth()->user()->isPesantren()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isPesantren()) {
             abort(403);
         }
     }
 
     public function getAkreditasisProperty()
     {
-        return Akreditasi::with('assessments')->where('user_id', auth()->id())
-            ->orderBy('created_at', 'desc')
-            ->get();
+        return Akreditasi::with(['assessments', 'catatans'])
+            ->where('user_id', Auth::id())
+            ->when($this->search, function ($query) {
+                // Search in catatan or rankings jika perlu, tapi biasanya di sini search kurang relevan 
+                // karena user hanya melihat datanya sendiri. Tapi kita tambahkan untuk konsistensi.
+                $query->where('peringkat', 'like', '%' . $this->search . '%');
+            })
+            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
+            ->paginate($this->perPage);
     }
 
     public function create()
     {
-        $userId = auth()->id();
+        $userId = Auth::id();
         $missingData = [];
 
         // 1. Check Profil Pesantren
@@ -90,7 +124,9 @@ new #[Layout('layouts.app')] class extends Component {
         ]);
 
         // Lock Pesantren Data
-        auth()->user()->pesantren->update(['is_locked' => true]);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $user->pesantren->update(['is_locked' => true]);
 
         // Notify Admin
         $admins = \App\Models\User::whereHas('role', function ($q) {
@@ -99,7 +135,7 @@ new #[Layout('layouts.app')] class extends Component {
         \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
             'pengajuan',
             'Pengajuan Akreditasi Baru',
-            'Pesantren ' . (auth()->user()->pesantren->nama_pesantren ?? auth()->user()->name) . ' telah membuat pengajuan akreditasi baru.',
+            'Pesantren ' . ($user->pesantren->nama_pesantren ?? $user->name) . ' telah membuat pengajuan akreditasi baru.',
             route('admin.akreditasi')
         ));
 
@@ -108,15 +144,20 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function delete($id)
     {
-        $akreditasi = Akreditasi::where('user_id', auth()->id())->findOrFail($id);
+        $akreditasi = Akreditasi::where('user_id', Auth::id())->findOrFail($id);
         $akreditasi->delete();
 
-        session()->flash('status', 'Pengajuan akreditasi berhasil dihapus.');
+        // Unlock Pesantren Data
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $user->pesantren->update(['is_locked' => false]);
+
+        session()->flash('status', 'Pengajuan akreditasi berhasil dihapus. Data profil telah dibuka kunci.');
     }
 
     public function banding($id, $alasan)
     {
-        $akreditasi = Akreditasi::where('user_id', auth()->id())->findOrFail($id);
+        $akreditasi = Akreditasi::where('user_id', Auth::id())->findOrFail($id);
 
         // Ensure status is 2 (Rejected) and has assessments
         if ($akreditasi->status == 2 && $akreditasi->assessments()->exists()) {
@@ -129,10 +170,12 @@ new #[Layout('layouts.app')] class extends Component {
             $admins = \App\Models\User::whereHas('role', function ($q) {
                 $q->where('id', 1);
             })->get();
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
             \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
                 'banding',
                 'Pengajuan Banding Baru',
-                'Pesantren ' . (auth()->user()->pesantren->nama_pesantren ?? auth()->user()->name) . ' telah mengajukan banding akreditasi.',
+                'Pesantren ' . ($user->pesantren->nama_pesantren ?? $user->name) . ' telah mengajukan banding akreditasi.',
                 route('admin.akreditasi')
             ));
 
@@ -141,242 +184,236 @@ new #[Layout('layouts.app')] class extends Component {
             session()->flash('error', 'Gagal mengajukan banding. Pastikan status pengajuan adalah Ditolak dan sudah melalui tahap Assessment.');
         }
     }
-
-    public function selectForUpload($id)
-    {
-        $this->selected_akreditasi_id = $id;
-        $this->dispatch('open-modal', 'upload-kartu-kendali');
-    }
-
-    public function uploadKartuKendali()
-    {
-        $this->validate([
-            'kartu_kendali_file' => 'required|file|mimes:pdf,docx|max:5120',
-        ], [
-            'kartu_kendali_file.required' => 'File Kartu Kendali wajib diunggah.',
-            'kartu_kendali_file.mimes' => 'Format file harus PDF atau DOCX.',
-            'kartu_kendali_file.max' => 'Ukuran file maksimal 5MB.',
-        ]);
-
-        $akreditasi = Akreditasi::where('user_id', auth()->id())->findOrFail($this->selected_akreditasi_id);
-
-        $path = $this->kartu_kendali_file->store('akreditasi/kartu_kendali', 'public');
-
-        $akreditasi->update([
-            'kartu_kendali' => $path
-        ]);
-
-        $this->dispatch('close-modal', 'upload-kartu-kendali');
-        $this->reset(['kartu_kendali_file', 'selected_akreditasi_id']);
-
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Berhasil!',
-            message: 'Kartu Kendali berhasil diunggah.'
-        );
-    }
 }; ?>
 
-<div class="py-12" x-data="akreditasiPesantren">
+<div class="py-12" x-data="{
+    confirmCreate() {
+        Swal.fire({
+            title: 'Konfirmasi Pengajuan',
+            text: 'Apakah Anda yakin ingin membuat pengajuan akreditasi baru? Data profil dan administrasi akan dikunci selama proses berlangsung.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1e3a5f',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Ajukan Sekarang',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.create();
+            }
+        });
+    },
+    confirmDelete(id) {
+        Swal.fire({
+            title: 'Hapus Pengajuan?',
+            text: 'Data pengajuan ini akan dihapus secara permanen.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.delete(id);
+            }
+        });
+    },
+    confirmBanding(id) {
+        Swal.fire({
+            title: 'Ajukan Banding',
+            text: 'Tuliskan alasan atau catatan banding Anda:',
+            input: 'textarea',
+            inputPlaceholder: 'Masukkan catatan di sini...',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Kirim Banding',
+            cancelButtonText: 'Batal',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Alasan banding wajib diisi!';
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.banding(id, result.value);
+            }
+        });
+    }
+}" x-init="
+    window.addEventListener('show-validation-alert', event => {
+        Swal.fire({
+            icon: 'error',
+            title: event.detail.title,
+            html: event.detail.html,
+            confirmButtonColor: '#ef4444'
+        });
+    });
+">
+    <x-slot name="header">
+        <h2 class="font-semibold text-gray-800 leading-tight">
+            {{ __('Akreditasi') }}
+        </h2>
+    </x-slot>
+
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-            <div class="p-6 text-gray-900">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-800">Daftar Akreditasi</h2>
-                    <button wire:click="create"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out">
-                        Buat Pengajuan
-                    </button>
-                </div>
+        <x-datatable.layout title="Daftar Akreditasi" :records="$this->akreditasis">
+            <x-slot name="filters">
+                <x-datatable.search placeholder="Cari Peringkat..." />
 
-                @if (session('status'))
-                <div class="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-                    {{ session('status') }}
-                </div>
-                @endif
+                <button @click="confirmCreate"
+                    class="bg-[#1e3a5f] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-[#162d4a] transition-all shadow-sm active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Buat Pengajuan
+                </button>
+            </x-slot>
 
-                @if (session('error'))
-                <div class="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-                    {{ session('error') }}
-                </div>
-                @endif
+            <x-slot name="thead">
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6">NO</th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS</th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">NILAI</th>
+                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">PERINGKAT</th>
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">CATATAN</th>
+                <x-datatable.th field="created_at" :sortField="$sortField" :sortAsc="$sortAsc">
+                    JADWAL
+                </x-datatable.th>
+                <th class="py-3 px-4 text-right text-[11px] font-bold text-gray-400 uppercase tracking-widest pr-8">AKSI</th>
+            </x-slot>
 
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200">
-                        <thead>
-                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
-                                <th class="py-3 px-6 text-left">No</th>
-                                <th class="py-3 px-6 text-center">Status</th>
-                                <th class="py-3 px-6 text-center">Nilai</th>
-                                <th class="py-3 px-6 text-center">Peringkat</th>
-                                <th class="py-3 px-6 text-center">Catatan</th>
-                                <th class="py-3 px-6 text-center">Tanggal</th>
-                                <th class="py-3 px-6 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-gray-600 text-xs md:text-sm font-light">
-                            @forelse ($this->akreditasis as $index => $item)
-                            <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                <td class="py-3 px-6 text-left whitespace-nowrap">
-                                    {{ $index + 1 }}
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    <span
-                                        class="{{ Akreditasi::getStatusBadgeClass($item->status) }} py-1 px-3 rounded-full text-xs font-semibold">
-                                        {{ Akreditasi::getStatusLabel($item->status) }}
-                                    </span>
-                                </td>
-                                <td class="py-3 px-6 text-center font-bold text-indigo-600">
-                                    {{ $item->nilai ?? '-' }}
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    @if($item->peringkat)
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold 
-                                        {{ $item->peringkat == 'Unggul' ? 'bg-green-100 text-green-700' : 
-                                           ($item->peringkat == 'Baik' ? 'bg-blue-100 text-blue-700' : 
-                                           'bg-yellow-100 text-yellow-700') }}">
-                                        {{ $item->peringkat }}
-                                    </span>
-                                    @else
-                                    -
-                                    @endif
-                                </td>
-                                <td class="py-3 px-6 text-left font-medium">
-                                    <div class="space-y-1">
-                                        @foreach($item->catatans as $catatan)
-                                        <div class="text-xs p-1 rounded border {{ $catatan->tipe == 'visitasi' ? 'bg-orange-50 border-orange-200 text-orange-800' : 'bg-red-50 border-red-200 text-red-800' }}">
-                                            <span class="font-bold uppercase">{{ $catatan->tipe }}:</span> {{ $catatan->catatan }}
-                                            <div class="text-[10px] text-gray-500 mt-0.5">{{ $catatan->created_at->format('d M Y H:i') }}</div>
-                                        </div>
-                                        @endforeach
-                                    </div>
-                                    @if($item->catatan)
-                                    <div class="text-xs mt-1 text-gray-600 border-t pt-1">
-                                        Logs Lama: {{ $item->catatan }}
-                                    </div>
-                                    @endif
-                                    @if($item->catatans->isEmpty() && !$item->catatan)
-                                    <span class="text-gray-400 italic">-</span>
-                                    @endif
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex flex-col items-center gap-1">
-                                        {{-- 1. Pengajuan --}}
-                                        <div class="flex items-center gap-1 text-[11px] text-gray-500 whitespace-nowrap" title="Tanggal Pengajuan">
-                                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <span class="font-medium uppercase tracking-tighter">Pengajuan:</span>
-                                            <span>{{ $item->created_at->format('d/m/y') }}</span>
-                                        </div>
-
-                                        {{-- 2. Assessment --}}
-                                        @php $firstAss = $item->assessments->first(); @endphp
-                                        @if($firstAss)
-                                        <div class="flex items-center gap-1 text-[11px] text-purple-600 font-bold whitespace-nowrap" title="Jadwal Assessment">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Assessment:</span>
-                                            <span>{{ \Carbon\Carbon::parse($firstAss->tanggal_mulai)->format('d/m/y') }} - {{ \Carbon\Carbon::parse($firstAss->tanggal_berakhir)->format('d/m/y') }}</span>
-                                        </div>
-                                        @endif
-
-                                        {{-- 3. Visitasi --}}
-                                        @if($item->tgl_visitasi)
-                                        <div class="flex items-center gap-1 text-[11px] text-indigo-600 font-bold whitespace-nowrap" title="Tanggal Visitasi">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span class="uppercase tracking-tighter">Visitasi:</span>
-                                            <span>{{ \Carbon\Carbon::parse($item->tgl_visitasi)->format('d/m/y') }}</span>
-                                        </div>
-                                        @endif
-                                    </div>
-                                </td>
-                                <td class="py-3 px-6 text-center">
-                                    <div class="flex items-center justify-center gap-4">
-                                        <a href="{{ route('pesantren.akreditasi-detail', $item->uuid) }}"
-                                            class="text-indigo-600 hover:text-indigo-900 font-medium">
-                                            Detail
-                                        </a>
-
-                                        @if ($item->status == 3)
-                                        @if($item->kartu_kendali)
-                                        <a href="{{ Storage::url($item->kartu_kendali) }}" target="_blank"
-                                            class="text-green-600 hover:text-green-900 font-medium">
-                                            Lihat Kartu
-                                        </a>
-                                        <button wire:click="selectForUpload({{ $item->id }})"
-                                            class="text-amber-600 hover:text-amber-900 font-medium">
-                                            Ganti
-                                        </button>
-                                        @else
-                                        <button wire:click="selectForUpload({{ $item->id }})"
-                                            class="text-indigo-600 hover:text-indigo-900 font-medium">
-                                            Upload Kartu
-                                        </button>
-                                        @endif
-                                        @endif
-
-                                        @if ($item->status == 2 && $item->assessments()->exists())
-                                        <button @click="confirmBanding({{ $item->id }})"
-                                            class="text-blue-600 hover:text-blue-900 font-medium">
-                                            Banding
-                                        </button>
-                                        @endif
-                                        <button @click="confirmDelete({{ $item->id }})"
-                                            class="text-red-600 hover:text-red-900 font-medium">
-                                            Hapus
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="py-10 text-center text-gray-500">
-                                    Belum ada data pengajuan akreditasi.
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Modal Upload Kartu Kendali -->
-                <x-modal name="upload-kartu-kendali" :show="false" focusable>
-                    <div class="p-6">
-                        <h2 class="text-lg font-medium text-gray-900 mb-4">
-                            Unggah Kartu Kendali
-                        </h2>
-                        <p class="text-sm text-gray-600 mb-4">
-                            Kartu Kendali adalah dokumen wajib yang harus diunggah pesantren setelah proses visitasi selesai untuk keperluan validasi admin.
-                        </p>
-
-                        <form wire:submit.prevent="uploadKartuKendali">
-                            <div class="space-y-4">
-                                <div>
-                                    <x-input-label for="kartu_kendali_file" value="File Kartu Kendali (PDF/DOCX)" />
-                                    <input wire:model="kartu_kendali_file" type="file" id="kartu_kendali_file" class="mt-1 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" accept=".pdf,.docx">
-                                    <div wire:loading wire:target="kartu_kendali_file" class="text-xs text-indigo-600 mt-1 font-bold">Mengunggah...</div>
-                                    <x-input-error :messages="$errors->get('kartu_kendali_file')" class="mt-2" />
-                                </div>
-
-                                <div class="flex justify-end gap-3 mt-6">
-                                    <x-secondary-button x-on:click="$dispatch('close')">
-                                        Batal
-                                    </x-secondary-button>
-                                    <x-primary-button>
-                                        Simpan
-                                    </x-primary-button>
-                                </div>
+            <x-slot name="tbody">
+                @forelse ($this->akreditasis as $index => $item)
+                <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="akred-{{ $item->id }}">
+                    <td class="py-5 px-4 pl-6">
+                        <span class="text-xs font-bold text-gray-400">{{ ($this->akreditasis->currentPage() - 1) * $this->akreditasis->perPage() + $index + 1 }}</span>
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight {{ Akreditasi::getStatusBadgeClass($item->status) }}">
+                            {{ Akreditasi::getStatusLabel($item->status) }}
+                        </span>
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        <span class="text-sm font-bold text-indigo-600">{{ $item->nilai ?? '-' }}</span>
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        @if($item->peringkat)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight 
+                            {{ $item->peringkat == 'Unggul' ? 'bg-green-50 text-green-600 border border-green-100' : 
+                               ($item->peringkat == 'Baik' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 
+                               'bg-yellow-50 text-yellow-600 border border-yellow-100') }}">
+                            {{ $item->peringkat }}
+                        </span>
+                        @else
+                        <span class="text-xs font-bold text-gray-300">-</span>
+                        @endif
+                    </td>
+                    <td class="py-5 px-4 max-w-xs">
+                        <div class="space-y-1.5">
+                            @foreach($item->catatans as $catatan)
+                            <div class="text-[10px] font-medium p-1.5 rounded-lg border {{ $catatan->tipe == 'visitasi' ? 'bg-orange-50/50 border-orange-100 text-orange-800' : 'bg-red-50/50 border-red-100 text-red-800' }} leading-tight">
+                                <span class="font-bold uppercase opacity-75">{{ $catatan->tipe }}:</span> {{ $catatan->catatan }}
                             </div>
-                        </form>
-                    </div>
-                </x-modal>
-            </div>
-        </div>
+                            @endforeach
+                            @if($item->catatan)
+                            <div class="text-[10px] italic text-gray-500 mt-1 border-t border-gray-100 pt-1">
+                                Logs: {{ $item->catatan }}
+                            </div>
+                            @endif
+                            @if($item->catatans->isEmpty() && !$item->catatan)
+                            <span class="text-xs font-bold text-gray-300">-</span>
+                            @endif
+                        </div>
+                    </td>
+                    <td class="py-5 px-4">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-tight" title="Tanggal Pengajuan">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>Pengajuan: {{ $item->created_at->format('d/m/y') }}</span>
+                            </div>
+                            @php $firstAss = $item->assessments->first(); @endphp
+                            @if($firstAss)
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-purple-600 uppercase tracking-tight" title="Jadwal Assessment">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                <span>Assessment: {{ \Carbon\Carbon::parse($firstAss->tanggal_mulai)->format('d/m/y') }}</span>
+                            </div>
+                            @endif
+                            @if($item->tgl_visitasi)
+                            <div class="flex items-center gap-1.5 text-[10px] font-bold text-indigo-600 uppercase tracking-tight" title="Tanggal Visitasi">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                </svg>
+                                <span>Visitasi: {{ \Carbon\Carbon::parse($item->tgl_visitasi)->format('d/m/y') }}
+                                    @if($item->tgl_visitasi_akhir && $item->tgl_visitasi != $item->tgl_visitasi_akhir)
+                                    - {{ \Carbon\Carbon::parse($item->tgl_visitasi_akhir)->format('d/m/y') }}
+                                    @endif
+                                </span>
+                            </div>
+                            @endif
+                        </div>
+                    </td>
+                    <td class="py-5 px-4 text-right pr-6">
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{{ route('pesantren.akreditasi-detail', $item->uuid) }}" wire:navigate
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-gray-500 hover:text-gray-800 transition-colors bg-gray-50/80 rounded-lg group-hover:bg-gray-100">
+                                Detail
+                            </a>
+
+                            @if ($item->status == 3)
+                            @if(!$item->kartu_kendali)
+                            <a href="{{ route('pesantren.akreditasi-detail', ['uuid' => $item->uuid, 'activeTab' => 'kartu']) }}" wire:navigate
+                                class="inline-flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50/50 rounded-lg hover:bg-indigo-100 uppercase">
+                                Upload Kartu
+                            </a>
+                            @else
+                            <a href="{{ Storage::url($item->kartu_kendali) }}" target="_blank"
+                                class="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Lihat Kartu">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                            </a>
+                            @endif
+                            @endif
+
+                            @if ($item->status == 2 && $item->assessments()->exists())
+                            <button @click="confirmBanding({{ $item->id }})"
+                                class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Ajukan Banding">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            @endif
+
+                            <button @click="confirmDelete({{ $item->id }})"
+                                class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Hapus">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" class="py-16 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="w-10 h-10 text-gray-400/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p class="text-xs text-gray-400 font-bold">Belum ada data pengajuan akreditasi.</p>
+                        </div>
+                    </td>
+                </tr>
+                @endforelse
+            </x-slot>
+        </x-datatable.layout>
     </div>
+
 </div>

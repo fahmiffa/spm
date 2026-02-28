@@ -21,6 +21,7 @@ class Akreditasi extends Model
         'catatan',
         'status',
         'tgl_visitasi',
+        'tgl_visitasi_akhir',
         'nilai',
         'peringkat',
         'na1',
@@ -30,6 +31,7 @@ class Akreditasi extends Model
         'sertifikat_path',
         'kartu_kendali',
         'masa_berlaku',
+        'masa_berlaku_akhir',
     ];
 
     protected static function boot()
