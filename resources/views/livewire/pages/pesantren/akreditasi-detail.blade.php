@@ -480,7 +480,7 @@ new #[Layout('layouts.app')] class extends Component {
                                 <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
                                     <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">1</span>
                                     <h4 class="font-bold text-gray-900 mb-2">Unduh Berkas</h4>
-                                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">Pihak Asesor telah mengunggah Kartu Kendali Anda. Silakan unduh berkas tersebut di menu dokumen.</p>
+                                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">Admin telah mengunggah Kartu Kendali Anda. Silakan unduh berkas tersebut di menu dokumen.</p>
                                     <a href="{{ route('documents.index') }}" class="inline-flex items-center text-[10px] font-bold text-indigo-600 hover:text-indigo-800 gap-1 group">
                                         Buka Menu Dokumen
                                         <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
