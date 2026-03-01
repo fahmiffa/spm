@@ -205,13 +205,17 @@ new #[Layout('layouts.app')] class extends Component {
             </x-slot>
 
             <x-slot name="thead">
-                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6">NO</th>
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6 w-16">NO</th>
                 <x-datatable.th field="id" :sortField="$sortField" :sortAsc="$sortAsc">
                     PESANTREN
                 </x-datatable.th>
-                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS</th>
+                <x-datatable.th field="status" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    STATUS
+                </x-datatable.th>
                 <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">AKREDITASI</th>
-                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">JADWAL</th>
+                <x-datatable.th field="created_at" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    JADWAL
+                </x-datatable.th>
                 <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">CATATAN</th>
                 <th class="py-3 px-4 text-right text-[11px] font-bold text-gray-400 uppercase tracking-widest pr-8">AKSI</th>
             </x-slot>
@@ -220,8 +224,8 @@ new #[Layout('layouts.app')] class extends Component {
                 @forelse ($this->assessments as $index => $item)
                 @if($item->akreditasi)
                 <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="ass-{{ $item->id }}">
-                    <td class="py-5 px-4 pl-6">
-                        <span class="text-xs font-bold text-gray-400">{{ ($this->assessments->currentPage() - 1) * $this->assessments->perPage() + $index + 1 }}</span>
+                    <td class="py-5 px-4 pl-6 w-16">
+                        <span class="text-xs font-bold text-gray-400">{{ $this->assessments->firstItem() + $index }}</span>
                     </td>
                     <td class="py-5 px-4">
                         <span class="text-sm font-bold text-[#374151]">{{ $item->akreditasi->user?->pesantren?->nama_pesantren ?? $item->akreditasi->user?->name ?? 'N/A' }}</span>

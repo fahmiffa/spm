@@ -12,33 +12,62 @@ class Home extends Component
 {
     public function render()
     {
-        $isAdmin = auth()->user()->isAdmin();
+        $user = auth()->user();
+        $isAdmin = $user->isAdmin();
+        $isPesantren = $user->isPesantren();
+        $isAsesor = $user->isAsesor();
 
-        // Stats for cards
-        $stats = [
-            'total_aktif' => Akreditasi::whereIn('status', [3, 4, 5, 6])->count(),
-            'verifikasi' => Akreditasi::where('status', 3)->count(),
-            'assessment' => Akreditasi::where('status', 5)->count(),
-            'visitasi' => Akreditasi::where('status', 4)->count(),
-            'terakreditasi' => Akreditasi::where('status', 1)->count(),
-            'ditolak' => Akreditasi::where('status', 2)->count(),
-        ];
+        // 1. Stats based on role
+        if ($isAdmin) {
+            $stats = [
+                'total_aktif' => Akreditasi::whereIn('status', [3, 4, 5, 6])->count(),
+                'verifikasi' => Akreditasi::where('status', 3)->count(),
+                'assessment' => Akreditasi::where('status', 5)->count(),
+                'visitasi' => Akreditasi::where('status', 4)->count(),
+                'terakreditasi' => Akreditasi::where('status', 1)->count(),
+                'ditolak' => Akreditasi::where('status', 2)->count(),
+            ];
+        } elseif ($isPesantren) {
+            $stats = [
+                'total_aktif' => Akreditasi::where('user_id', $user->id)->whereIn('status', [3, 4, 5, 6])->count(),
+                'verifikasi' => Akreditasi::where('user_id', $user->id)->where('status', 3)->count(),
+                'assessment' => Akreditasi::where('user_id', $user->id)->where('status', 5)->count(),
+                'visitasi' => Akreditasi::where('user_id', $user->id)->where('status', 4)->count(),
+                'terakreditasi' => Akreditasi::where('user_id', $user->id)->where('status', 1)->count(),
+                'ditolak' => Akreditasi::where('user_id', $user->id)->where('status', 2)->count(),
+            ];
+        } elseif ($isAsesor) {
+            $asesor = $user->asesor;
+            $asesorId = $asesor ? $asesor->id : 0;
+            $stats = [
+                'total_aktif' => Assessment::where('asesor_id', $asesorId)->whereHas('akreditasi', fn($q) => $q->whereIn('status', [4, 5]))->count(),
+                'verifikasi' => Akreditasi::where('status', 3)->count(),
+                'assessment' => Assessment::where('asesor_id', $asesorId)->whereHas('akreditasi', fn($q) => $q->where('status', 5))->count(),
+                'visitasi' => Assessment::where('asesor_id', $asesorId)->whereHas('akreditasi', fn($q) => $q->where('status', 4))->count(),
+                'terakreditasi' => Assessment::where('asesor_id', $asesorId)->whereHas('akreditasi', fn($q) => $q->where('status', 1))->count(),
+                'ditolak' => Akreditasi::where('status', 2)->count(),
+            ];
+        }
 
-        // Chart Data: Submissions per month (current year)
-        $monthlySubmissions = Akreditasi::selectRaw('MONTH(created_at) as month, COUNT(*) as count')
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get()
-            ->pluck('count', 'month')
-            ->toArray();
+        // 2. Chart Data
+        $submissionQuery = Akreditasi::selectRaw('MONTH(created_at) as month, COUNT(*) as count')
+            ->whereYear('created_at', date('Y'));
+
+        if ($isPesantren) {
+            $submissionQuery->where('user_id', $user->id);
+        } elseif ($isAsesor) {
+            $asesorId = $user->asesor?->id ?? 0;
+            $submissionQuery->whereHas('assessments', fn($q) => $q->where('asesor_id', $asesorId));
+        }
+
+        $monthlySubmissions = $submissionQuery->groupBy('month')->orderBy('month')->get()->pluck('count', 'month')->toArray();
 
         $chartData = [];
         for ($i = 1; $i <= 12; $i++) {
             $chartData[] = $monthlySubmissions[$i] ?? 0;
         }
 
-        // Monitoring Asesor
+        // 3. Monitoring Asesor
         $totalAsesor = Asesor::count();
         $totalTugasAktif = Assessment::whereHas('akreditasi', function ($q) {
             $q->whereIn('status', [3, 4, 5]);
@@ -51,24 +80,16 @@ class Home extends Component
         $asesorTanpaTugas = $totalAsesor - count($asesorPunyaTugasIds);
         $avgBeban = $totalAsesor > 0 ? round($totalTugasAktif / $totalAsesor, 1) : 0;
 
-        // Extra for non-admin if needed (current logic uses these variables)
-        $prosesPengajuan = $stats['total_aktif'];
-        $ditolak = $stats['ditolak'];
-        $selesai = $stats['terakreditasi'];
-        $totalPesantren = Pesantren::count();
-
         return view('livewire.home', compact(
             'isAdmin',
+            'isPesantren',
+            'isAsesor',
             'stats',
             'chartData',
             'totalAsesor',
             'totalTugasAktif',
             'asesorTanpaTugas',
-            'avgBeban',
-            'prosesPengajuan',
-            'ditolak',
-            'selesai',
-            'totalPesantren'
+            'avgBeban'
         ));
     }
 }

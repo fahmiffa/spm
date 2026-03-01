@@ -5,6 +5,8 @@ use App\Models\Pesantren;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PesantrenExport;
 
 new #[Layout('layouts.app')] class extends Component {
     use WithPagination;
@@ -84,6 +86,11 @@ new #[Layout('layouts.app')] class extends Component {
             ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
             ->paginate($this->perPage);
     }
+
+    public function export()
+    {
+        return Excel::download(new PesantrenExport($this->search, $this->filterStatus, $this->filterAkreditasi, $this->sortField, $this->sortAsc), 'data-pesantren-' . now()->format('Y-m-d') . '.xlsx');
+    }
 }; ?>
 
 <div class="py-12">
@@ -110,7 +117,7 @@ new #[Layout('layouts.app')] class extends Component {
                     <option value="1">Aktif</option>
                     <option value="0">Tidak Aktif</option>
                 </select>
-                <button class="bg-[#1e3a5f] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-[#162d4a] transition-all shadow-sm active:scale-95">
+                <button wire:click="export" class="bg-[#1e3a5f] text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-[#162d4a] transition-all shadow-sm active:scale-95">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>

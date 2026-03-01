@@ -273,11 +273,19 @@ new #[Layout('layouts.app')] class extends Component {
             </x-slot>
 
             <x-slot name="thead">
-                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6">NO</th>
-                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS</th>
-                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">NILAI</th>
-                <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">PERINGKAT</th>
-                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">CATATAN</th>
+                <th class="py-3 px-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest pl-6 w-16">NO</th>
+                <x-datatable.th field="status" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    STATUS
+                </x-datatable.th>
+                <x-datatable.th field="nilai" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    NILAI
+                </x-datatable.th>
+                <x-datatable.th field="peringkat" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    PERINGKAT
+                </x-datatable.th>
+                <x-datatable.th field="catatan" :sortField="$sortField" :sortAsc="$sortAsc">
+                    CATATAN
+                </x-datatable.th>
                 <x-datatable.th field="created_at" :sortField="$sortField" :sortAsc="$sortAsc">
                     JADWAL
                 </x-datatable.th>
@@ -287,8 +295,8 @@ new #[Layout('layouts.app')] class extends Component {
             <x-slot name="tbody">
                 @forelse ($this->akreditasis as $index => $item)
                 <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="akred-{{ $item->id }}">
-                    <td class="py-5 px-4 pl-6">
-                        <span class="text-xs font-bold text-gray-400">{{ ($this->akreditasis->currentPage() - 1) * $this->akreditasis->perPage() + $index + 1 }}</span>
+                    <td class="py-5 px-4 pl-6 w-16">
+                        <span class="text-xs font-bold text-gray-400">{{ $this->akreditasis->firstItem() + $index }}</span>
                     </td>
                     <td class="py-5 px-4 text-center">
                         <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight {{ Akreditasi::getStatusBadgeClass($item->status) }}">
@@ -391,12 +399,7 @@ new #[Layout('layouts.app')] class extends Component {
                             </button>
                             @endif
 
-                            <button @click="confirmDelete({{ $item->id }})"
-                                class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Hapus">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
+
                         </div>
                     </td>
                 </tr>
