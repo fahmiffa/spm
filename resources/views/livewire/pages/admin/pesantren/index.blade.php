@@ -17,25 +17,31 @@ new #[Layout('layouts.app')] class extends Component {
     public $perPage = 10;
     public $sortField = 'name';
     public $sortAsc = true;
+    public $selectedIds = [];
+    public $selectAll = false;
 
     public function updatedSearch()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function updatedFilterStatus()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function updatedFilterAkreditasi()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function updatedPerPage()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function sortBy($field)
@@ -47,6 +53,7 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->sortField = $field;
+        $this->resetSelection();
     }
 
     public function getPesantrensProperty()
@@ -85,6 +92,26 @@ new #[Layout('layouts.app')] class extends Component {
             ->with(['pesantren', 'akreditasis'])
             ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
             ->paginate($this->perPage);
+    }
+
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedIds = $this->pesantrens->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        } else {
+            $this->selectedIds = [];
+        }
+    }
+
+    public function updatedSelectedIds()
+    {
+        $this->selectAll = count($this->selectedIds) > 0 && count($this->selectedIds) === count($this->pesantrens->pluck('id'));
+    }
+
+    private function resetSelection()
+    {
+        $this->selectedIds = [];
+        $this->selectAll = false;
     }
 
     public function export()
@@ -127,7 +154,7 @@ new #[Layout('layouts.app')] class extends Component {
 
             <x-slot name="thead">
                 <th class="w-12 py-3 px-4">
-                    <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
+                    <input type="checkbox" wire:model.live="selectAll" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
                 </th>
                 <x-datatable.th field="name" :sortField="$sortField" :sortAsc="$sortAsc">
                     NAMA PESANTREN
@@ -141,7 +168,7 @@ new #[Layout('layouts.app')] class extends Component {
                 @forelse ($this->pesantrens as $index => $user)
                 <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="user-{{ $user->id }}">
                     <td class="py-5 px-4">
-                        <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
+                        <input type="checkbox" wire:model.live="selectedIds" value="{{ $user->id }}" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
                     </td>
                     <td class="py-5 px-4">
                         <span class="text-sm font-bold text-[#374151]">{{ $user->pesantren->nama_pesantren ?? $user->name }}</span>

@@ -25,20 +25,25 @@ new #[Layout('layouts.app')] class extends Component {
     public $sortField = 'created_at';
     public $sortAsc = false;
     public $selectedAkreditasiNotes;
+    public $selectedIds = [];
+    public $selectAll = false;
 
     public function updatedSearch()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function updatedStatusFilter()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function updatedPerPage()
     {
         $this->resetPage();
+        $this->resetSelection();
     }
 
     public function sortBy($field)
@@ -50,12 +55,33 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->sortField = $field;
+        $this->resetSelection();
     }
 
     public function openCatatanModal($id)
     {
         $this->selectedAkreditasiNotes = Akreditasi::with(['catatans.user'])->find($id);
         $this->dispatch('open-modal', 'catatan-modal');
+    }
+
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedIds = $this->akreditasis->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        } else {
+            $this->selectedIds = [];
+        }
+    }
+
+    public function updatedSelectedIds()
+    {
+        $this->selectAll = count($this->selectedIds) > 0 && count($this->selectedIds) === count($this->akreditasis->pluck('id'));
+    }
+
+    private function resetSelection()
+    {
+        $this->selectedIds = [];
+        $this->selectAll = false;
     }
 
     public function mount()
@@ -274,7 +300,7 @@ new #[Layout('layouts.app')] class extends Component {
 
             <x-slot name="thead">
                 <th class="w-12 py-3 px-4">
-                    <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
+                    <input type="checkbox" wire:model.live="selectAll" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
                 </th>
                 <x-datatable.th field="user_id" :sortField="$sortField" :sortAsc="$sortAsc">
                     PESANTREN
@@ -293,7 +319,7 @@ new #[Layout('layouts.app')] class extends Component {
                 @forelse ($this->akreditasis as $index => $item)
                 <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="akred-{{ $item->id }}">
                     <td class="py-5 px-4">
-                        <input type="checkbox" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
+                        <input type="checkbox" wire:model.live="selectedIds" value="{{ $item->id }}" class="rounded border-gray-300 text-green-600 focus:ring-green-500 bg-gray-100 h-4 w-4">
                     </td>
                     <td class="py-5 px-4">
                         <span class="text-sm font-bold text-[#374151]">{{ $item->user->pesantren->nama_pesantren ?? $item->user->name }}</span>
