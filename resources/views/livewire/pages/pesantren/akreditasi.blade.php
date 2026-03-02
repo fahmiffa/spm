@@ -75,9 +75,24 @@ new #[Layout('layouts.app')] class extends Component {
             ->paginate($this->perPage);
     }
 
-    public function create()
+    public function create($parentId = null)
     {
         $userId = Auth::id();
+
+        // Check if already resubmitted
+        if ($parentId) {
+            $isResubmitted = Akreditasi::where('parent', $parentId)->exists();
+            if ($isResubmitted) {
+                $this->dispatch(
+                    'notification-received',
+                    type: 'error',
+                    title: 'Gagal!',
+                    message: 'Pengajuan ini sudah pernah diajukan ulang sebelumnya.'
+                );
+                return;
+            }
+        }
+
         $missingData = [];
 
         // 1. Check Profil Pesantren
@@ -132,6 +147,7 @@ new #[Layout('layouts.app')] class extends Component {
         $akreditasi = Akreditasi::create([
             'user_id' => $userId,
             'status' => 6, // 6. Pengajuan
+            'parent' => $parentId,
         ]);
 
         // Lock Pesantren Data
@@ -164,6 +180,34 @@ new #[Layout('layouts.app')] class extends Component {
         $user->pesantren->update(['is_locked' => false]);
 
         session()->flash('status', 'Pengajuan akreditasi berhasil dihapus. Data profil telah dibuka kunci.');
+    }
+
+    public function cancelSubmission($id)
+    {
+        $akreditasi = Akreditasi::where('user_id', Auth::id())
+            ->where('status', 6)
+            ->findOrFail($id);
+
+        $akreditasi->delete();
+
+        // Unlock Pesantren Data if no more active accreditations
+        $hasActive = Akreditasi::where('user_id', Auth::id())
+            ->whereIn('status', [3, 4, 5, 6])
+            ->exists();
+
+        if (!$hasActive) {
+            $pesantren = Auth::user()->pesantren;
+            if ($pesantren) {
+                $pesantren->update(['is_locked' => false]);
+            }
+        }
+
+        $this->dispatch(
+            'notification-received',
+            type: 'success',
+            title: 'Dibatalkan!',
+            message: 'Pengajuan akreditasi telah berhasil dibatalkan.'
+        );
     }
 
     public function banding($id, $alasan)
@@ -252,6 +296,46 @@ new #[Layout('layouts.app')] class extends Component {
                 $wire.banding(id, result.value);
             }
         });
+    },
+    confirmCancel(id, year) {
+        Swal.fire({
+            title: 'Batal Pengajuan?',
+            text: `Pengajuan periode ${year} akan dibatalkan dan tidak dapat dilanjutkan kembali.`,
+            icon: 'error',
+            showCancelButton: true,
+            confirmButtonColor: '#f1f5f9',
+            cancelButtonColor: '#f43f5e',
+            confirmButtonText: '<span style=&quot;color: #1e293b; font-weight: bold;&quot;>Ya, Batalkan</span>',
+            cancelButtonText: '<span style=&quot;color: #ffffff; font-weight: bold;&quot;>Tidak</span>',
+            customClass: {
+                confirmButton: 'px-8 py-3 rounded-xl shadow-sm border border-gray-100',
+                cancelButton: 'px-8 py-3 rounded-xl shadow-sm'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.cancelSubmission(id);
+            }
+        });
+    },
+    confirmResubmit(id) {
+        Swal.fire({
+            title: 'Ajukan Ulang Pengajuan Akreditasi',
+            text: 'Pastikan seluruh dokumen telah diperbaiki sebelum mengirim ulang pengajuan.',
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#f3f4f6',
+            confirmButtonText: '<span style=&quot;color: #ffffff; font-weight: bold;&quot;>Kirim Pengajuan Ulang</span>',
+            cancelButtonText: '<span style=&quot;color: #1e293b; font-weight: bold;&quot;>Tidak</span>',
+            customClass: {
+                confirmButton: 'px-6 py-3 rounded-xl shadow-sm',
+                cancelButton: 'px-8 py-3 rounded-xl shadow-sm border border-gray-100'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.create(id);
+            }
+        });
     }
 }" x-init="
     window.addEventListener('show-validation-alert', event => {
@@ -318,9 +402,19 @@ new #[Layout('layouts.app')] class extends Component {
                         <span class="text-sm font-black text-slate-700">{{ $item->created_at->format('Y') }}</span>
                     </td>
                     <td class="py-8 px-4 text-center">
-                        @if($item->status == 1 || $item->status == 2)
+                        @if($item->status == 1)
+                        @if($item->masa_berlaku_akhir && \Carbon\Carbon::parse($item->masa_berlaku_akhir)->isPast())
+                        <span class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight bg-rose-50 text-rose-600">
+                            Masa Berlaku Habis
+                        </span>
+                        @else
                         <span class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight bg-emerald-50 text-emerald-600">
                             Selesai
+                        </span>
+                        @endif
+                        @elseif($item->status == 2)
+                        <span class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight bg-rose-50 text-rose-600">
+                            Ditolak
                         </span>
                         @else
                         <span class="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight bg-blue-50 text-blue-600">
@@ -402,13 +496,42 @@ new #[Layout('layouts.app')] class extends Component {
                                         Upload Kartu
                                     </a>
                                     @endif
-                                    @if ($item->status == 2 && $item->assessments()->exists())
-                                    <button @click="confirmBanding({{ $item->id }}); open = false" class="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-amber-600 hover:bg-amber-50 rounded-xl transition-colors text-left">
+                                    @if ($item->status == 1 && $item->sertifikat_path)
+                                    <a href="{{ Storage::url($item->sertifikat_path) }}" target="_blank" class="flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                         </svg>
-                                        Ajukan Banding
+                                        Download Sertifikat
+                                    </a>
+                                    @endif
+                                    @if ($item->status == 6)
+                                    <button @click="confirmCancel({{ $item->id }}, '{{ $item->created_at->format('Y') }}'); open = false" class="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-left">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Batalkan Pengajuan
                                     </button>
+                                    @endif
+                                    @if ($item->status == 2)
+                                    @php
+                                    $isAlreadyResubmitted = \App\Models\Akreditasi::where('parent', $item->id)->exists();
+                                    @endphp
+
+                                    @if (!$isAlreadyResubmitted)
+                                    <button @click="confirmResubmit({{ $item->id }}); open = false" class="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors text-left border-l-4 border-transparent hover:border-emerald-500">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        Ajukan Ulang
+                                    </button>
+                                    @else
+                                    <div class="px-4 py-3 text-[10px] font-bold text-slate-400 bg-slate-50 italic flex items-center gap-2">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Sudah Diajukan Ulang
+                                    </div>
+                                    @endif
                                     @endif
                                 </div>
                             </template>

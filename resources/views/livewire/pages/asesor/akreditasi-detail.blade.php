@@ -1,6 +1,56 @@
 @use('App\Models\Akreditasi')
 @use('Illuminate\Support\Facades\Storage')
-<div class="py-12" x-data="akreditasiManagement">
+<div class="py-12" x-data="{
+    ...akreditasiManagement(),
+    confirmSaveDraft() {
+        Swal.fire({
+            title: 'Simpan Draft?',
+            text: 'Simpan penilaian sementara? Anda masih dapat mengubahnya nanti.',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#4f46e5',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Simpan Draft',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.saveAsesorEdpm();
+            }
+        });
+    },
+    confirmFinalize() {
+        Swal.fire({
+            title: 'Selesaikan & Verifikasi?',
+            text: 'Pastikan nilai NA 1, NA 2, dan NK sudah sesuai. Status akan berubah menjadi Validasi Admin.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Selesaikan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.finalizeVerification();
+            }
+        });
+    },
+    confirmAsesor2Final() {
+        Swal.fire({
+            title: 'Selesaikan Penilaian (Final)?',
+            text: 'Nilai NA akan dikirimkan dan data akan dikunci untuk Asesor 1 melakukan verifikasi NK.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Ya, Kirim Final',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $wire.saveAsesorEdpm(true);
+            }
+        });
+    }
+}">
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -469,7 +519,7 @@
                             @if ($akreditasi->status == 4)
                             <div class="flex gap-2">
                                 @if(!$isLocked || $asesorTipe == 2)
-                                <x-secondary-button wire:click="saveAsesorEdpm" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
+                                <x-secondary-button @click="confirmSaveDraft" wire:loading.attr="disabled" wire:target="saveAsesorEdpm">
                                     <span wire:loading.remove wire:target="saveAsesorEdpm">Simpan Draft</span>
                                     <span wire:loading wire:target="saveAsesorEdpm">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -482,7 +532,7 @@
                                 @endif
 
                                 @if($asesorTipe == 1)
-                                <x-primary-button wire:click="finalizeVerification" wire:loading.attr="disabled" wire:target="finalizeVerification">
+                                <x-primary-button @click="confirmFinalize" wire:loading.attr="disabled" wire:target="finalizeVerification">
                                     <span wire:loading.remove wire:target="finalizeVerification">Selesaikan & Verifikasi</span>
                                     <span wire:loading wire:target="finalizeVerification">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -493,7 +543,7 @@
                                     </span>
                                 </x-primary-button>
                                 @else
-                                <x-primary-button wire:click="saveAsesorEdpm(true)" wire:loading.attr="disabled" wire:target="saveAsesorEdpm(true)">
+                                <x-primary-button @click="confirmAsesor2Final" wire:loading.attr="disabled" wire:target="saveAsesorEdpm(true)">
                                     <span wire:loading.remove wire:target="saveAsesorEdpm(true)">Selesaikan (Final)</span>
                                     <span wire:loading wire:target="saveAsesorEdpm(true)">
                                         <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

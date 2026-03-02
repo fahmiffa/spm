@@ -36,7 +36,7 @@ class AkreditasiNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', WebPushChannel::class];
+        return ['database', WebPushChannel::class, 'broadcast'];
     }
 
     /**
@@ -68,5 +68,18 @@ class AkreditasiNotification extends Notification
             ->icon('/logo.png')
             ->body($this->message)
             ->action('Lihat Detail', $this->url);
+    }
+
+    /**
+     * Get the broadcastable representation of the notification.
+     */
+    public function toBroadcast(object $notifiable): \Illuminate\Notifications\Messages\BroadcastMessage
+    {
+        return new \Illuminate\Notifications\Messages\BroadcastMessage([
+            'type' => $this->type,
+            'title' => $this->title,
+            'message' => $this->message,
+            'url' => $this->url,
+        ]);
     }
 }
