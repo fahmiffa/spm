@@ -66,11 +66,10 @@ new #[Layout('layouts.guest')] class extends Component
             <x-primary-button class="mx-auto">
                 {{ __('Log in') }}
             </x-primary-button>
-
         </div>
     </form>
 
-    <div class="relative flex items-center py-5">
+    <!-- <div class="relative flex items-center py-5">
         <div class="flex-grow border-t border-gray-300"></div>
         <span class="flex-shrink mx-4 text-gray-400 text-sm">Atau</span>
         <div class="flex-grow border-t border-gray-300"></div>
@@ -81,5 +80,5 @@ new #[Layout('layouts.guest')] class extends Component
            style="background: linear-gradient(to right, #2c506d, #427c95);">
             <img src="https://aqsa-dev.muhammadiyah.or.id/assets/media/logos/logo-white-full.png" alt="Muhammadiyah ID" class="h-8 object-contain">
         </a>
-    </div>
+    </div> -->
 </div>
