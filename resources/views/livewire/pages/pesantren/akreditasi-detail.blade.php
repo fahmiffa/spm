@@ -134,6 +134,19 @@ new #[Layout('layouts.app')] class extends Component {
             'kartu_kendali' => $path
         ]);
 
+        // Fetch all Admin users (Role ID 1)
+        $admins = \App\Models\User::whereHas('role', function ($q) {
+            $q->where('id', 1);
+        })->get();
+
+        // Notify Admin: Kartu Kendali Uploaded
+        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
+            'kartu_kendali_diunggah',
+            'Kartu Kendali Diunggah',
+            'Pesantren ' . ($this->akreditasi->user->pesantren->nama_pesantren ?? $this->akreditasi->user->name) . ' telah mengunggah kembali Kartu Kendali.',
+            route('admin.akreditasi-detail', $this->akreditasi->uuid)
+        ));
+
         $this->reset(['kartu_kendali_file']);
 
         $this->dispatch(
@@ -481,7 +494,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">1</span>
                                     <h4 class="font-bold text-gray-900 mb-2">Unduh Berkas</h4>
                                     <p class="text-xs text-gray-600 mb-4 leading-relaxed">Admin telah mengunggah Kartu Kendali Anda. Silakan unduh berkas tersebut di menu dokumen.</p>
-                                    <a href="{{ route('documents.index') }}" class="inline-flex items-center text-[10px] font-bold text-indigo-600 hover:text-indigo-800 gap-1 group">
+                                    <a href="{{ route('documents.index', ['doc' => 'all']) }}" class="inline-flex items-center text-[10px] font-bold text-indigo-600 hover:text-indigo-800 gap-1 group">
                                         Buka Menu Dokumen
                                         <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />

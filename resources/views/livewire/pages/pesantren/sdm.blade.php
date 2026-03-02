@@ -27,11 +27,11 @@ new #[Layout('layouts.app')] class extends Component {
 
     public $categories = [
         ['key' => 'santri', 'label' => 'Santri', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
-        ['key' => 'ustadz_dirosah', 'label' => 'Ustadz Dirosah', 'icon' => 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z'],
-        ['key' => 'ustadz_non_dirosah', 'label' => 'Ustadz Non Dirosah', 'icon' => 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
-        ['key' => 'pamong', 'label' => 'Pamong', 'icon' => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-7.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
-        ['key' => 'musyrif', 'label' => 'Musyrif/Musyrifah', 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'],
-        ['key' => 'tendik', 'label' => 'Tenaga Kependidikan', 'icon' => 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4'],
+        ['key' => 'ustadz_dirosah', 'label' => 'Ustadz Dirosah', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+        ['key' => 'ustadz_non_dirosah', 'label' => 'Ustadz Non Dirosah', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+        ['key' => 'pamong', 'label' => 'Pamong', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+        ['key' => 'musyrif', 'label' => 'Musyrif/Musyrifah', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
+        ['key' => 'tendik', 'label' => 'Tenaga Kependidikan', 'icon' => 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z'],
     ];
 
     public function mount()
@@ -104,8 +104,8 @@ new #[Layout('layouts.app')] class extends Component {
 <div class="py-12" x-data="{ 
     confirmSave() {
         Swal.fire({
-            title: 'Apakah anda yakin ingin menyimpan perubahan data SDM ini?',
-            text: 'Pastikan seluruh informasi telah diperiksa dan sesuai sebelum melanjutkan.',
+            title: 'Apakah anda yakin ingin menyimpan<br> perubahan data SDM ini?',
+            html: 'Pastikan seluruh informasi telah diperiksa<br> dan sesuai sebelum melanjutkan.',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#1e3a5f',
@@ -126,17 +126,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }">
     <x-slot name="header">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#1e3a5f] shadow-sm">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </div>
-            <div>
-                <h2 class="font-bold text-xl text-slate-800 leading-tight uppercase tracking-tight">{{ __('Data SDM Pesantren') }}</h2>
-                <p class="text-xs text-slate-400 font-medium">Rekapitulasi data santri dan tenaga pendidik</p>
-            </div>
-        </div>
+        {{ __('Data SDM Pesantren') }}
     </x-slot>
 
     <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
@@ -227,11 +217,31 @@ new #[Layout('layouts.app')] class extends Component {
                             @endforeach
 
                             <!-- Summary Box -->
-                            <div class="mt-8 bg-blue-50/50 rounded-[2.5rem] p-4 border border-slate-100 shadow-inner">
-                                <div class="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex lg:flex-row lg:items-center justify-between gap-6">
-                                    <div class="flex items-center gap-5">
-                                        <div>
-                                            <h5 class="text-[13px] font-black text-[#1e3a5f] uppercase tracking-widest leading-none">Total Keseluruhan Santri</h5>
+                            <div class="mt-8 bg-[#eef7ff] rounded-[2rem] p-8 border border-[#d9ebf8]">
+                                <div class="flex items-center gap-3 mb-6 font-bold text-[#5e718d]">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                    <h5 class="text-sm">Total Keseluruhan {{ $category['label'] }}</h5>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-bold text-[#5e718d]">Laki-laki</label>
+                                        <div class="bg-white border border-[#e2eaf2] rounded-lg py-3 px-4 text-sm font-medium text-slate-500 shadow-sm">
+                                            {{ $this->getCategoryTotal($category['key'], 'l') }}
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-bold text-[#5e718d]">Perempuan</label>
+                                        <div class="bg-white border border-[#e2eaf2] rounded-lg py-3 px-4 text-sm font-medium text-slate-500 shadow-sm">
+                                            {{ $this->getCategoryTotal($category['key'], 'p') }}
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-bold text-[#5e718d]">Total</label>
+                                        <div class="bg-white border border-[#e2eaf2] rounded-lg py-3 px-4 text-sm font-medium text-slate-500 shadow-sm">
+                                            {{ $this->getGrandTotal($category['key']) }}
                                         </div>
                                     </div>
                                 </div>

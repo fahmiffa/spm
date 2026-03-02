@@ -64,7 +64,7 @@ Route::get('asesor/akreditasi/{uuid}', \App\Livewire\Pages\Asesor\AkreditasiDeta
     ->middleware(['auth', 'verified'])
     ->name('admin.master-dokumen');
 
-\Livewire\Volt\Volt::route('documents', 'pages.dokumen.index')
+\Livewire\Volt\Volt::route('documents/{doc?}', 'pages.dokumen.index')
     ->middleware(['auth', 'verified'])
     ->name('documents.index');
 
