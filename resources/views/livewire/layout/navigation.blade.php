@@ -164,9 +164,6 @@ new class extends Component {
                         <x-sidebar-link :href="route('documents.index', ['doc' => 'kartu_kendali'])" :active="request()->fullUrlIs(route('documents.index', ['doc' => 'kartu_kendali']))" icon="document-stack">
                             {{ __('Kartu Kendali') }}
                         </x-sidebar-link>
-                        <x-sidebar-link :href="route('documents.index', ['doc' => 'all'])" :active="request()->fullUrlIs(route('documents.index', ['doc' => 'all']))" icon="document-stack">
-                            {{ __('Daftar Dokumen') }}
-                        </x-sidebar-link>
                     </div>
                     @endif
 
