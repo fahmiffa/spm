@@ -148,8 +148,8 @@ new class extends Component {
                         <div class="pt-6 pb-2 px-4">
                             <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">AKREDITASI</span>
                         </div>
-                        <x-sidebar-link :href="route('pesantren.ipm')" :active="request()->routeIs('pesantren.ipm')" icon="paper">
-                            {{ __('IPM') }}
+                        <x-sidebar-link :href="route('pesantren.edpm')" :active="request()->routeIs('pesantren.edpm')" icon="paper">
+                            {{ __('EDPM') }}
                         </x-sidebar-link>
                         <x-sidebar-link :href="route('pesantren.akreditasi')" :active="request()->routeIs('pesantren.akreditasi*')" icon="shield-lock">
                             {{ __('Akreditasi') }}
