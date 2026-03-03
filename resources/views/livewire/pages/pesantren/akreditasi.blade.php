@@ -357,23 +357,44 @@ new #[Layout('layouts.app')] class extends Component {
         <x-datatable.layout title="Pengajuan Akreditasi" :records="$this->akreditasis">
             <x-slot name="filters">
                 <div class="flex items-center gap-3">
-                    <select wire:model.live="periodeFilter" class="bg-gray-50 border-none text-slate-400 text-xs font-bold rounded-xl focus:ring-0 block p-2.5 transition-all">
-                        <option value="">Periode</option>
-                        @for($i = date('Y'); $i >= 2024; $i--)
-                        <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
-                    </select>
+                    <div class="relative group">
+                        <select wire:model.live="periodeFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                            <option value="">Periode</option>
+                            @for($i = date('Y'); $i >= 2024; $i--)
+                            <option value="{{ $i }}">{{ $i }}</option>
+                            @endfor
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-300 group-hover:text-slate-400 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
 
-                    <select wire:model.live="statusFilter" class="bg-gray-50 border-none text-slate-400 text-xs font-bold rounded-xl focus:ring-0 block p-2.5 transition-all">
-                        <option value="">Status</option>
-                        <option value="1">Selesai</option>
-                        <option value="2">Ditolak</option>
-                    </select>
+                    <div class="relative group">
+                        <select wire:model.live="statusFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                            <option value="">Status</option>
+                            <option value="1">Selesai</option>
+                            <option value="2">Ditolak</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-300 group-hover:text-slate-400 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
 
-                    <select wire:model.live="tahapanFilter" class="bg-gray-50 border-none text-slate-400 text-xs font-bold rounded-xl focus:ring-0 block p-2.5 transition-all">
-                        <option value="">Tahapan</option>
-                        <option value="visitasi">Visitasi</option>
-                    </select>
+                    <div class="relative group">
+                        <select wire:model.live="tahapanFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                            <option value="">Tahapan</option>
+                            <option value="visitasi">Visitasi</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-300 group-hover:text-slate-400 transition-colors">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
 
                     <button @click="confirmCreate"
                         class="bg-[#0f2d4e] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-[#0a1f35] transition-all shadow-sm active:scale-95 ml-2">
