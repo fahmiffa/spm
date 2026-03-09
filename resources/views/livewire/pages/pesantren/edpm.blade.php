@@ -175,7 +175,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="edpmManagement">
     <x-slot name="header">{{ __('Evaluasi Data Pesantren Muhammadiyah (EDPM)') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -244,7 +244,7 @@ new #[Layout('layouts.app')] class extends Component {
                     </h3>
                 </div>
 
-                <form wire:submit="save">
+                <form wire:submit.prevent>
                     <div class="space-y-6">
                         @if(isset($komponens[$activeStep]))
                         @php
@@ -325,7 +325,7 @@ new #[Layout('layouts.app')] class extends Component {
                     <div class="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-6">
                         <!-- Prev Button -->
                         <button type="button" wire:click="prevStep"
-                            class="w-full md:w-auto bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg transition-all {{ $activeStep === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            class="w-full md:w-auto bg-gray-100/50 text-gray-600 font-bold py-3 px-8 rounded-2xl transition-all {{ $activeStep === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
                             {{ $activeStep === 0 ? 'disabled' : '' }}>
                             &laquo; Sebelumnya
                         </button>
@@ -334,7 +334,7 @@ new #[Layout('layouts.app')] class extends Component {
                             <!-- Draft Button -->
                             @if(!auth()->user()->pesantren->is_locked)
                             <button type="button" wire:click="saveDraft" wire:loading.attr="disabled"
-                                class="w-full md:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2">
+                                class="w-full md:w-auto bg-amber-500 text-white font-bold py-3 px-8 rounded-2xl transition-all flex items-center justify-center gap-2">
                                 <svg wire:loading.remove wire:target="saveDraft" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                 </svg>
@@ -348,13 +348,13 @@ new #[Layout('layouts.app')] class extends Component {
 
                             <!-- Next / Save Button -->
                             @if ($activeStep === count($komponens) - 1)
-                            <button type="submit" wire:loading.attr="disabled"
-                                class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                            <button type="button" @click="confirmSimpan($wire)" wire:loading.attr="disabled"
+                                class="w-full md:w-auto bg-gray-900 text-white text-[11px] font-black py-3 px-10 rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest transition-all">
                                 <span>Simpan Permanen EDPM</span>
                             </button>
                             @else
-                            <button type="button" onclick="validateAndNext()"
-                                class="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-8 rounded-lg transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+                            <button type="button" @click="validateAndNext($wire)"
+                                class="w-full md:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-2xl flex items-center justify-center gap-2 transition-all">
                                 <span>Selanjutnya</span>
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -372,36 +372,5 @@ new #[Layout('layouts.app')] class extends Component {
             </div>
         </div>
     </div>
+
 </div>
-
-<script>
-    function validateAndNext() {
-        // Get all select elements in current step
-        const selects = document.querySelectorAll('select[wire\\:model\\.live^="evaluasis"]');
-        const emptySelects = [];
-
-        selects.forEach(select => {
-            if (!select.value || select.value === '') {
-                // Find the butir number from the card
-                const card = select.closest('.bg-white.border.rounded-lg');
-                const butirBadge = card?.querySelector('.bg-indigo-50');
-                const butirText = butirBadge?.textContent.trim() || 'Unknown';
-                emptySelects.push(butirText);
-            }
-        });
-
-        if (emptySelects.length > 0) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Nilai',
-                html: 'Harap pilih nilai evaluasi untuk:<br><br>' + emptySelects.map(b => '• ' + b).join('<br>'),
-                confirmButtonColor: '#4f46e5',
-                confirmButtonText: 'OK'
-            });
-            return;
-        }
-
-        // If validation passes, call Livewire method
-        Livewire.find('{{ $_instance->getId() }}').call('nextStep');
-    }
-</script>

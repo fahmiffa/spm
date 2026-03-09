@@ -126,7 +126,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="adminManagement">
     <x-slot name="header">
             {{ __('Asesor') }}
     </x-slot>
@@ -280,7 +280,7 @@ new #[Layout('layouts.app')] class extends Component {
                                         </svg>
                                         Lihat Detail
                                     </a>
-                                    <button wire:click="toggleStatus({{ $user->id }})" @click="open = false"
+                                    <button @click="confirmToggleStatus($wire, {{ $user->id }}, {{ $user->status }}, '{{ addslashes($user->name) }}', 'Asesor'); open = false"
                                         class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold {{ $user->status == 1 ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50' }} transition-colors gap-3 border-t border-gray-50 mt-1">
                                         @if($user->status == 1)
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

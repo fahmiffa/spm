@@ -101,30 +101,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12" x-data="{ 
-    confirmSave() {
-        Swal.fire({
-            title: 'Apakah anda yakin ingin menyimpan<br> perubahan data SDM ini?',
-            html: 'Pastikan seluruh informasi telah diperiksa<br> dan sesuai sebelum melanjutkan.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#1e3a5f',
-            cancelButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Simpan Perubahan',
-            cancelButtonText: 'Batal',
-            customClass: {
-                title: 'text-xl font-bold text-slate-800',
-                htmlContainer: 'text-sm text-slate-500',
-                confirmButton: 'px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest',
-                cancelButton: 'px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.save();
-            }
-        })
-    }
-}">
+<div class="py-12" x-data="sdmManagement">
     <x-slot name="header">
         {{ __('Data SDM Pesantren') }}
     </x-slot>
@@ -255,12 +232,12 @@ new #[Layout('layouts.app')] class extends Component {
 
         <div class="mt-12 flex items-center justify-end gap-3 pb-20">
             <button type="button"
-                class="px-8 py-3 rounded-2xl bg-white border border-slate-200 text-slate-500 text-[11px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 hover:text-slate-700 transition-all active:scale-95 shadow-sm">
+                class="px-8 py-3 rounded-2xl bg-white border border-slate-200 text-slate-500 text-[11px] font-black uppercase tracking-[0.2em] transition-all">
                 Batal
             </button>
             <button type="button"
                 @click="confirmSave"
-                class="px-10 py-3 rounded-2xl bg-[#1e3a5f] text-white text-[11px] font-black uppercase tracking-[0.2em] hover:bg-[#162d4a] shadow-xl shadow-[#1e3a5f]/30 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="px-10 py-3 rounded-2xl bg-gray-900 text-white text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 {{ auth()->user()->pesantren->is_locked ? 'disabled' : '' }}>
                 <span>Simpan Perubahan</span>
                 <svg wire:loading wire:target="save" class="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">

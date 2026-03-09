@@ -241,112 +241,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12" x-data="{
-    confirmCreate() {
-        Swal.fire({
-            title: 'Konfirmasi Pengajuan',
-            text: 'Apakah Anda yakin ingin membuat pengajuan akreditasi baru? Data profil dan administrasi akan dikunci selama proses berlangsung.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#1e3a5f',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Ajukan Sekarang',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.create();
-            }
-        });
-    },
-    confirmDelete(id) {
-        Swal.fire({
-            title: 'Hapus Pengajuan?',
-            text: 'Data pengajuan ini akan dihapus secara permanen.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e11d48',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Ya, Hapus',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.delete(id);
-            }
-        });
-    },
-    confirmBanding(id) {
-        Swal.fire({
-            title: 'Ajukan Banding',
-            text: 'Tuliskan alasan atau catatan banding Anda:',
-            input: 'textarea',
-            inputPlaceholder: 'Masukkan catatan di sini...',
-            icon: 'info',
-            showCancelButton: true,
-            confirmButtonColor: '#2563eb',
-            cancelButtonColor: '#6b7280',
-            confirmButtonText: 'Kirim Banding',
-            cancelButtonText: 'Batal',
-            inputValidator: (value) => {
-                if (!value) {
-                    return 'Alasan banding wajib diisi!';
-                }
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.banding(id, result.value);
-            }
-        });
-    },
-    confirmCancel(id, year) {
-        Swal.fire({
-            title: 'Batal Pengajuan?',
-            text: `Pengajuan periode ${year} akan dibatalkan dan tidak dapat dilanjutkan kembali.`,
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#f1f5f9',
-            cancelButtonColor: '#f43f5e',
-            confirmButtonText: '<span style=&quot;color: #1e293b; font-weight: bold;&quot;>Ya, Batalkan</span>',
-            cancelButtonText: '<span style=&quot;color: #ffffff; font-weight: bold;&quot;>Tidak</span>',
-            customClass: {
-                confirmButton: 'px-8 py-3 rounded-xl shadow-sm border border-gray-100',
-                cancelButton: 'px-8 py-3 rounded-xl shadow-sm'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.cancelSubmission(id);
-            }
-        });
-    },
-    confirmResubmit(id) {
-        Swal.fire({
-            title: 'Ajukan Ulang Pengajuan Akreditasi',
-            text: 'Pastikan seluruh dokumen telah diperbaiki sebelum mengirim ulang pengajuan.',
-            icon: 'success',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#f3f4f6',
-            confirmButtonText: '<span style=&quot;color: #ffffff; font-weight: bold;&quot;>Kirim Pengajuan Ulang</span>',
-            cancelButtonText: '<span style=&quot;color: #1e293b; font-weight: bold;&quot;>Tidak</span>',
-            customClass: {
-                confirmButton: 'px-6 py-3 rounded-xl shadow-sm',
-                cancelButton: 'px-8 py-3 rounded-xl shadow-sm border border-gray-100'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.create(id);
-            }
-        });
-    }
-}" x-init="
-    window.addEventListener('show-validation-alert', event => {
-        Swal.fire({
-            icon: 'error',
-            title: event.detail.title,
-            html: event.detail.html,
-            confirmButtonColor: '#ef4444'
-        });
-    });
-">
+<div class="py-12" x-data="akreditasiPesantren">
     <x-slot name="header">
         <h2 class="font-semibold text-gray-800 leading-tight">
             {{ __('Akreditasi') }}
@@ -358,7 +253,7 @@ new #[Layout('layouts.app')] class extends Component {
             <x-slot name="filters">
                 <div class="flex items-center gap-3">
                     <div class="relative group">
-                        <select wire:model.live="periodeFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                        <select wire:model.live="periodeFilter" class="appearance-none bg-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
                             <option value="">Periode</option>
                             @for($i = date('Y'); $i >= 2024; $i--)
                             <option value="{{ $i }}">{{ $i }}</option>
@@ -372,7 +267,7 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
 
                     <div class="relative group">
-                        <select wire:model.live="statusFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                        <select wire:model.live="statusFilter" class="appearance-none bg-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
                             <option value="">Status</option>
                             <option value="1">Selesai</option>
                             <option value="2">Ditolak</option>
@@ -385,7 +280,7 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
 
                     <div class="relative group">
-                        <select wire:model.live="tahapanFilter" class="appearance-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
+                        <select wire:model.live="tahapanFilter" class="appearance-none bg-none bg-gray-50 border-none text-slate-500 text-[11px] font-black uppercase tracking-widest rounded-xl focus:ring-0 block pl-4 pr-10 py-2.5 transition-all cursor-pointer hover:bg-gray-100">
                             <option value="">Tahapan</option>
                             <option value="visitasi">Visitasi</option>
                         </select>
@@ -397,7 +292,7 @@ new #[Layout('layouts.app')] class extends Component {
                     </div>
 
                     <button @click="confirmCreate"
-                        class="bg-[#0f2d4e] text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-[#0a1f35] transition-all shadow-sm active:scale-95 ml-2">
+                        class="bg-gray-900 text-white px-6 py-2.5 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all ml-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
