@@ -48,12 +48,10 @@
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
                         @endif
-                        @if($asesorTipe == 1)
                         <li class="me-2">
                             <button wire:click="setTab('laporan_visitasi')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'laporan_visitasi' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Laporan Visitasi</button>
                         </li>
-                        @endif
                     </ul>
                 </div>
 
@@ -563,7 +561,7 @@
                                 <div>
                                     <h3 class="text-xl font-bold text-indigo-900 mb-2 leading-tight">Instruksi Unggah Laporan Visitasi</h3>
                                     <p class="text-indigo-700/80 text-sm font-medium leading-relaxed max-w-2xl">
-                                        Ketua Asesor wajib mengunggah Laporan Visitasi yang telah ditandatangani untuk menyelesaikan proses penilaian ini.
+                                        Tim Asesor (Ketua atau Anggota) wajib mengunggah Laporan Visitasi yang telah ditandatangani untuk menyelesaikan proses penilaian ini.
                                     </p>
                                 </div>
                             </div>

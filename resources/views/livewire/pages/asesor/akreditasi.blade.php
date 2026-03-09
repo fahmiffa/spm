@@ -410,11 +410,10 @@ new #[Layout('layouts.app')] class extends Component {
                                     <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}" wire:navigate
                                         class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors gap-3 border-t border-gray-50/50">
                                         <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2-2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                         Input Nilai
                                     </a>
-                                    @if($item->tipe == 1)
                                     <a href="{{ route('asesor.akreditasi-detail', ['uuid' => $item->akreditasi->uuid, 'tab' => 'laporan_visitasi']) }}"
                                         class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors gap-3 border-t border-gray-50/50">
                                         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,7 +421,6 @@ new #[Layout('layouts.app')] class extends Component {
                                         </svg>
                                         Upload Laporan
                                     </a>
-                                    @endif
                                     @endif
                                 </div>
                             </template>
