@@ -35,7 +35,7 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function loadData()
     {
-        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
     }
 
     public function setTab($tab)

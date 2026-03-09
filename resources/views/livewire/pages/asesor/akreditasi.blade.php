@@ -269,14 +269,14 @@ new #[Layout('layouts.app')] class extends Component {
             <x-slot name="filters">
                 <x-datatable.search placeholder="Cari Pesantren..." />
 
-                <select wire:model.live="periodeFilter" class="bg-gray-50/50 border-gray-100 text-slate-500 text-[11px] font-bold rounded-xl focus:ring-[#1e3a5f] focus:border-[#1e3a5f] block p-2 transition-all mr-2">
+                <select wire:model.live="periodeFilter" class="text-xs border border-gray-100 rounded-lg bg-gray-50/50 py-2 pl-3 pr-8 focus:ring-1 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] text-gray-500 font-bold">
                     <option value="">Periode</option>
                     @for($i = date('Y'); $i >= 2024; $i--)
                     <option value="{{ $i }}">{{ $i }}</option>
                     @endfor
                 </select>
 
-                <select wire:model.live="statusFilter" class="bg-gray-50/50 border-gray-100 text-slate-500 text-[11px] font-bold rounded-xl focus:ring-[#1e3a5f] focus:border-[#1e3a5f] block p-2 transition-all">
+                <select wire:model.live="statusFilter" class="text-xs border border-gray-100 rounded-lg bg-gray-50/50 py-2 pl-3 pr-8 focus:ring-1 focus:ring-[#1e3a5f] focus:border-[#1e3a5f] text-gray-500 font-bold">
                     <option value="">Status</option>
                     <option value="siap">Siap Visitasi</option>
                     <option value="belum">Belum Visitasi</option>

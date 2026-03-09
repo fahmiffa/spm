@@ -435,16 +435,16 @@
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-blue-50/10">
                                                 <textarea wire:model.live="asesorButirCatatans.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 && !$isLocked ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
                                                     placeholder="Catatan butir..."
-                                                    {{ $akreditasi->status == 4 && !$isLocked ? '' : 'disabled' }}></textarea>
+                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @if ($index === 0)
                                             <td rowspan="{{ $butirsCount }}"
                                                 class="border border-gray-300 p-0 align-top h-px bg-blue-50/20">
                                                 <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 && !$isLocked ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 4 && !$isLocked ? '' : 'disabled' }}></textarea>
+                                                    class="w-full h-full min-h-[150px] border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                    placeholder="Masukkan catatan perbaikan..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
                                             </td>
                                             @endif
                                             @endif

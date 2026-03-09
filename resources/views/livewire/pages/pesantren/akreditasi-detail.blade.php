@@ -68,7 +68,7 @@ new #[Layout('layouts.app')] class extends Component {
             $this->levels = $this->pesantren->units->pluck('unit')->toArray();
         }
 
-        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
 
         // Load Pesantren EDPM
         $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
