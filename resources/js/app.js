@@ -9,6 +9,8 @@ import { ipmManagement } from "./alpine/ipm";
 import { sdmManagement } from "./alpine/sdm";
 import { edpmManagement } from "./alpine/edpm";
 import { akreditasiPesantren } from "./alpine/akreditasi";
+import { adminManagement } from "./alpine/admin";
+import { asesorManagement } from "./alpine/asesor";
 import { dashboardCharts } from "./alpine/dashboard";
 
 document.addEventListener("alpine:init", () => {
@@ -16,8 +18,10 @@ document.addEventListener("alpine:init", () => {
     Alpine.data("ipmManagement", ipmManagement);
     Alpine.data("sdmManagement", sdmManagement);
     Alpine.data("edpmManagement", edpmManagement);
-    Alpine.data("wilayahSelector", wilayahSelector);
     Alpine.data("akreditasiPesantren", akreditasiPesantren);
+    Alpine.data("adminManagement", adminManagement);
+    Alpine.data("asesorManagement", asesorManagement);
+    Alpine.data("wilayahSelector", wilayahSelector);
     Alpine.data("dashboardCharts", dashboardCharts);
 
     Alpine.data("deleteConfirmation", () => ({

@@ -478,59 +478,7 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 
-<div class="py-12" x-data="{
-    confirmSaveNV() {
-        Swal.fire({
-            title: 'Simpan Nilai Verifikasi?',
-            text: 'Pastikan seluruh nilai NV sudah sesuai sebelum disimpan.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#7c3aed',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Simpan',
-            cancelButtonText: 'Batal',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.saveAdminNv();
-            }
-        });
-    },
-    confirmApprove() {
-        Swal.fire({
-            title: 'Setujui Akreditasi?',
-            text: 'Data hasil akreditasi akan disimpan dan sertifikat akan diterbitkan.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#059669',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Setujui',
-            cancelButtonText: 'Batal',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.approve();
-            }
-        });
-    },
-    confirmReject() {
-        Swal.fire({
-            title: 'Tolak Akreditasi?',
-            text: 'Berikan alasan penolakan yang jelas kepada pihak pesantren.',
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#94a3b8',
-            confirmButtonText: 'Ya, Tolak',
-            cancelButtonText: 'Batal',
-            reverseButtons: true
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $wire.reject();
-            }
-        });
-    }
-}">
+<div class="py-12" x-data="{ ...akreditasiManagement(), ...adminManagement() }">
     <x-slot name="header">{{ __('Detail Akreditasi') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -1024,7 +972,7 @@ new #[Layout('layouts.app')] class extends Component {
                                         <p class="text-xs text-purple-700">Silakan input nilai verifikasi untuk
                                             setiap butir penilaian.</p>
                                     </div>
-                                    <x-primary-button @click="confirmSaveNV" wire:loading.attr="disabled"
+                                    <x-primary-button @click="confirmSaveNV($wire)" wire:loading.attr="disabled"
                                         class="bg-purple-600 hover:bg-purple-700">
                                         <svg wire:loading wire:target="saveAdminNv" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1211,7 +1159,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <!-- Approve Form -->
                                     <div class="bg-green-50 p-6 rounded-lg border border-green-200">
                                         <h4 class="text-sm font-bold text-green-900 mb-4 uppercase">Setujui Akreditasi</h4>
-                                        <form @submit.prevent="confirmApprove">
+                                        <form @submit.prevent="confirmApprove($wire)">
                                             <div class="space-y-4">
                                                 <div>
                                                     <x-input-label for="nomor_sk" value="Nomor SK" />
@@ -1261,7 +1209,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <!-- Reject Form -->
                                     <div class="bg-red-50 p-6 rounded-lg border border-red-200">
                                         <h4 class="text-sm font-bold text-red-900 mb-4 uppercase">Tolak Akreditasi</h4>
-                                        <form @submit.prevent="confirmReject">
+                                        <form @submit.prevent="confirmReject($wire)">
                                             <div class="space-y-4">
                                                 <div>
                                                     <x-input-label for="catatan_admin" value="Catatan Penolakan" />
@@ -1270,15 +1218,15 @@ new #[Layout('layouts.app')] class extends Component {
                                                         rows="3" required placeholder="Masukkan alasan penolakan..."></textarea>
                                                     <x-input-error :messages="$errors->get('catatan_admin')" class="mt-2" />
                                                 </div>
-                                                <div class="flex justify-end">
-                                                    <button type="submit" wire:loading.attr="disabled"
-                                                        class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                                <div class="mt-6 flex justify-end">
+                                                    <x-primary-button type="submit" wire:loading.attr="disabled"
+                                                        class="bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                                         <svg wire:loading wire:target="reject" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                         </svg>
                                                         <span>Tolak Pengajuan</span>
-                                                    </button>
+                                                    </x-primary-button>
                                                 </div>
                                             </div>
                                         </form>
