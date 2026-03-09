@@ -16,6 +16,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $is_pesantren = false;
     public $is_asesor = false;
     public $file;
+    public $type = '';
     public $documentId = null;
     public $currentFile = null;
 
@@ -66,7 +67,7 @@ new #[Layout('layouts.app')] class extends Component {
     public function openModal()
     {
         $this->resetValidation();
-        $this->reset(['title', 'status', 'is_pesantren', 'is_asesor', 'file', 'documentId', 'currentFile']);
+        $this->reset(['title', 'status', 'is_pesantren', 'is_asesor', 'type', 'file', 'documentId', 'currentFile']);
         $this->status = 1;
         $this->dispatch('open-modal', 'document-modal');
     }
@@ -80,6 +81,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->status = $doc->status;
         $this->is_pesantren = (bool) $doc->is_pesantren;
         $this->is_asesor = (bool) $doc->is_asesor;
+        $this->type = $doc->type;
         $this->currentFile = $doc->file_path;
         $this->dispatch('open-modal', 'document-modal');
     }
@@ -91,6 +93,7 @@ new #[Layout('layouts.app')] class extends Component {
             'status' => 'required|integer',
             'is_pesantren' => 'boolean',
             'is_asesor' => 'boolean',
+            'type' => 'required|string|in:iapm,kartu_kendali,visitasi',
         ];
 
         if (!$this->documentId) {
@@ -106,6 +109,7 @@ new #[Layout('layouts.app')] class extends Component {
             'status' => $this->status,
             'is_pesantren' => $this->is_pesantren,
             'is_asesor' => $this->is_asesor,
+            'type' => $this->type,
         ];
 
         if ($this->file) {
@@ -127,7 +131,7 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->dispatch('close-modal', 'document-modal');
         $this->dispatch('notification-received', type: 'success', title: 'Berhasil', message: 'Dokumen berhasil disimpan.');
-        $this->reset(['title', 'status', 'is_pesantren', 'is_asesor', 'file', 'documentId', 'currentFile']);
+        $this->reset(['title', 'status', 'is_pesantren', 'is_asesor', 'type', 'file', 'documentId', 'currentFile']);
     }
 
     public function delete($id)
@@ -161,6 +165,9 @@ new #[Layout('layouts.app')] class extends Component {
                 <x-datatable.th field="title" :sortField="$sortField" :sortAsc="$sortAsc">
                     NAMA DOKUMEN
                 </x-datatable.th>
+                <x-datatable.th field="type" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
+                    TIPE DOKUMEN
+                </x-datatable.th>
                 <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">AKSES</th>
                 <th class="py-3 px-4 text-center text-[11px] font-bold text-gray-400 uppercase tracking-widest">STATUS</th>
                 <x-datatable.th field="updated_at" :sortField="$sortField" :sortAsc="$sortAsc" class="text-center">
@@ -174,6 +181,17 @@ new #[Layout('layouts.app')] class extends Component {
                 <tr class="hover:bg-gray-50/50 transition-colors duration-150 group border-b border-gray-50 last:border-0" wire:key="doc-{{ $doc->id }}">
                     <td class="py-5 px-4 font-bold text-[#374151] text-sm tracking-tight">
                         {{ $doc->title }}
+                    </td>
+                    <td class="py-5 px-4 text-center">
+                        @if($doc->type === 'iapm')
+                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 uppercase tracking-tight border border-amber-200 shadow-sm">IAPM</span>
+                        @elseif($doc->type === 'kartu_kendali')
+                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 uppercase tracking-tight border border-purple-200 shadow-sm">Kartu Kendali</span>
+                        @elseif($doc->type === 'visitasi')
+                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 uppercase tracking-tight border border-blue-200 shadow-sm">Visitasi</span>
+                        @else
+                        <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-gray-50 text-gray-600 uppercase tracking-tight border border-gray-200 shadow-sm">-</span>
+                        @endif
                     </td>
                     <td class="py-5 px-4 text-center">
                         <div class="flex items-center justify-center gap-1.5 flex-wrap">
@@ -305,6 +323,19 @@ new #[Layout('layouts.app')] class extends Component {
                     <input type="text" wire:model="title" required placeholder="Contoh: Panduan Assessment"
                         class="w-full text-xs border-gray-100 rounded-lg bg-gray-50/50 py-2.5 focus:ring-1 focus:ring-green-500 focus:border-green-500 placeholder-gray-400">
                     <x-input-error :messages="$errors->get('title')" class="mt-2" />
+                </div>
+
+                <!-- Tipe Dokumen -->
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Tipe Dokumen</label>
+                    <select wire:model="type" required
+                        class="w-full text-xs border-gray-100 rounded-lg bg-gray-50/50 py-2.5 focus:ring-1 focus:ring-green-500 focus:border-green-500 placeholder-gray-400 text-gray-700">
+                        <option value="">Pilih Tipe Dokumen...</option>
+                        <option value="iapm">IAPM</option>
+                        <option value="kartu_kendali">KARTU KENDALI</option>
+                        <option value="visitasi">VISITASI</option>
+                    </select>
+                    <x-input-error :messages="$errors->get('type')" class="mt-2" />
                 </div>
 
                 <!-- Dokumen Saat Ini (If Editing) -->

@@ -273,7 +273,7 @@ new #[Layout('layouts.app')] class extends Component {
         </div>
 
         @if($isEditing)
-        <form wire:submit="save" class="space-y-8">
+        <form x-data="asesorManagement" x-on:submit.prevent="confirmSaveProfile($wire)" class="space-y-8">
             <!-- Section A: DATA DIRI -->
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-xl border border-gray-100">
                 <div class="p-8">
@@ -850,17 +850,18 @@ new #[Layout('layouts.app')] class extends Component {
             </div>
 
             <div class="flex items-center justify-end gap-6 bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-inner">
-                <div wire:loading wire:target="save" class="text-indigo-600 flex items-center gap-2">
-                    <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                <button type="button" wire:click="toggleEdit"
+                    class="px-6 py-3 rounded-2xl text-gray-500 text-[11px] font-bold uppercase tracking-[0.2em] hover:text-gray-700 transition-colors">
+                    Batal
+                </button>
+                <button type="submit" wire:loading.attr="disabled"
+                    class="px-10 py-3 rounded-2xl bg-gray-900 text-white text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 hover:bg-[#1e3a5f] active:scale-95 shadow-lg">
+                    <svg wire:loading wire:target="save" class="animate-spin -ml-1 mr-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span class="text-sm font-semibold italic">Menyimpan perubahan...</span>
-                </div>
-
-                <button type="button" wire:click="toggleEdit" class="mr-3 text-gray-600 hover:text-gray-900 font-medium text-sm">Batal</button>
-                <button type="submit" wire:loading.attr="disabled" class="relative inline-flex items-center justify-center px-10 py-3.5 overflow-hidden font-bold text-white transition-all duration-300 bg-indigo-600 rounded-xl group hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 active:scale-95">
-                    <span class="relative">{{ __('SIMPAN PROFIL ASESOR') }}</span>
+                    <span wire:loading.remove wire:target="save">{{ __('SIMPAN PROFIL ASESOR') }}</span>
+                    <span wire:loading wire:target="save">{{ __('Memproses...') }}</span>
                 </button>
             </div>
         </form>
@@ -941,28 +942,6 @@ new #[Layout('layouts.app')] class extends Component {
                         <div>
                             <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Thn Terbit Sertifikat</span>
                             <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">{{ $tahun_terbit_sertifikat ?: '-' }}</p>
-                        </div>
-                        <div>
-                            <span class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Akreditasi</span>
-                            <p class="text-gray-800 font-medium border-b border-gray-50 pb-1">
-                                @php
-                                $assessments = auth()->user()->asesor?->assessments ?? collect();
-                                $activeProcess = $assessments->contains(function ($a) {
-                                return $a->akreditasi && !in_array($a->akreditasi->status, [1, 2]);
-                                });
-                                @endphp
-                                @if ($assessments->isEmpty())
-                                -
-                                @elseif ($activeProcess)
-                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase">
-                                    Proses
-                                </span>
-                                @else
-                                <span class="px-2 py-0.5 rounded text-xs font-bold bg-indigo-100 text-indigo-700 border border-indigo-200 uppercase">
-                                    Selesai
-                                </span>
-                                @endif
-                            </p>
                         </div>
                     </div>
                 </div>

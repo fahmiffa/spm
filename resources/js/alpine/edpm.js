@@ -25,35 +25,56 @@ export function edpmManagement() {
             });
         },
         validateAndNext(wire) {
-            // Get all select elements in current step
-            const selects = document.querySelectorAll(
-                'select[wire\\:model\\.live^="evaluasis"]',
+            const cards = document.querySelectorAll(
+                ".bg-white.border.rounded-lg",
             );
-            const emptySelects = [];
+            const errors = [];
 
-            selects.forEach((select) => {
-                if (!select.value || select.value === "") {
-                    // Find the butir number from the card
-                    const card = select.closest(".bg-white.border.rounded-lg");
-                    const butirBadge = card?.querySelector(".bg-indigo-50");
-                    const butirText =
-                        butirBadge?.textContent.trim() || "Unknown";
-                    emptySelects.push(butirText);
+            cards.forEach((card) => {
+                const selectElement = card.querySelector(
+                    'select[wire\\:model\\.live^="evaluasis"]',
+                );
+                const linkElement = card.querySelector(
+                    'input[wire\\:model\\.live^="links"]',
+                );
+                const butirBadge = card.querySelector(".bg-indigo-50");
+                const butirText = butirBadge
+                    ? butirBadge.textContent.trim()
+                    : "Unknown";
+
+                if (
+                    selectElement &&
+                    (!selectElement.value || selectElement.value.trim() === "")
+                ) {
+                    errors.push(butirText + " (Nilai Evaluasi kosong)");
+                }
+
+                if (
+                    linkElement &&
+                    (!linkElement.value || linkElement.value.trim() === "")
+                ) {
+                    errors.push(butirText + " (Tautan Bukti kosong)");
+                } else if (
+                    linkElement &&
+                    linkElement.value &&
+                    !linkElement.validity.valid
+                ) {
+                    errors.push(butirText + " (Format URL Bukti tidak valid)");
                 }
             });
 
-            if (emptySelects.length > 0) {
+            if (errors.length > 0) {
                 Swal.fire({
                     icon: "error",
-                    title: "Invalid Nilai",
+                    title: "Peringatan Validasi",
                     html:
-                        "Harap pilih nilai evaluasi untuk:<br><br>" +
-                        emptySelects.map((b) => "• " + b).join("<br>"),
+                        "Data belum lengkap / terjadi kesalahan format:<br><br>" +
+                        errors.map((b) => "• " + b).join("<br>"),
                     confirmButtonColor: "#4f46e5",
                     confirmButtonText: "OK",
                     customClass: {
                         title: "text-xl font-bold text-slate-800",
-                        htmlContainer: "text-sm text-slate-500",
+                        htmlContainer: "text-sm text-slate-500 text-left pl-6",
                         confirmButton:
                             "px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest",
                     },

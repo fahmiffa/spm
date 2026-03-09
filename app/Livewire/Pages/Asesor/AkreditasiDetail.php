@@ -13,18 +13,23 @@ use App\Models\AkreditasiEdpm;
 use App\Models\AkreditasiEdpmCatatan;
 use App\Models\User;
 use App\Models\Assessment;
+use App\Models\Document;
 use App\Notifications\AkreditasiNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 #[Layout('layouts.app')]
 class AkreditasiDetail extends Component
 {
+    use WithFileUploads;
+
     public $akreditasi;
     public $pesantren;
+    public $laporan_visitasi_file;
     public $ipm;
     public $sdm;
     public $levels = [];
@@ -47,6 +52,7 @@ class AkreditasiDetail extends Component
     // Pesantren's EDPM data (read only)
     public $pesantrenEvaluasis = [];
     public $pesantrenCatatans = [];
+    public $pesantrenLinks = [];
 
     // Assessor's EDPM evaluation (editable)
     public $asesorEvaluasis = [];
@@ -54,6 +60,7 @@ class AkreditasiDetail extends Component
     public $asesorNks = [];
     public $asesorCatatanNks = [];
     public $asesorButirCatatans = [];
+    public $visitasiTemplate;
 
     // Values from the other assessor (for preview)
     public $otherAsesorEvaluasis = [];
@@ -67,8 +74,9 @@ class AkreditasiDetail extends Component
     // Overall Accreditation Scores
 
 
-    public function mount($uuid)
+    public function mount($uuid, $tab = 'profil')
     {
+        $this->activeTab = $tab;
         /** @var User $user */
         $user = Auth::user();
         if (!$user->isAsesor()) {
@@ -95,10 +103,13 @@ class AkreditasiDetail extends Component
         if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
             $this->levels = $this->pesantren->units->pluck('unit')->toArray();
         }
-        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
+        $this->visitasiTemplate = Document::where('type', 'visitasi')->where('status', 1)->first();
 
         // Load Pesantren EDPM
-        $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
+        $pEdpms = Edpm::where('user_id', $userId)->get();
+        $pEvaluasis = $pEdpms->pluck('isian', 'butir_id');
+        $pLinks = $pEdpms->pluck('link', 'butir_id');
         $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
 
         /** @var User $user */
@@ -139,6 +150,7 @@ class AkreditasiDetail extends Component
 
             foreach ($komponen->butirs as $butir) {
                 $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '-';
+                $this->pesantrenLinks[$butir->id] = $pLinks[$butir->id] ?? null;
                 $this->asesorEvaluasis[$butir->id] = $aEvaluasis[$butir->id] ?? '';
                 $this->asesorNks[$butir->id] = $aNks[$butir->id] ?? '';
                 $this->asesorButirCatatans[$butir->id] = $aButirCatatans[$butir->id] ?? '';
@@ -344,6 +356,15 @@ class AkreditasiDetail extends Component
             return;
         }
 
+        if (empty($this->akreditasi->laporan_visitasi_file)) {
+            $this->dispatch(
+                'validation-failed',
+                title: 'Laporan Visitasi Kosong',
+                html: "Mohon unggah Laporan Visitasi terlebih dahulu di tab 'Laporan Visitasi' sebelum melakukan verifikasi final."
+            );
+            return;
+        }
+
         $this->akreditasi->update(['status' => 3]); // 3. Validasi
 
         /** @var User $user */
@@ -359,6 +380,30 @@ class AkreditasiDetail extends Component
 
         session()->flash('status', 'Assessment berhasil diselesaikan. Status berubah menjadi Validasi Admin.');
         return redirect()->route('asesor.akreditasi');
+    }
+
+    public function uploadLaporanVisitasi()
+    {
+        if ($this->akreditasi->status != 4 || $this->asesorTipe != 1) {
+            abort(403, 'Hanya Ketua Asesor (Asesor 1) pada masa Visitasi yang dapat mengunggah laporan ini.');
+            return;
+        }
+
+        $this->validate([
+            'laporan_visitasi_file' => 'required|file|mimes:pdf,docx|max:5120',
+        ], [
+            'laporan_visitasi_file.required' => 'File Laporan Visitasi wajib diunggah.',
+            'laporan_visitasi_file.mimes' => 'Format file harus PDF atau DOCX.',
+            'laporan_visitasi_file.max' => 'Ukuran file maksimal 5MB.',
+        ]);
+
+        $path = $this->laporan_visitasi_file->store('akreditasi/laporan_visitasi', 'public');
+
+        $this->akreditasi->update([
+            'laporan_visitasi_file' => $path
+        ]);
+
+        $this->dispatch('notification-received', type: 'success', title: 'Berhasil Upload', message: 'Laporan Visitasi berhasil diunggah secara permanen.');
     }
 
     public function setTab($tab)

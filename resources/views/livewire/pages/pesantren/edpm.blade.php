@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 new #[Layout('layouts.app')] class extends Component {
     public $komponens;
     public $evaluasis = []; // butir_id => isian
+    public $links = [];     // butir_id => link
     public $catatans = [];  // komponen_id => catatan
     public $activeStep = 0;
 
@@ -24,15 +25,16 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function loadData()
     {
-        $this->komponens = MasterEdpmKomponen::with('butirs')->get();
+        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
 
-        $existingEvaluasis = Edpm::where('user_id', auth()->id())->get()->pluck('isian', 'butir_id');
+        $existingEdpms = Edpm::where('user_id', auth()->id())->get()->keyBy('butir_id');
         $existingCatatans = EdpmCatatan::where('user_id', auth()->id())->get()->pluck('catatan', 'komponen_id');
 
         foreach ($this->komponens as $komponen) {
             $this->catatans[$komponen->id] = $existingCatatans[$komponen->id] ?? '';
             foreach ($komponen->butirs as $butir) {
-                $this->evaluasis[$butir->id] = $existingEvaluasis[$butir->id] ?? '';
+                $this->evaluasis[$butir->id] = $existingEdpms[$butir->id]->isian ?? '';
+                $this->links[$butir->id] = $existingEdpms[$butir->id]->link ?? '';
             }
         }
     }
@@ -47,10 +49,13 @@ new #[Layout('layouts.app')] class extends Component {
 
             foreach ($currentKomponen->butirs as $butir) {
                 $rules['evaluasis.' . $butir->id] = 'required|numeric|min:1|max:4';
+                $rules['links.' . $butir->id] = 'required|url';
                 $messages['evaluasis.' . $butir->id . '.required'] = 'Harap pilih nilai evaluasi untuk butir ' . $butir->nomor_butir;
                 $messages['evaluasis.' . $butir->id . '.numeric'] = 'Nilai harus berupa angka.';
                 $messages['evaluasis.' . $butir->id . '.min'] = 'Nilai minimal adalah 1.';
                 $messages['evaluasis.' . $butir->id . '.max'] = 'Nilai maksimal adalah 4.';
+                $messages['links.' . $butir->id . '.required'] = 'Harap isi tautan bukti untuk butir ' . $butir->nomor_butir;
+                $messages['links.' . $butir->id . '.url'] = 'Format tautan bukti tidak valid (harus berupa URL valid).';
             }
 
             try {
@@ -94,20 +99,42 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
-        $this->validate([
-            'evaluasis.*' => 'required|numeric|min:1|max:4',
+        $rules = [
             'catatans.*' => 'nullable|string',
-        ], [
-            'evaluasis.*.required' => 'Harap pilih nilai evaluasi.',
-            'evaluasis.*.numeric' => 'Nilai harus berupa angka.',
-            'evaluasis.*.min' => 'Nilai minimal adalah 1.',
-            'evaluasis.*.max' => 'Nilai maksimal adalah 4.',
-        ]);
+        ];
+        $messages = [];
 
-        foreach ($this->evaluasis as $butirId => $isian) {
+        foreach ($this->komponens as $komponen) {
+            foreach ($komponen->butirs as $butir) {
+                $rules['evaluasis.' . $butir->id] = 'required|numeric|min:1|max:4';
+                $rules['links.' . $butir->id] = 'required|url';
+
+                $messages['evaluasis.' . $butir->id . '.required'] = 'Harap pilih nilai evaluasi untuk butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.numeric'] = 'Nilai harus berupa angka pada butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.min'] = 'Nilai minimal adalah 1 pada butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.max'] = 'Nilai maksimal adalah 4 pada butir ' . $butir->nomor_butir;
+
+                $messages['links.' . $butir->id . '.required'] = 'Harap isi tautan bukti untuk butir ' . $butir->nomor_butir;
+                $messages['links.' . $butir->id . '.url'] = 'Format tautan bukti tidak valid pada butir ' . $butir->nomor_butir;
+            }
+        }
+
+        try {
+            $this->validate($rules, $messages);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errorMessages = collect($e->errors())->flatten()->toArray();
+            session()->flash('validation_errors', $errorMessages);
+            $this->dispatch('show-validation-error');
+            return;
+        }
+
+        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
+        foreach ($allIds as $butirId) {
+            $isian = $this->evaluasis[$butirId] ?? null;
+            $link = $this->links[$butirId] ?? null;
             Edpm::updateOrCreate(
                 ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                ['isian' => $isian]
+                ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
             );
         }
 
@@ -137,14 +164,19 @@ new #[Layout('layouts.app')] class extends Component {
         // Validate formats if present, but don't require values
         $this->validate([
             'evaluasis.*' => 'nullable|numeric|min:1|max:4',
+            'links.*' => 'nullable|url',
             'catatans.*' => 'nullable|string',
         ]);
 
-        foreach ($this->evaluasis as $butirId => $isian) {
-            if ($isian !== '' && $isian !== null) {
+        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
+        foreach ($allIds as $butirId) {
+            $isian = $this->evaluasis[$butirId] ?? null;
+            $link = $this->links[$butirId] ?? null;
+
+            if (($isian !== '' && $isian !== null) || ($link !== '' && $link !== null)) {
                 Edpm::updateOrCreate(
                     ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                    ['isian' => $isian]
+                    ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
                 );
             }
         }
@@ -170,6 +202,9 @@ new #[Layout('layouts.app')] class extends Component {
             if (!isset($this->evaluasis[$butir->id]) || $this->evaluasis[$butir->id] === '') {
                 return false;
             }
+            if (!isset($this->links[$butir->id]) || $this->links[$butir->id] === '') {
+                return false;
+            }
         }
         return true;
     }
@@ -186,19 +221,18 @@ new #[Layout('layouts.app')] class extends Component {
                     </h2>
                 </header>
 
-                @if(auth()->user()->pesantren->is_locked)
-                <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-red-700">
-                                <span class="font-bold">DATA TERKUNCI!</span> Data EDPM tidak dapat diubah karena sedang dalam proses akreditasi.
-                            </p>
-                        </div>
+                @php $isLocked = auth()->user()->pesantren->is_locked; @endphp
+
+                @if($isLocked)
+                <div class="mb-6 flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+                    <div class="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-black text-amber-800 uppercase tracking-wide">Data Terkunci</p>
+                        <p class="text-xs text-amber-700 mt-0.5">Data EDPM tidak dapat diubah karena pesantren sedang dalam proses akreditasi.</p>
                     </div>
                 </div>
                 @endif
@@ -272,19 +306,33 @@ new #[Layout('layouts.app')] class extends Component {
                                             {{ $butir->butir_pernyataan }}
                                         </p>
 
-                                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Pilih Nilai Evaluasi:</label>
-                                            <select wire:model.live="evaluasis.{{ $butir->id }}"
-                                                class="w-full md:w-auto min-w-[200px] border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('evaluasis.'.$butir->id) border-red-300 ring-red-200 @enderror">
-                                                <option value="">-- Pilih Nilai --</option>
-                                                <option value="1">1</option>
-                                                <option value="2">2</option>
-                                                <option value="3">3</option>
-                                                <option value="4">4</option>
-                                            </select>
-                                            @error('evaluasis.'.$butir->id)
-                                            <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                            @enderror
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Pilih Nilai Evaluasi:</label>
+                                                <select wire:model.live="evaluasis.{{ $butir->id }}"
+                                                    @disabled($isLocked)
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('evaluasis.'.$butir->id) border-red-300 ring-red-200 @enderror {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}">
+                                                    <option value="">-- Pilih Nilai --</option>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                </select>
+                                                @error('evaluasis.'.$butir->id)
+                                                <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+
+                                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Tautan Bukti (Wajib):</label>
+                                                <input type="url" wire:model.live="links.{{ $butir->id }}"
+                                                    placeholder="https://..."
+                                                    @disabled($isLocked)
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('links.'.$butir->id) border-red-300 ring-red-200 @enderror {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}">
+                                                @error('links.'.$butir->id)
+                                                <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
+                                                @enderror
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -312,7 +360,8 @@ new #[Layout('layouts.app')] class extends Component {
                                         {{ $komponen->nama }}
                                     </label>
                                     <textarea wire:model.live="catatans.{{ $komponen->id }}"
-                                        class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm min-h-[100px]"
+                                        @disabled($isLocked)
+                                        class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm min-h-[100px] {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}"
                                         placeholder="Catatan untuk {{ strtolower($komponen->nama) }}..."></textarea>
                                 </div>
                                 @endforeach
@@ -325,14 +374,23 @@ new #[Layout('layouts.app')] class extends Component {
                     <div class="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t pt-6">
                         <!-- Prev Button -->
                         <button type="button" wire:click="prevStep"
-                            class="w-full md:w-auto bg-gray-100/50 text-gray-600 font-bold py-3 px-8 rounded-2xl transition-all {{ $activeStep === 0 ? 'opacity-50 cursor-not-allowed' : '' }}"
-                            {{ $activeStep === 0 ? 'disabled' : '' }}>
+                            class="w-full md:w-auto bg-gray-100/50 text-gray-600 font-bold py-3 px-8 rounded-2xl transition-all {{ ($activeStep === 0 || $isLocked) ? 'opacity-50 cursor-not-allowed' : '' }}"
+                            {{ ($activeStep === 0 || $isLocked) ? 'disabled' : '' }}>
                             &laquo; Sebelumnya
                         </button>
 
                         <div class="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                            @if($isLocked)
+                            <!-- Locked State Buttons -->
+                            <button type="button" disabled
+                                class="w-full md:w-auto bg-gray-300 text-gray-400 text-[11px] font-black py-3 px-10 rounded-2xl flex items-center justify-center gap-2 uppercase tracking-widest cursor-not-allowed select-none">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                                Data Terkunci
+                            </button>
+                            @else
                             <!-- Draft Button -->
-                            @if(!auth()->user()->pesantren->is_locked)
                             <button type="button" wire:click="saveDraft" wire:loading.attr="disabled"
                                 class="w-full md:w-auto bg-amber-500 text-white font-bold py-3 px-8 rounded-2xl transition-all flex items-center justify-center gap-2">
                                 <svg wire:loading.remove wire:target="saveDraft" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -344,7 +402,6 @@ new #[Layout('layouts.app')] class extends Component {
                                 </svg>
                                 <span>Simpan Draft</span>
                             </button>
-                            @endif
 
                             <!-- Next / Save Button -->
                             @if ($activeStep === count($komponens) - 1)
@@ -360,6 +417,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                 </svg>
                             </button>
+                            @endif
                             @endif
                         </div>
                     </div>

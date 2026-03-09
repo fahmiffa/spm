@@ -30,6 +30,7 @@ class Akreditasi extends Model
         'nv',
         'sertifikat_path',
         'kartu_kendali',
+        'laporan_visitasi_file',
         'masa_berlaku',
         'masa_berlaku_akhir',
     ];
