@@ -14,7 +14,13 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getDocumentsProperty()
     {
-        $query = auth()->user()->documents();
+        $query = Document::where('status', 1);
+
+        if (auth()->user()->isAsesor()) {
+            $query->where('is_asesor', true);
+        } elseif (auth()->user()->isPesantren()) {
+            $query->where('is_pesantren', true);
+        }
 
         if ($this->doc !== 'all') {
             $query->where('type', $this->doc);
@@ -26,14 +32,14 @@ new #[Layout('layouts.app')] class extends Component {
 
 <div class="py-12 bg-slate-50/50 min-h-screen">
     <x-slot name="header">
-        @if($this->doc == 'iapm') IAPM @elseif($this->doc == 'kartu_kendali') Kartu Kendali @else Daftar Dokumen @endif
+        @if($this->doc == 'iapm') IAPM @elseif($this->doc == 'kartu_kendali') Kartu Kendali @elseif($this->doc == 'visitasi') Visitasi @else Daftar Dokumen @endif
     </x-slot>
 
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-8 md:p-12 text-gray-900">
                 <div class="mb-10">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">@if($this->doc == 'iapm') IAPM @elseif($this->doc == 'kartu_kendali') Kartu Kendali @else Daftar Dokumen @endif</h2>
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">@if($this->doc == 'iapm') IAPM @elseif($this->doc == 'kartu_kendali') Kartu Kendali @elseif($this->doc == 'visitasi') Visitasi @else Daftar Dokumen @endif</h2>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">

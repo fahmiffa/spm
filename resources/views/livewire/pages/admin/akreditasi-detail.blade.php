@@ -25,6 +25,7 @@ new #[Layout('layouts.app')] class extends Component {
     // Pesantren's EDPM data (read only)
     public $pesantrenEvaluasis = [];
     public $pesantrenCatatans = [];
+    public $pesantrenLinks = [];
 
     // Assessor 1 EDPM evaluation
     public $asesor1Evaluasis = [];
@@ -89,7 +90,9 @@ new #[Layout('layouts.app')] class extends Component {
         $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
 
         // Load Pesantren EDPM
-        $pEvaluasis = Edpm::where('user_id', $userId)->get()->pluck('isian', 'butir_id');
+        $pEdpms = Edpm::where('user_id', $userId)->get();
+        $pEvaluasis = $pEdpms->pluck('isian', 'butir_id');
+        $pLinks = $pEdpms->pluck('link', 'butir_id');
         $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
 
         // Load Assessor 1 EDPM
@@ -122,6 +125,7 @@ new #[Layout('layouts.app')] class extends Component {
 
             foreach ($komponen->butirs as $butir) {
                 $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '';
+                $this->pesantrenLinks[$butir->id] = $pLinks[$butir->id] ?? null;
                 $this->asesor1Evaluasis[$butir->id] = $a1Evaluasis[$butir->id] ?? '';
                 $this->asesor1Nks[$butir->id] = $a1Nks[$butir->id] ?? '';
                 $this->adminNvs[$butir->id] = $a1Nvs[$butir->id] ?? '';
@@ -852,6 +856,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             <th class="border border-gray-300 px-2 py-2">No Butir</th>
                                             <th class="border border-gray-300 px-4 py-2 text-left">Pernyataan</th>
                                             <th class="border border-gray-300 px-4 py-2">Isian Pesantren</th>
+                                            <th class="border border-gray-300 px-4 py-2">Bukti Pesantren</th>
                                             <th class="border border-gray-300 px-4 py-2">Catatan Komponen</th>
                                         </tr>
                                     </thead>
@@ -867,8 +872,15 @@ new #[Layout('layouts.app')] class extends Component {
                                                 {{ $butir->butir_pernyataan }}
                                             </td>
                                             <td
-                                                class="border border-gray-300 px-4 py-2 font-medium bg-yellow-50 text-indigo-700">
+                                                class="border border-gray-300 px-4 py-2 font-medium bg-yellow-50 text-indigo-700 text-center">
                                                 {{ $pesantrenEvaluasis[$butir->id] }}
+                                            </td>
+                                            <td class="border border-gray-300 px-4 py-2 text-center text-[10px]">
+                                                @if(!empty($pesantrenLinks[$butir->id]))
+                                                <a href="{{ $pesantrenLinks[$butir->id] }}" target="_blank" class="text-indigo-600 font-bold hover:underline break-all uppercase" title="{{ $pesantrenLinks[$butir->id] }}">LIHAT BUKTI</a>
+                                                @else
+                                                <span class="text-gray-400 italic">-</span>
+                                                @endif
                                             </td>
                                             @if ($idx === 0)
                                             <td rowspan="{{ $butirsCount }}"

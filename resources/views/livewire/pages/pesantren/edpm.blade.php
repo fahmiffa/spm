@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 new #[Layout('layouts.app')] class extends Component {
     public $komponens;
     public $evaluasis = []; // butir_id => isian
+    public $links = [];     // butir_id => link
     public $catatans = [];  // komponen_id => catatan
     public $activeStep = 0;
 
@@ -26,13 +27,14 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
 
-        $existingEvaluasis = Edpm::where('user_id', auth()->id())->get()->pluck('isian', 'butir_id');
+        $existingEdpms = Edpm::where('user_id', auth()->id())->get()->keyBy('butir_id');
         $existingCatatans = EdpmCatatan::where('user_id', auth()->id())->get()->pluck('catatan', 'komponen_id');
 
         foreach ($this->komponens as $komponen) {
             $this->catatans[$komponen->id] = $existingCatatans[$komponen->id] ?? '';
             foreach ($komponen->butirs as $butir) {
-                $this->evaluasis[$butir->id] = $existingEvaluasis[$butir->id] ?? '';
+                $this->evaluasis[$butir->id] = $existingEdpms[$butir->id]->isian ?? '';
+                $this->links[$butir->id] = $existingEdpms[$butir->id]->link ?? '';
             }
         }
     }
@@ -47,10 +49,13 @@ new #[Layout('layouts.app')] class extends Component {
 
             foreach ($currentKomponen->butirs as $butir) {
                 $rules['evaluasis.' . $butir->id] = 'required|numeric|min:1|max:4';
+                $rules['links.' . $butir->id] = 'required|url';
                 $messages['evaluasis.' . $butir->id . '.required'] = 'Harap pilih nilai evaluasi untuk butir ' . $butir->nomor_butir;
                 $messages['evaluasis.' . $butir->id . '.numeric'] = 'Nilai harus berupa angka.';
                 $messages['evaluasis.' . $butir->id . '.min'] = 'Nilai minimal adalah 1.';
                 $messages['evaluasis.' . $butir->id . '.max'] = 'Nilai maksimal adalah 4.';
+                $messages['links.' . $butir->id . '.required'] = 'Harap isi tautan bukti untuk butir ' . $butir->nomor_butir;
+                $messages['links.' . $butir->id . '.url'] = 'Format tautan bukti tidak valid (harus berupa URL valid).';
             }
 
             try {
@@ -94,20 +99,42 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
-        $this->validate([
-            'evaluasis.*' => 'required|numeric|min:1|max:4',
+        $rules = [
             'catatans.*' => 'nullable|string',
-        ], [
-            'evaluasis.*.required' => 'Harap pilih nilai evaluasi.',
-            'evaluasis.*.numeric' => 'Nilai harus berupa angka.',
-            'evaluasis.*.min' => 'Nilai minimal adalah 1.',
-            'evaluasis.*.max' => 'Nilai maksimal adalah 4.',
-        ]);
+        ];
+        $messages = [];
 
-        foreach ($this->evaluasis as $butirId => $isian) {
+        foreach ($this->komponens as $komponen) {
+            foreach ($komponen->butirs as $butir) {
+                $rules['evaluasis.' . $butir->id] = 'required|numeric|min:1|max:4';
+                $rules['links.' . $butir->id] = 'required|url';
+
+                $messages['evaluasis.' . $butir->id . '.required'] = 'Harap pilih nilai evaluasi untuk butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.numeric'] = 'Nilai harus berupa angka pada butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.min'] = 'Nilai minimal adalah 1 pada butir ' . $butir->nomor_butir;
+                $messages['evaluasis.' . $butir->id . '.max'] = 'Nilai maksimal adalah 4 pada butir ' . $butir->nomor_butir;
+
+                $messages['links.' . $butir->id . '.required'] = 'Harap isi tautan bukti untuk butir ' . $butir->nomor_butir;
+                $messages['links.' . $butir->id . '.url'] = 'Format tautan bukti tidak valid pada butir ' . $butir->nomor_butir;
+            }
+        }
+
+        try {
+            $this->validate($rules, $messages);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errorMessages = collect($e->errors())->flatten()->toArray();
+            session()->flash('validation_errors', $errorMessages);
+            $this->dispatch('show-validation-error');
+            return;
+        }
+
+        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
+        foreach ($allIds as $butirId) {
+            $isian = $this->evaluasis[$butirId] ?? null;
+            $link = $this->links[$butirId] ?? null;
             Edpm::updateOrCreate(
                 ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                ['isian' => $isian]
+                ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
             );
         }
 
@@ -137,14 +164,19 @@ new #[Layout('layouts.app')] class extends Component {
         // Validate formats if present, but don't require values
         $this->validate([
             'evaluasis.*' => 'nullable|numeric|min:1|max:4',
+            'links.*' => 'nullable|url',
             'catatans.*' => 'nullable|string',
         ]);
 
-        foreach ($this->evaluasis as $butirId => $isian) {
-            if ($isian !== '' && $isian !== null) {
+        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
+        foreach ($allIds as $butirId) {
+            $isian = $this->evaluasis[$butirId] ?? null;
+            $link = $this->links[$butirId] ?? null;
+
+            if (($isian !== '' && $isian !== null) || ($link !== '' && $link !== null)) {
                 Edpm::updateOrCreate(
                     ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                    ['isian' => $isian]
+                    ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
                 );
             }
         }
@@ -168,6 +200,9 @@ new #[Layout('layouts.app')] class extends Component {
         foreach ($this->komponens[$index]->butirs as $butir) {
             // Check if evaluation value exists and is not empty or null
             if (!isset($this->evaluasis[$butir->id]) || $this->evaluasis[$butir->id] === '') {
+                return false;
+            }
+            if (!isset($this->links[$butir->id]) || $this->links[$butir->id] === '') {
                 return false;
             }
         }
@@ -271,20 +306,33 @@ new #[Layout('layouts.app')] class extends Component {
                                             {{ $butir->butir_pernyataan }}
                                         </p>
 
-                                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                            <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Pilih Nilai Evaluasi:</label>
-                                            <select wire:model.live="evaluasis.{{ $butir->id }}"
-                                                @disabled($isLocked)
-                                                class="w-full md:w-auto min-w-[200px] border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('evaluasis.'.$butir->id) border-red-300 ring-red-200 @enderror {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}">
-                                                <option value="">-- Pilih Nilai --</option>
-                                                <option value="1">1</option>
-                                                <option value="2">2</option>
-                                                <option value="3">3</option>
-                                                <option value="4">4</option>
-                                            </select>
-                                            @error('evaluasis.'.$butir->id)
-                                            <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
-                                            @enderror
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Pilih Nilai Evaluasi:</label>
+                                                <select wire:model.live="evaluasis.{{ $butir->id }}"
+                                                    @disabled($isLocked)
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('evaluasis.'.$butir->id) border-red-300 ring-red-200 @enderror {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}">
+                                                    <option value="">-- Pilih Nilai --</option>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                </select>
+                                                @error('evaluasis.'.$butir->id)
+                                                <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
+                                                @enderror
+                                            </div>
+
+                                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <label class="block text-xs font-semibold text-gray-500 uppercase mb-2">Tautan Bukti (Wajib):</label>
+                                                <input type="url" wire:model.live="links.{{ $butir->id }}"
+                                                    placeholder="https://..."
+                                                    @disabled($isLocked)
+                                                    class="w-full border-gray-300 rounded-md text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm @error('links.'.$butir->id) border-red-300 ring-red-200 @enderror {{ $isLocked ? 'opacity-50 cursor-not-allowed bg-gray-100' : '' }}">
+                                                @error('links.'.$butir->id)
+                                                <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p>
+                                                @enderror
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

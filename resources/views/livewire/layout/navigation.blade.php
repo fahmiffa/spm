@@ -186,6 +186,9 @@ new class extends Component {
                     <x-sidebar-link :href="route('documents.index', ['doc' => 'iapm'])" :active="request()->fullUrlIs(route('documents.index', ['doc' => 'iapm']))" icon="document-stack">
                         {{ __('IAPM') }}
                     </x-sidebar-link>
+                    <x-sidebar-link :href="route('documents.index', ['doc' => 'visitasi'])" :active="request()->fullUrlIs(route('documents.index', ['doc' => 'iapm']))" icon="document-stack">
+                        {{ __('Visitasi') }}
+                    </x-sidebar-link>
                     @endif
                 </nav>
             </div>
