@@ -5,11 +5,17 @@ import Swal from "sweetalert2";
 window.Swal = Swal;
 
 import { fileManagement, wilayahSelector } from "./alpine/profile";
+import { ipmManagement } from "./alpine/ipm";
+import { sdmManagement } from "./alpine/sdm";
+import { edpmManagement } from "./alpine/edpm";
 import { akreditasiPesantren } from "./alpine/akreditasi";
 import { dashboardCharts } from "./alpine/dashboard";
 
 document.addEventListener("alpine:init", () => {
     Alpine.data("fileManagement", fileManagement);
+    Alpine.data("ipmManagement", ipmManagement);
+    Alpine.data("sdmManagement", sdmManagement);
+    Alpine.data("edpmManagement", edpmManagement);
     Alpine.data("wilayahSelector", wilayahSelector);
     Alpine.data("akreditasiPesantren", akreditasiPesantren);
     Alpine.data("dashboardCharts", dashboardCharts);

@@ -44,8 +44,8 @@ export function fileManagement() {
                 showCancelButton: true,
                 confirmButtonColor: "#1e3a5f",
                 cancelButtonColor: "#ef4444",
-                confirmButtonText: "Ya, Simpan Perubahan",
-                cancelButtonText: "Batal",
+                confirmButtonText: "YA, SIMPAN PERUBAHAN",
+                cancelButtonText: "BATAL",
                 customClass: {
                     title: "text-xl font-bold text-slate-800",
                     htmlContainer: "text-sm text-slate-500",
