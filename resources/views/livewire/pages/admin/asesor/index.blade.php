@@ -128,9 +128,7 @@ new #[Layout('layouts.app')] class extends Component {
 
 <div class="py-12">
     <x-slot name="header">
-        <h2 class="font-semibold text-gray-800 leading-tight">
             {{ __('Asesor') }}
-        </h2>
     </x-slot>
 
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
