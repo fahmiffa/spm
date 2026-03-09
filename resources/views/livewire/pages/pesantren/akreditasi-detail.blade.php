@@ -49,8 +49,10 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesorCatatans = [];
 
     #[Url]
+    #[Url]
     public $activeTab = 'profil';
     public $kartu_kendali_file;
+    public $visitasiTemplate;
 
     use WithFileUploads;
 
@@ -71,6 +73,7 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
+        $this->visitasiTemplate = \App\Models\Document::where('type', 'visitasi')->where('status', 1)->first();
 
         // Load Pesantren EDPM
         $pEdpms = Edpm::where('user_id', $userId)->get();
@@ -201,6 +204,16 @@ new #[Layout('layouts.app')] class extends Component {
                         @if($akreditasi->status == 1 || $akreditasi->status == 2 || $akreditasi->status == 3)
                         <li class="me-2">
                             <button wire:click="setTab('hasil')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'hasil' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Hasil Penilaian</button>
+                        </li>
+                        @if($akreditasi->status != 5)
+                        <li class="me-2">
+                            <button wire:click="setTab('instrumen')"
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
+                        </li>
+                        @endif
+                        <li class="me-2">
+                            <button wire:click="setTab('laporan_visitasi')"
+                                class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'laporan_visitasi' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Laporan Visitasi</button>
                         </li>
                         <li class="me-2">
                             <button wire:click="setTab('kartu')" class="inline-block p-4 border-b-2 rounded-t-lg {{ $activeTab === 'kartu' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Kartu Kendali</button>
@@ -578,6 +591,60 @@ new #[Layout('layouts.app')] class extends Component {
                                 </p>
                             </div>
                         </div>
+                    </div>
+                    @endif
+
+                    @if ($activeTab === 'laporan_visitasi')
+                    <div class="space-y-6">
+                        <div class="bg-indigo-50/50 p-8 rounded-[2rem] border border-indigo-100/50 mb-8 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-8 opacity-10">
+                                <svg class="w-32 h-32 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div class="flex items-start gap-6 relative z-10">
+                                <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-indigo-900 mb-2 leading-tight">Laporan Hasil Visitasi Asesor</h3>
+                                    <p class="text-indigo-700/80 text-sm font-medium leading-relaxed max-w-2xl">
+                                        Berikut adalah Laporan Hasil Visitasi yang telah diunggah oleh Tim Asesor setelah proses visitasi selesai dilaksanakan.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if($akreditasi->laporan_visitasi_file)
+                        <div class="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-sm flex flex-col items-center text-center">
+                            <div class="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mb-6 shadow-sm">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-800 mb-2">Laporan Visitasi Selesai</h4>
+                            <p class="text-slate-500 text-sm mb-8">Berkas laporan sudah tersedia dan dapat diunduh untuk kebutuhan administrasi Pesantren.</p>
+
+                            <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="inline-flex items-center gap-3 bg-[#1e293b] hover:bg-black text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl active:scale-95 group">
+                                <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Unduh Laporan Visitasi
+                            </a>
+                        </div>
+                        @else
+                        <div class="bg-slate-50 border border-slate-200 border-dashed p-16 rounded-[2rem] text-center">
+                            <div class="mx-auto w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-slate-300 mb-6 shadow-sm">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h4 class="text-lg font-bold text-slate-400">Laporan Belum Tersedia</h4>
+                            <p class="text-slate-400 text-sm mt-2 font-medium">Tim Asesor sedang memproses laporan visitasi Anda.</p>
+                        </div>
+                        @endif
                     </div>
                     @endif
                 </div>

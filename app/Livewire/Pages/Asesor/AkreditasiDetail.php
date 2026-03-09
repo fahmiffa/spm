@@ -384,8 +384,8 @@ class AkreditasiDetail extends Component
 
     public function uploadLaporanVisitasi()
     {
-        if ($this->akreditasi->status != 4 || $this->asesorTipe != 1) {
-            abort(403, 'Hanya Ketua Asesor (Asesor 1) pada masa Visitasi yang dapat mengunggah laporan ini.');
+        if ($this->akreditasi->status != 4) {
+            abort(403, 'Proses unggah laporan hanya dapat dilakukan pada masa Visitasi.');
             return;
         }
 
