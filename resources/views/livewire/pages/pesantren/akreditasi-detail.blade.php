@@ -46,6 +46,7 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesor1Nks = [];
     public $adminNvs = [];
     public $asesorButirCatatans = [];
+    public $asesorCatatans = [];
 
     #[Url]
     public $activeTab = 'profil';
@@ -85,6 +86,10 @@ new #[Layout('layouts.app')] class extends Component {
             $this->asesor1Nks = $a1Edpms->pluck('nk', 'butir_id');
             $this->adminNvs = $a1Edpms->pluck('nv', 'butir_id');
             $this->asesorButirCatatans = $a1Edpms->pluck('catatan', 'butir_id');
+            $this->asesorCatatans = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)
+                ->where('asesor_id', $asesor1Id)
+                ->get()
+                ->pluck('catatan', 'komponen_id');
         }
 
         $asesor2Id = $this->akreditasi->assessment2->asesor_id ?? null;
@@ -414,6 +419,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             <th class="border border-gray-300 px-3 py-2 text-left font-bold">Komponen</th>
                                             <th class="border border-gray-300 px-3 py-2 text-center font-bold">Skor Komponen</th>
                                             <th class="border border-gray-300 px-3 py-2 text-center font-bold">Total Skor</th>
+                                            <th class="border border-gray-300 px-3 py-2 text-left font-bold">Catatan Rekomendasi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -468,14 +474,17 @@ new #[Layout('layouts.app')] class extends Component {
                                                 {{ $skorKomponen }}
                                             </td>
                                             @if ($index === 0)
-                                            <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-50 align-middle">
+                                            <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-50 align-middle text-center">
                                                 {{ $totalSkorIprNull }}
                                             </td>
                                             @elseif ($index === $iprNullComponents->count())
-                                            <td class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-100 align-middle">
+                                            <td class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-100 align-middle text-center">
                                                 {{ $skorKomponen }}
                                             </td>
                                             @endif
+                                            <td class="border border-gray-300 px-3 py-2 text-left italic text-gray-600">
+                                                {{ $asesorCatatans[$komponen->id] ?? '-' }}
+                                            </td>
                                         </tr>
                                         @endforeach
                                     </tbody>
