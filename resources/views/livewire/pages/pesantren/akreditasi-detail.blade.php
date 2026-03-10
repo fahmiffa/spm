@@ -49,7 +49,6 @@ new #[Layout('layouts.app')] class extends Component {
     public $asesorCatatans = [];
 
     #[Url]
-    #[Url]
     public $activeTab = 'profil';
     public $kartu_kendali_file;
     public $visitasiTemplate;
