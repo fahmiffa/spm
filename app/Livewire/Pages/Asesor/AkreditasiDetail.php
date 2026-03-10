@@ -87,6 +87,11 @@ class AkreditasiDetail extends Component
             ->where('uuid', $uuid)
             ->firstOrFail();
 
+        // Security check: Hide Laporan Visitasi tab if status is 4 or 5
+        if (($this->akreditasi->status == 4 || $this->akreditasi->status == 5) && $this->activeTab === 'laporan_visitasi') {
+            $this->activeTab = 'profil';
+        }
+
         /** @var User $user */
         $user = Auth::user();
         // Security check: only assigned assessor can see this
@@ -187,8 +192,8 @@ class AkreditasiDetail extends Component
 
     public function saveAsesorEdpm($isFinal = false)
     {
-        if ($this->akreditasi->status != 4) {
-            session()->flash('error', 'Data tidak dapat diubah karena status bukan Visitasi.');
+        if ($this->akreditasi->status != 4 && $this->akreditasi->status != 3) {
+            session()->flash('error', 'Data tidak dapat diubah karena status bukan Visitasi/Validasi.');
             return;
         }
 
@@ -356,6 +361,8 @@ class AkreditasiDetail extends Component
             return;
         }
 
+        // Laporan visitasi optional at this stage according to new flow
+        /*
         if (empty($this->akreditasi->laporan_visitasi_file)) {
             $this->dispatch(
                 'validation-failed',
@@ -364,6 +371,7 @@ class AkreditasiDetail extends Component
             );
             return;
         }
+        */
 
         $this->akreditasi->update(['status' => 3]); // 3. Validasi
 
@@ -384,8 +392,8 @@ class AkreditasiDetail extends Component
 
     public function uploadLaporanVisitasi()
     {
-        if ($this->akreditasi->status != 4) {
-            abort(403, 'Proses unggah laporan hanya dapat dilakukan pada masa Visitasi.');
+        if ($this->akreditasi->status != 4 && $this->akreditasi->status != 3) {
+            abort(403, 'Proses unggah laporan hanya dapat dilakukan pada masa Visitasi atau Validasi.');
             return;
         }
 
