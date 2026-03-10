@@ -128,7 +128,7 @@ new #[Layout('layouts.app')] class extends Component {
                 $this->pesantrenLinks[$butir->id] = $pLinks[$butir->id] ?? null;
                 $this->asesor1Evaluasis[$butir->id] = $a1Evaluasis[$butir->id] ?? '';
                 $this->asesor1Nks[$butir->id] = $a1Nks[$butir->id] ?? '';
-                $this->adminNvs[$butir->id] = $a1Nvs[$butir->id] ?? '';
+                $this->adminNvs[$butir->id] = $a1Nvs[$butir->id] ?? ($this->akreditasi->status == 3 ? ($a1Nks[$butir->id] ?? '') : '');
                 $this->asesor1ButirCatatans[$butir->id] = $a1ButirCatatans[$butir->id] ?? '';
                 $this->asesor2Evaluasis[$butir->id] = $a2Evaluasis[$butir->id] ?? '';
                 $this->asesor2ButirCatatans[$butir->id] = $a2ButirCatatans[$butir->id] ?? '';
