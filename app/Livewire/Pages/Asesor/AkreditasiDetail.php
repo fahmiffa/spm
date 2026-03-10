@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -68,15 +69,15 @@ class AkreditasiDetail extends Component
     public $otherAsesorButirCatatans = [];
 
     public $asesorTipe;
+    #[Url]
     public $activeTab = 'profil';
     public $isLocked = false;
 
     // Overall Accreditation Scores
 
 
-    public function mount($uuid, $tab = 'profil')
+    public function mount($uuid)
     {
-        $this->activeTab = $tab;
         /** @var User $user */
         $user = Auth::user();
         if (!$user->isAsesor()) {

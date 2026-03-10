@@ -49,7 +49,7 @@
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
                         @endif
-                        @if($akreditasi->status == 3)
+                        @if($akreditasi->status == 3 || $akreditasi->status == 1 || $akreditasi->status == 2)
                         <li class="me-2">
                             <button wire:click="setTab('laporan_visitasi')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'laporan_visitasi' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Laporan Visitasi</button>
@@ -586,43 +586,70 @@
                                 <!-- Step 3 -->
                                 <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
                                     <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">3</span>
-                                    <h4 class="font-bold text-gray-900 mb-2">Unggah {{$asesorTipe}}</h4>
+                                    <h4 class="font-bold text-gray-900 mb-2">Unggah</h4>
 
-                                        @if($akreditasi->laporan_visitasi_file && $akreditasi->assessment1->asesor_id == auth()->user()->asesor->id)
-                                        <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
-                                            <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                                </svg>
-                                                Lihat Laporan
-                                            </a>
-                                        </div>
-                                        @elseif($akreditasi->laporan_visitasi_file && $akreditasi->assessment2->asesor_id == auth()->user()->asesor->id)
-                                        <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
-                                            <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                                </svg>
-                                                Lihat Laporan
-                                            </a>
-                                        </div>
-                                        @else
-                                        <div class="space-y-4 border-t border-slate-50">
-                                            <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
-                                            <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
+                                    <div class="space-y-4">
+                                        <!-- My Report -->
+                                        <div>
+                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Laporan Visitasi (Anda)</p>
+                                            @php
+                                            $myFile = $asesorTipe == 1 ? $akreditasi->laporan_visitasi_file : $akreditasi->laporan_visitasi_file_2;
+                                            @endphp
 
-                                            <button wire:click="uploadLaporanVisitasi" wire:loading.attr="disabled" class="w-full bg-[#1e293b] hover:bg-black text-white px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
-                                                <svg wire:loading.remove wire:target="uploadLaporanVisitasi" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                                                </svg>
-                                                <svg wire:loading wire:target="uploadLaporanVisitasi" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                {{ __('Simpan') }}
-                                            </button>
+                                            @if($myFile && !$errors->has('laporan_visitasi_file'))
+                                            <div class="p-4 rounded-2xl border bg-emerald-50 border-emerald-100 flex items-center justify-between">
+                                                <a href="{{ Storage::url($myFile) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                                    </svg>
+                                                    Lihat Laporan Saya
+                                                </a>
+                                            </div>
+                                            @else
+                                            <div class="space-y-4 border-t border-slate-50 pt-2">
+                                                <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
+                                                <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
+
+                                                @if($laporan_visitasi_file)
+                                                <button @click="confirmUploadLaporan($wire)" wire:loading.attr="disabled" class="w-full bg-[#1e293b] hover:bg-black text-white px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                                                    <svg wire:loading.remove wire:target="uploadLaporanVisitasi" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                    </svg>
+                                                    <svg wire:loading wire:target="uploadLaporanVisitasi" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    {{ __('Simpan Laporan') }}
+                                                </button>
+                                                @endif
+                                            </div>
+                                            @endif
                                         </div>
-                                        @endif
+
+                                        <!-- Other Assessor Status -->
+                                        @php
+                                        $otherFile = $asesorTipe == 1 ? $akreditasi->laporan_visitasi_file_2 : $akreditasi->laporan_visitasi_file;
+                                        $otherLabel = $asesorTipe == 1 ? 'Anggota (Asesor 2)' : 'Ketua (Asesor 1)';
+                                        @endphp
+                                        <div class="border-t border-slate-100 pt-4 mt-4">
+                                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Status Laporan {{ $otherLabel }}</p>
+                                            @if($otherFile)
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100 uppercase tracking-tight">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                                </svg>
+                                                Sudah Diunggah
+                                            </div>
+                                            @else
+                                            <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-100 uppercase tracking-tight">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Belum Diunggah
+                                            </div>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

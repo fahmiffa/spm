@@ -169,7 +169,7 @@ new #[Layout('layouts.app')] class extends Component {
     }
 }; ?>
 
-<div class="py-12">
+<div class="py-12" x-data="akreditasiPesantren()">
     <x-slot name="header">{{ __('Akreditasi Detail') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -542,24 +542,30 @@ new #[Layout('layouts.app')] class extends Component {
                                     <h4 class="font-bold text-gray-900 mb-2">Unggah</h4>
 
                                     @if($akreditasi->status == 3)
-                                    <form wire:submit.prevent="uploadKartuKendali" class="space-y-4">
+                                    @if($akreditasi->kartu_kendali && !$errors->has('kartu_kendali_file'))
+                                    <div class="p-6 rounded-xl border bg-emerald-50 border-emerald-100 flex flex-col items-center gap-4 text-center">
+                                        <div class="h-10 w-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shadow-sm">
+                                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[11px] font-black text-emerald-900 uppercase tracking-wider">Berhasil Diunggah</p>
+                                            <p class="text-[10px] text-emerald-600 mt-1 font-medium leading-relaxed">Kartu Kendali sudah tersimpan dan sedang divalidasi oleh Admin.</p>
+                                        </div>
+                                        <a href="{{ Storage::url($akreditasi->kartu_kendali) }}" target="_blank" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-black uppercase tracking-widest py-2.5 rounded-xl transition-all shadow-md active:scale-95 text-center">
+                                            Lihat Dokumen
+                                        </a>
+                                    </div>
+                                    @else
+                                    <div class="space-y-4">
                                         <div>
                                             <input wire:model="kartu_kendali_file" type="file" id="kartu_kendali_file" class="block w-full text-[10px] text-gray-900 border border-gray-200 rounded-lg cursor-pointer bg-gray-50 focus:outline-none file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" accept=".pdf,.docx">
                                             <div wire:loading wire:target="kartu_kendali_file" class="text-[10px] text-indigo-600 mt-1 font-bold">Mengunggah...</div>
                                             <x-input-error :messages="$errors->get('kartu_kendali_file')" class="mt-1" />
                                         </div>
 
-                                        @if($akreditasi->kartu_kendali)
-                                        <div class="flex items-center gap-2 mt-2 p-2 bg-green-50 rounded-lg border border-green-100">
-                                            <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            <span class="text-[9px] font-bold text-green-700 uppercase">Sudah diunggah</span>
-                                            <a href="{{ Storage::url($akreditasi->kartu_kendali) }}" target="_blank" class="text-[9px] font-bold text-indigo-600 hover:underline ml-auto">LIHAT</a>
-                                        </div>
-                                        @endif
-
-                                        <button type="submit" wire:loading.attr="disabled" class="w-full bg-gray-900 text-white text-[11px] font-black uppercase tracking-[0.2em] py-3 px-4 rounded-2xl transition-all flex items-center justify-center gap-2">
+                                        <button type="button" @click="confirmUploadKartu($wire)" wire:loading.attr="disabled" {{ !$kartu_kendali_file ? 'disabled' : '' }} class="w-full bg-gray-900 text-white text-[11px] font-black uppercase tracking-[0.2em] py-3 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95">
                                             <span wire:loading.remove wire:target="uploadKartuKendali">Simpan Kartu Kendali</span>
                                             <span wire:loading wire:target="uploadKartuKendali">
                                                 <svg class="animate-spin h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -568,7 +574,8 @@ new #[Layout('layouts.app')] class extends Component {
                                                 </svg>
                                             </span>
                                         </button>
-                                    </form>
+                                    </div>
+                                    @endif
                                     @else
                                     <p class="text-xs text-gray-500 italic">Menu upload akan muncul saat status pengajuan Anda adalah 'Validasi'.</p>
                                     @endif
