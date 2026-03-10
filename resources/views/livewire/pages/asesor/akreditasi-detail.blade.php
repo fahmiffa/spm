@@ -617,7 +617,7 @@
                                 </div>
                                 @endif
 
-                                @if($akreditasi->status == 4)
+                                @if($akreditasi->status == 4 || $akreditasi->status == 3)
                                 <div class="space-y-4">
                                     <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
                                     <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
@@ -635,7 +635,7 @@
                                 </div>
                                 @else
                                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400">Pengunggahan terkunci (Bukan Masa Visitasi)</p>
+                                    <p class="text-[10px] font-bold text-slate-400">Pengunggahan terkunci (Bukan Masa Visitasi/Validasi)</p>
                                 </div>
                                 @endif
                             </div>
