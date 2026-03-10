@@ -48,10 +48,12 @@
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
                         @endif
+                        @if($akreditasi->status != 4 && $akreditasi->status != 5)
                         <li class="me-2">
                             <button wire:click="setTab('laporan_visitasi')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'laporan_visitasi' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Laporan Visitasi</button>
                         </li>
+                        @endif
                     </ul>
                 </div>
 
@@ -617,7 +619,7 @@
                                 </div>
                                 @endif
 
-                                @if($akreditasi->status == 4 || $akreditasi->status == 3)
+                                @if($akreditasi->status == 3)
                                 <div class="space-y-4">
                                     <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
                                     <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
@@ -635,7 +637,7 @@
                                 </div>
                                 @else
                                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400">Pengunggahan terkunci (Bukan Masa Visitasi/Validasi)</p>
+                                    <p class="text-[10px] font-bold text-slate-400">Pengunggahan terkunci (Belum Masa Validasi)</p>
                                 </div>
                                 @endif
                             </div>
@@ -650,7 +652,7 @@
                             <div>
                                 <h5 class="text-[13px] font-black text-amber-900 mb-1">Penting: Verifikasi Final</h5>
                                 <p class="text-[12px] text-amber-800/70 font-medium leading-relaxed">
-                                    Tombol "Selesaikan & Verifikasi" di tab **NA** tidak dapat ditekan jika Laporan Visitasi belum diunggah. Pastikan format file adalah PDF atau DOCX dengan ukuran maksimal 5MB.
+                                    Laporan Visitasi dapat diunggah selama masa Visitasi (Status 4) atau masa Validasi (Status 3). Pastikan format file adalah PDF atau DOCX dengan ukuran maksimal 5MB.
                                 </p>
                             </div>
                         </div>

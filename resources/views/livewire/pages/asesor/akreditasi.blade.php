@@ -307,23 +307,31 @@ new #[Layout('layouts.app')] class extends Component {
                         </span>
                     </td>
                     <td class="py-5 px-4 text-center">
-                        @if($item->akreditasi->status <= 3)
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-emerald-100 text-emerald-800">
+                        @if($item->akreditasi->status == 1)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-emerald-100 text-emerald-800">
                             Selesai
-                            </span>
-                            @elseif($item->akreditasi->tgl_visitasi)
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-green-100 text-green-800">
-                                Siap Visitasi
-                            </span>
-                            @elseif($item->akreditasi->catatans->whereNotNull('perbaikan')->filter(fn($c) => !empty($c->perbaikan))->isNotEmpty())
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-red-100 text-red-800">
-                                Perlu Revisi
-                            </span>
-                            @else
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-amber-100 text-amber-800">
-                                Belum Visitasi
-                            </span>
-                            @endif
+                        </span>
+                        @elseif($item->akreditasi->status == 2)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-red-100 text-red-800">
+                            Di Tolak
+                        </span>
+                        @elseif($item->akreditasi->status == 3)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-indigo-100 text-indigo-800">
+                            Validasi
+                        </span>
+                        @elseif($item->akreditasi->tgl_visitasi)
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-green-100 text-green-800">
+                            Siap Visitasi
+                        </span>
+                        @elseif($item->akreditasi->catatans->whereNotNull('perbaikan')->filter(fn($c) => !empty($c->perbaikan))->isNotEmpty())
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-red-100 text-red-800">
+                            Perlu Revisi
+                        </span>
+                        @else
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-amber-100 text-amber-800">
+                            Belum Visitasi
+                        </span>
+                        @endif
                     </td>
                     <td class="py-5 px-4 text-center text-xs font-bold text-gray-500">
                         @if($item->akreditasi->tgl_visitasi)
@@ -414,6 +422,9 @@ new #[Layout('layouts.app')] class extends Component {
                                         </svg>
                                         Input Nilai
                                     </a>
+                                    @endif
+
+                                    @if($item->akreditasi->status == 3)
                                     <a href="{{ route('asesor.akreditasi-detail', ['uuid' => $item->akreditasi->uuid, 'tab' => 'laporan_visitasi']) }}"
                                         class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors gap-3 border-t border-gray-50/50">
                                         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
