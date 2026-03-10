@@ -406,7 +406,7 @@ new #[Layout('layouts.app')] class extends Component {
                                     </button>
                                     @endif
 
-                                    @if($item->akreditasi->status == 4)
+                                    @if($item->akreditasi->status == 4 || $item->akreditasi->status == 3)
                                     <a href="{{ route('asesor.akreditasi-detail', $item->akreditasi->uuid) }}" wire:navigate
                                         class="flex items-center w-full px-4 py-2.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors gap-3 border-t border-gray-50/50">
                                         <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
