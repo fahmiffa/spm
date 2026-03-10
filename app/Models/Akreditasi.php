@@ -31,6 +31,7 @@ class Akreditasi extends Model
         'sertifikat_path',
         'kartu_kendali',
         'laporan_visitasi_file',
+        'laporan_visitasi_file_2',
         'masa_berlaku',
         'masa_berlaku_akhir',
     ];

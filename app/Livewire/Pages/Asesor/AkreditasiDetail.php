@@ -407,8 +407,11 @@ class AkreditasiDetail extends Component
 
         $path = $this->laporan_visitasi_file->store('akreditasi/laporan_visitasi', 'public');
 
+        // Separate fields for Asesor 1 and Asesor 2
+        $field = $this->asesorTipe == 1 ? 'laporan_visitasi_file' : 'laporan_visitasi_file_2';
+
         $this->akreditasi->update([
-            'laporan_visitasi_file' => $path
+            $field => $path
         ]);
 
         $this->dispatch('notification-received', type: 'success', title: 'Berhasil Upload', message: 'Laporan Visitasi berhasil diunggah secara permanen.');

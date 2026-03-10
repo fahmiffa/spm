@@ -603,24 +603,41 @@
                                 <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs mb-6">3</div>
                                 <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Unggah Laporan</h4>
 
-                                @if($akreditasi->laporan_visitasi_file)
-                                <div class="mb-4 flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                    <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white shrink-0">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                    <div class="overflow-hidden">
-                                        <p class="text-[10px] font-black text-emerald-800 uppercase leading-none mb-1">Terunggah</p>
-                                        <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="text-[11px] font-bold text-emerald-600 truncate block hover:underline">
-                                            Lihat Laporan Saat Ini
+                                <div class="grid grid-cols-1 gap-4 mb-6">
+                                    <!-- Asesor 1 Report Status -->
+                                    <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Laporan Ketua Asesor (1)</p>
+                                        @if($akreditasi->laporan_visitasi_file)
+                                        <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            Lihat Laporan
                                         </a>
+                                        @else
+                                        <span class="text-[11px] font-bold text-slate-400 italic">Belum diunggah</span>
+                                        @endif
+                                    </div>
+
+                                    <!-- Asesor 2 Report Status -->
+                                    <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file_2 ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Laporan Anggota Asesor (2)</p>
+                                        @if($akreditasi->laporan_visitasi_file_2)
+                                        <a href="{{ Storage::url($akreditasi->laporan_visitasi_file_2) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            Lihat Laporan
+                                        </a>
+                                        @else
+                                        <span class="text-[11px] font-bold text-slate-400 italic">Belum diunggah</span>
+                                        @endif
                                     </div>
                                 </div>
-                                @endif
 
                                 @if($akreditasi->status == 3)
-                                <div class="space-y-4">
+                                <div class="space-y-4 pt-4 border-t border-slate-50">
+                                    <p class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Unggah Laporan Anda (Asesor {{ $asesorTipe }})</p>
                                     <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
                                     <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
 
@@ -632,7 +649,7 @@
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        {{ __('Simpan Laporan Visitasi') }}
+                                        {{ __('Simpan') }}
                                     </button>
                                 </div>
                                 @else
