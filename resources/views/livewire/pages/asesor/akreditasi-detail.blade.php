@@ -654,7 +654,13 @@
                                 </div>
                                 @else
                                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400">Pengunggahan terkunci (Belum Masa Validasi)</p>
+                                    <p class="text-[10px] font-bold text-slate-400">
+                                        @if($akreditasi->status == 1 || $akreditasi->status == 2)
+                                        Pengunggahan terkunci (Proses Selesai)
+                                        @else
+                                        Pengunggahan terkunci (Belum Masa Validasi)
+                                        @endif
+                                    </p>
                                 </div>
                                 @endif
                             </div>
