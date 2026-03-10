@@ -1,6 +1,7 @@
 @use('App\Models\Akreditasi')
 @use('Illuminate\Support\Facades\Storage')
 <div class="py-12" x-data="{ ...akreditasiManagement(), ...asesorManagement() }">
+    <x-slot name="header">{{ __('Akreditasi Detail') }}</x-slot>
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
             <div class="p-6 text-gray-900">
@@ -48,7 +49,7 @@
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'instrumen' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">NA</button>
                         </li>
                         @endif
-                        @if($akreditasi->status != 4 && $akreditasi->status != 5)
+                        @if($akreditasi->status == 3)
                         <li class="me-2">
                             <button wire:click="setTab('laporan_visitasi')"
                                 class="inline-block p-3 border-b-2 rounded-t-lg {{ $activeTab === 'laporan_visitasi' ? 'text-indigo-600 border-indigo-600' : 'border-transparent hover:text-gray-600 hover:border-gray-300' }}">Laporan Visitasi</button>
@@ -548,135 +549,81 @@
 
                     @if ($activeTab === 'laporan_visitasi')
                     <div class="space-y-6">
-                        <div class="bg-indigo-50/50 p-8 rounded-[2rem] border border-indigo-100/50 mb-8 relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-8 opacity-10">
-                                <svg class="w-32 h-32 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <div class="flex items-start gap-6 relative z-10">
-                                <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
-                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <div class="bg-indigo-50 border border-indigo-200 p-8 rounded-2xl shadow-sm">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-indigo-900 mb-2 leading-tight">Instruksi Unggah Laporan Visitasi</h3>
-                                    <p class="text-indigo-700/80 text-sm font-medium leading-relaxed max-w-2xl">
-                                        Tim Asesor (Ketua atau Anggota) wajib mengunggah Laporan Visitasi yang telah ditandatangani untuk menyelesaikan proses penilaian ini.
-                                    </p>
+                                    <h3 class="text-xl font-bold text-indigo-900">Instruksi Unggah Laporan Visitasi</h3>
+                                    <p class="text-sm text-indigo-600">Silakan ikuti langkah-langkah di bawah ini untuk menyelesaikan laporan</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Step 1: Download Template -->
-                            <div class="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-                                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs mb-6">1</div>
-                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Unduh Berkas</h4>
-                                <p class="text-[13px] text-slate-500 font-medium leading-relaxed mb-8">
-                                    Unduh *template* Laporan Visitasi yang telah disediakan oleh Admin Pusat melalui menu dokumen.
-                                </p>
-                                @if($visitasiTemplate)
-                                <a href="{{ Storage::url($visitasiTemplate->file_path) }}" target="_blank" class="inline-flex items-center gap-2 text-indigo-600 text-[11px] font-black uppercase tracking-widest group">
-                                    Buka Menu Dokumen
-                                    <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
-                                </a>
-                                @else
-                                <span class="text-[11px] font-bold text-rose-500 italic">Template belum tersedia di Menu Dokumen.</span>
-                                @endif
-                            </div>
-
-                            <!-- Step 2: Review Content -->
-                            <div class="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-                                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs mb-6">2</div>
-                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Tinjau Dokumen</h4>
-                                <p class="text-[13px] text-slate-500 font-medium leading-relaxed">
-                                    Pastikan seluruh data penilaian, rekomendasi, dan tanda tangan pada Laporan Visitasi sudah lengkap dan benar.
-                                </p>
-                            </div>
-
-                            <!-- Step 3: Upload Report -->
-                            <div class="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow">
-                                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-black text-xs mb-6">3</div>
-                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest mb-4">Unggah Laporan</h4>
-
-                                <div class="grid grid-cols-1 gap-4 mb-6">
-                                    <!-- Asesor 1 Report Status -->
-                                    <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
-                                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Laporan Ketua Asesor (1)</p>
-                                        @if($akreditasi->laporan_visitasi_file)
-                                        <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                            </svg>
-                                            Lihat Laporan
-                                        </a>
-                                        @else
-                                        <span class="text-[11px] font-bold text-slate-400 italic">Belum diunggah</span>
-                                        @endif
-                                    </div>
-
-                                    <!-- Asesor 2 Report Status -->
-                                    <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file_2 ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
-                                        <p class="text-[10px] font-black text-slate-400 uppercase mb-2">Laporan Anggota Asesor (2)</p>
-                                        @if($akreditasi->laporan_visitasi_file_2)
-                                        <a href="{{ Storage::url($akreditasi->laporan_visitasi_file_2) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                            </svg>
-                                            Lihat Laporan
-                                        </a>
-                                        @else
-                                        <span class="text-[11px] font-bold text-slate-400 italic">Belum diunggah</span>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                @if($akreditasi->status == 3)
-                                <div class="space-y-4 pt-4 border-t border-slate-50">
-                                    <p class="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Unggah Laporan Anda (Asesor {{ $asesorTipe }})</p>
-                                    <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
-                                    <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
-
-                                    <button wire:click="uploadLaporanVisitasi" wire:loading.attr="disabled" class="w-full bg-[#1e293b] hover:bg-black text-white px-6 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-xl active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
-                                        <svg wire:loading.remove wire:target="uploadLaporanVisitasi" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+                                <!-- Step 1 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">1</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Unduh Berkas</h4>
+                                    <p class="text-xs text-gray-600 mb-4 leading-relaxed">Admin telah mengunggah template laporan, silakan unduh berkas tersebut di menu dokumen.</p>
+                                    <a href="{{ route('documents.index', ['doc' => 'visitasi']) }}" class="inline-flex items-center text-[10px] font-bold text-indigo-600 hover:text-indigo-800 gap-1 group">
+                                        Buka Menu Dokumen
+                                        <svg class="w-3 h-3 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                         </svg>
-                                        <svg wire:loading wire:target="uploadLaporanVisitasi" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        {{ __('Simpan') }}
-                                    </button>
+                                    </a>
                                 </div>
-                                @else
-                                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                                    <p class="text-[10px] font-bold text-slate-400">
-                                        @if($akreditasi->status == 1 || $akreditasi->status == 2)
-                                        Pengunggahan terkunci (Proses Selesai)
-                                        @else
-                                        Pengunggahan terkunci (Belum Masa Validasi)
-                                        @endif
-                                    </p>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
 
-                        <div class="mt-8 p-6 bg-amber-50/50 border border-amber-100 rounded-3xl flex items-start gap-4">
-                            <div class="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg shadow-amber-200">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h5 class="text-[13px] font-black text-amber-900 mb-1">Penting: Verifikasi Final</h5>
-                                <p class="text-[12px] text-amber-800/70 font-medium leading-relaxed">
-                                    Laporan Visitasi dapat diunggah selama masa Visitasi (Status 4) atau masa Validasi (Status 3). Pastikan format file adalah PDF atau DOCX dengan ukuran maksimal 5MB.
-                                </p>
+                                <!-- Step 2 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">2</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Tinjau Dokumen</h4>
+                                    <p class="text-xs text-gray-600 leading-relaxed">Pastikan seluruh data penilaian, rekomendasi, dan tanda tangan pada Laporan Visitasi sudah lengkap dan benar. </p>
+                                </div>
+
+                                <!-- Step 3 -->
+                                <div class="bg-white p-6 rounded-xl border border-indigo-100 shadow-sm relative z-10">
+                                    <span class="absolute -top-3 -left-3 h-8 w-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold shadow-md">3</span>
+                                    <h4 class="font-bold text-gray-900 mb-2">Unggah {{$asesorTipe}}</h4>
+
+                                        @if($akreditasi->laporan_visitasi_file && $akreditasi->assessment1->asesor_id == auth()->user()->asesor->id)
+                                        <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
+                                            <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                                Lihat Laporan
+                                            </a>
+                                        </div>
+                                        @elseif($akreditasi->laporan_visitasi_file && $akreditasi->assessment2->asesor_id == auth()->user()->asesor->id)
+                                        <div class="p-4 rounded-2xl border {{ $akreditasi->laporan_visitasi_file ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100' }}">
+                                            <a href="{{ Storage::url($akreditasi->laporan_visitasi_file) }}" target="_blank" class="flex items-center gap-2 text-emerald-600 text-[11px] font-bold hover:underline">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M5 13l4 4L19 7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                                </svg>
+                                                Lihat Laporan
+                                            </a>
+                                        </div>
+                                        @else
+                                        <div class="space-y-4 border-t border-slate-50">
+                                            <input type="file" wire:model="laporan_visitasi_file" class="block w-full text-[11px] text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-[10px] file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-100 rounded-xl p-2 bg-slate-50/50" />
+                                            <x-input-error :messages="$errors->get('laporan_visitasi_file')" />
+
+                                            <button wire:click="uploadLaporanVisitasi" wire:loading.attr="disabled" class="w-full bg-[#1e293b] hover:bg-black text-white px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3">
+                                                <svg wire:loading.remove wire:target="uploadLaporanVisitasi" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                </svg>
+                                                <svg wire:loading wire:target="uploadLaporanVisitasi" class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                {{ __('Simpan') }}
+                                            </button>
+                                        </div>
+                                        @endif
+                                </div>
                             </div>
                         </div>
                     </div>
