@@ -236,7 +236,7 @@ new #[Layout('layouts.app')] class extends Component {
                 Batal
             </button>
             <button type="button"
-                @click="confirmSave"
+                @click="confirmSave($wire)"
                 class="px-10 py-3 rounded-2xl bg-gray-900 text-white text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 {{ auth()->user()->pesantren->is_locked ? 'disabled' : '' }}>
                 <span>Simpan Perubahan</span>
