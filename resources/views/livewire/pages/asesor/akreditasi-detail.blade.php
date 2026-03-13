@@ -386,7 +386,6 @@
                                             <th class="border border-gray-300 px-2 py-3 text-center w-20 bg-green-50">NA 2</th>
                                             <th class="border border-gray-300 px-2 py-3 text-center w-20 bg-amber-50">NK</th>
                                             <th class="border border-gray-300 px-2 py-3 text-center w-48 bg-blue-50 text-[10px]">CATATAN BUTIR (NK)</th>
-                                            <th class="border border-gray-300 px-2 py-3 text-center w-56 bg-blue-50 text-[10px]">CATATAN REKOMENDASI KOMPONEN (NK)</th>
                                             @else
                                             <th class="border border-gray-300 px-2 py-3 text-center w-24">NA</th>
                                             @endif
@@ -454,16 +453,6 @@
                                                     placeholder="Catatan butir..."
                                                     {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
                                             </td>
-                                            @if ($index === 0)
-                                            <td rowspan="{{ $butirsCount }}"
-                                                class="border border-gray-300 p-0 align-top bg-blue-50/20 relative" style="min-width: 200px;">
-                                                <div class="absolute inset-0 p-1">
-                                                    <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                                        class="w-full h-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm rounded-md resize-none {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                        placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
-                                                </div>
-                                            </td>
-                                            @endif
                                             @endif
                                         </tr>
                                         @endforeach
@@ -472,7 +461,22 @@
                                 </table>
                             </div>
 
-
+                            @if ($this->asesorTipe == 1)
+                            <div class="mt-8 space-y-6">
+                                <h3 class="text-sm font-bold text-indigo-900 border-l-4 border-indigo-500 pl-3 uppercase">
+                                    Catatan Rekomendasi Komponen (NK)</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @foreach ($komponens as $komponen)
+                                    <div class="p-4 bg-blue-50/10 border border-blue-100 rounded-lg">
+                                        <label class="block text-xs font-bold text-gray-700 uppercase mb-2">{{ $komponen->nama }}</label>
+                                        <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
+                                            class="w-full border-gray-300 p-3 text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm rounded-md resize-y min-h-[100px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                            placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
                         </form>
 
                         <div
