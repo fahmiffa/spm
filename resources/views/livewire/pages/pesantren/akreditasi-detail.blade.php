@@ -434,12 +434,11 @@ new #[Layout('layouts.app')] class extends Component {
                             </h3>
 
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                                <table class="min-w-full text-xs">
+                                <table class="min-w-full text-sm">
                                     <thead class="bg-gray-100">
                                         <tr>
                                             <th class="border border-gray-300 px-3 py-2 text-left font-bold">Komponen</th>
-                                            <th class="border border-gray-300 px-3 py-2 text-center font-bold">Skor Komponen</th>
-                                            <th class="border border-gray-300 px-3 py-2 text-center font-bold">Total Skor</th>
+
                                             <th class="border border-gray-300 px-3 py-2 text-left font-bold">Catatan Rekomendasi</th>
                                         </tr>
                                     </thead>
@@ -491,18 +490,8 @@ new #[Layout('layouts.app')] class extends Component {
                                             <td class="border border-gray-300 px-3 py-2 font-medium text-gray-700 text-left uppercase">
                                                 {{ $komponen->nama }}
                                             </td>
-                                            <td class="border border-gray-300 px-3 py-2 text-blue-700 font-bold">
-                                                {{ $skorKomponen }}
-                                            </td>
-                                            @if ($index === 0)
-                                            <td rowspan="{{ $iprNullComponents->count() }}" class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-50 align-middle text-center">
-                                                {{ $totalSkorIprNull }}
-                                            </td>
-                                            @elseif ($index === $iprNullComponents->count())
-                                            <td class="border border-gray-300 px-3 py-2 text-green-900 font-bold text-lg bg-green-100 align-middle text-center">
-                                                {{ $skorKomponen }}
-                                            </td>
-                                            @endif
+
+
                                             <td class="border border-gray-300 px-3 py-2 text-left italic text-gray-600">
                                                 {!! $asesorCatatans[$komponen->id] ?? '-' !!}
                                             </td>
