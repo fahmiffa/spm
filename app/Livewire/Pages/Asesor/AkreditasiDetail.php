@@ -378,11 +378,32 @@ class AkreditasiDetail extends Component
 
         /** @var User $user */
         $user = Auth::user();
-        // Notify Admin
+        // Notify Admin (Pemberitahuan)
         $admins = User::whereHas('role', function ($q) {
             $q->where('id', 1);
         })->get();
-        Notification::send($admins, new AkreditasiNotification('assessment_selesai', 'Assessment Selesai', 'Asesor ' . $user->name . ' telah menyelesaikan assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name), route('admin.akreditasi')));
+        Notification::send($admins, new AkreditasiNotification(
+            'assessment_selesai', 
+            'Pemberitahuan: Assessment Selesai', 
+            'Assessment untuk ' . ($this->pesantren?->nama_pesantren ?? $this->akreditasi->user?->name ?? 'Pesantren') . ' telah diselesaikan oleh ' . $user->name . '. Menunggu unggahan Laporan Visitasi.', 
+            route('admin.akreditasi-detail', $this->akreditasi->uuid)
+        ));
+        
+        // Notify Assessors (Instruksi Upload)
+        $asesors = collect();
+        if ($this->akreditasi->assessment1?->asesor?->user) {
+            $asesors->push($this->akreditasi->assessment1->asesor->user);
+        }
+        if ($this->akreditasi->assessment2?->asesor?->user) {
+            $asesors->push($this->akreditasi->assessment2->asesor->user);
+        }
+
+        Notification::send($asesors->unique('id'), new AkreditasiNotification(
+            'input_laporan',
+            'Instruksi: Unggah Laporan Visitasi',
+            'Assessment untuk ' . ($this->pesantren?->nama_pesantren ?? $this->akreditasi->user?->name ?? 'Pesantren') . ' telah diverifikasi. Silakan ketua/anggota segera unggah Laporan Visitasi di tab yang tersedia.',
+            route('asesor.akreditasi-detail', $this->akreditasi->uuid)
+        ));
 
         // Notify Pesantren
         $this->akreditasi->user->notify(new AkreditasiNotification('validasi', 'Update Status: Validasi', 'Assessment telah selesai. Silakan unduh Kartu Kendali di menu dokumen, kemudian unggah kembali di menu akreditasi untuk melanjutkan proses validasi.', route('pesantren.akreditasi')));

@@ -426,16 +426,22 @@
                                                 {{ $butir->butir_pernyataan }}
                                             </td>
                                             <td class="border border-gray-300 p-0">
-                                                <select
-                                                    wire:model.live="asesorEvaluasis.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? '' : 'disabled' }}>
-                                                    <option value="">Pilih...</option>
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                </select>
+                                                @if ($akreditasi->status == 3)
+                                                    <div class="p-2 text-center font-bold text-gray-700 text-xs">
+                                                        {{ $asesorEvaluasis[$butir->id] ?: '-' }}
+                                                    </div>
+                                                @else
+                                                    <select
+                                                        wire:model.live="asesorEvaluasis.{{ $butir->id }}"
+                                                        class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-indigo-500 {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? 'bg-white' : 'bg-gray-100 cursor-not-allowed' }}"
+                                                        {{ $akreditasi->status == 4 && ($asesorTipe == 2 || !$isLocked) ? '' : 'disabled' }}>
+                                                        <option value="">Pilih...</option>
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                    </select>
+                                                @endif
                                                 @error('asesorEvaluasis.' . $butir->id)
                                                 <span class="text-red-500 text-[10px] px-2 pb-1 block">{{ $message }}</span>
                                                 @enderror
@@ -445,25 +451,37 @@
                                                 {{ $otherAsesorEvaluasis[$butir->id] ?? '' }}
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-amber-50/10">
-                                                <select
-                                                    wire:model.live="asesorNks.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
-                                                    {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
-                                                    <option value="">Pilih...</option>
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                </select>
+                                                @if ($akreditasi->status == 3)
+                                                    <div class="p-2 text-center font-bold text-amber-900 text-xs">
+                                                        {{ $asesorNks[$butir->id] ?: '-' }}
+                                                    </div>
+                                                @else
+                                                    <select
+                                                        wire:model.live="asesorNks.{{ $butir->id }}"
+                                                        class="w-full border-0 p-2 text-xs focus:ring-2 focus:ring-amber-500 {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                        {{ $akreditasi->status == 4 && !empty($asesorEvaluasis[$butir->id]) && !empty($otherAsesorEvaluasis[$butir->id]) ? '' : 'disabled' }}>
+                                                        <option value="">Pilih...</option>
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                    </select>
+                                                @endif
                                                 @error('asesorNks.' . $butir->id)
                                                 <span class="text-red-500 text-[10px] px-2 pb-1 block">{{ $message }}</span>
                                                 @enderror
                                             </td>
                                             <td class="border border-gray-300 p-0 bg-blue-50/10">
-                                                <textarea wire:model.live="asesorButirCatatans.{{ $butir->id }}"
-                                                    class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
-                                                    placeholder="Catatan butir..."
-                                                    {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                                @if ($akreditasi->status == 3)
+                                                    <div class="p-2 text-[10px] text-gray-700 whitespace-pre-line leading-relaxed">
+                                                        {{ $asesorButirCatatans[$butir->id] ?: '-' }}
+                                                    </div>
+                                                @else
+                                                    <textarea wire:model.live="asesorButirCatatans.{{ $butir->id }}"
+                                                        class="w-full border-0 p-2 text-[10px] focus:ring-2 focus:ring-blue-500 min-h-[60px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
+                                                        placeholder="Catatan butir..."
+                                                        {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                                @endif
                                             </td>
                                             @endif
                                         </tr>
@@ -481,10 +499,16 @@
                                     @foreach ($komponens as $komponen)
                                     <div class="p-4 bg-blue-50/10 border border-blue-100 rounded-lg">
                                         <label class="block text-xs font-bold text-gray-700 uppercase mb-2">{{ $komponen->nama }}</label>
-                                        <x-quill-editor 
-                                            wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                            placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." 
-                                            :disabled="$akreditasi->status != 4" />
+                                        @if ($akreditasi->status == 3)
+                                            <div class="text-sm text-gray-800 bg-white p-3 rounded-lg border border-blue-100 min-h-[60px] leading-relaxed shadow-sm">
+                                                {!! $asesorCatatans[$komponen->id] ?: '<span class="text-gray-400 italic">Tidak ada catatan.</span>' !!}
+                                            </div>
+                                        @else
+                                            <x-quill-editor 
+                                                wire:model.live="asesorCatatans.{{ $komponen->id }}"
+                                                placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." 
+                                                :disabled="$akreditasi->status != 4" />
+                                        @endif
                                     </div>
                                     @endforeach
                                 </div>

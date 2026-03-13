@@ -262,6 +262,17 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
+        // Check if Kartu Kendali and Laporan Visitasi are uploaded
+        if (empty($this->akreditasi->kartu_kendali) || empty($this->akreditasi->laporan_visitasi_file)) {
+            $this->dispatch(
+                'notification-received',
+                type: 'error',
+                title: 'Data Belum Lengkap',
+                message: 'Nilai NV belum dapat disimpan karena Kartu Kendali atau Laporan Visitasi belum diunggah.'
+            );
+            return;
+        }
+
         try {
             $this->validate([
                 'adminNvs.*' => 'required|integer|between:1,4',
@@ -914,6 +925,23 @@ new #[Layout('layouts.app')] class extends Component {
 
                         @if ($activeTab === 'instrumen')
                         <div class="space-y-6">
+                            @if ($akreditasi->status == 3 && (empty($akreditasi->kartu_kendali) || empty($akreditasi->laporan_visitasi_file)))
+                            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-start space-x-3 mb-6">
+                                <div class="flex-shrink-0">
+                                    <div class="w-5 h-5 bg-amber-200 rounded-full flex items-center justify-center">
+                                        <svg class="w-3.5 h-3.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-xs font-bold text-amber-900 uppercase tracking-tight">Kelengkapan Dokumen Wajib</h4>
+                                    <p class="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                                        Nilai NV (Nilai Verifikasi) hanya dapat disimpan apabila <b>Kartu Kendali</b> dan <b>Laporan Visitasi</b> telah diunggah ke dalam sistem.
+                                    </p>
+                                </div>
+                            </div>
+                            @endif
 
                             <div class="overflow-x-auto mt-4">
                                 <table class="min-w-full border-collapse border border-gray-300 text-xs md:text-sm">
