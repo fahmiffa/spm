@@ -368,6 +368,21 @@ new #[Layout('layouts.app')] class extends Component {
                             </tbody>
                         </table>
                     </div>
+                    <div class="mt-8 space-y-4">
+                        <h3 class="text-sm font-bold text-gray-700 border-l-4 border-gray-400 pl-3 uppercase">
+                            Catatan Kinerja Satuan Pendidikan (Per Komponen)
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            @foreach ($komponens as $komponen)
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">{{ $komponen->nama }}</h4>
+                                <div class="text-sm text-gray-800 leading-relaxed">
+                                    {{ $pesantrenCatatans[$komponen->id] ?: 'Tidak ada catatan.' }}
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
                     @endif
 
                     @if ($activeTab === 'hasil')

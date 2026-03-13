@@ -311,7 +311,7 @@
                                         <th class="border border-gray-300 px-4 py-2 text-left">Pernyataan</th>
                                         <th class="border border-gray-300 px-4 py-2">Isian Pesantren</th>
                                         <th class="border border-gray-300 px-4 py-2">Bukti Pesantren</th>
-                                        <th class="border border-gray-300 px-4 py-2">Catatan Komponen</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -336,19 +336,28 @@
                                             <span class="text-gray-400 italic">-</span>
                                             @endif
                                         </td>
-                                        @if ($idx === 0)
-                                        <td rowspan="{{ $butirsCount }}"
-                                            class="border border-gray-300 px-4 py-2 text-[10px] bg-gray-50 align-top">
-                                            <span class="font-bold text-gray-500">KOMPONEN:
-                                                {{ $komponen->nama }}</span><br>
-                                            {{ $pesantrenCatatans[$komponen->id] }}
-                                        </td>
-                                        @endif
+
                                     </tr>
                                     @endforeach
                                     @endforeach
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div class="mt-8 space-y-4">
+                            <h3 class="text-sm font-bold text-gray-700 border-l-4 border-gray-400 pl-3 uppercase">
+                                Catatan Kinerja Satuan Pendidikan (Per Komponen)
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                @foreach ($komponens as $komponen)
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <h4 class="text-xs font-bold text-gray-500 uppercase mb-2">{{ $komponen->nama }}</h4>
+                                    <div class="text-sm text-gray-800 leading-relaxed">
+                                        {{ $pesantrenCatatans[$komponen->id] ?: 'Tidak ada catatan.' }}
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                     @endif

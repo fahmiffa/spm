@@ -2,8 +2,8 @@
 
 @php
 $classes = ($active ?? false)
-? 'group flex items-center px-4 py-2.5 text-sm font-bold rounded-xl bg-slate-100/80 text-slate-900 transition duration-150'
-: 'group flex items-center px-4 py-2.5 text-sm font-medium rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition duration-150';
+? 'group flex items-center px-4 py-2.5 text-base font-bold rounded-xl bg-slate-100/80 text-slate-900 transition duration-150'
+: 'group flex items-center px-4 py-2.5 text-base font-medium rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition duration-150';
 
 $iconClasses = ($active ?? false)
 ? 'mr-4 flex-shrink-0 h-5 w-5 text-slate-800'
