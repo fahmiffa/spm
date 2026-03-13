@@ -489,7 +489,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             </td>
                                             @endif
                                             <td class="border border-gray-300 px-3 py-2 text-left italic text-gray-600">
-                                                {{ $asesorCatatans[$komponen->id] ?? '-' }}
+                                                {!! $asesorCatatans[$komponen->id] ?? '-' !!}
                                             </td>
                                         </tr>
                                         @endforeach

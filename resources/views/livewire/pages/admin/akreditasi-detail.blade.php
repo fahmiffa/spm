@@ -987,7 +987,7 @@ new #[Layout('layouts.app')] class extends Component {
                                             @if ($index === 0)
                                             <td rowspan="{{ $butirsCount }}"
                                                 class="border border-gray-300 px-2 py-2 bg-indigo-50/20 align-top text-[10px] text-gray-700">
-                                                {{ $asesor1Catatans[$komponen->id] ?? '-' }}
+                                                {!! $asesor1Catatans[$komponen->id] ?? '-' !!}
                                             </td>
                                             @endif
                                         </tr>

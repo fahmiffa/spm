@@ -472,9 +472,10 @@
                                     @foreach ($komponens as $komponen)
                                     <div class="p-4 bg-blue-50/10 border border-blue-100 rounded-lg">
                                         <label class="block text-xs font-bold text-gray-700 uppercase mb-2">{{ $komponen->nama }}</label>
-                                        <textarea wire:model.live="asesorCatatans.{{ $komponen->id }}"
-                                            class="w-full border-gray-300 p-3 text-xs focus:ring-2 focus:ring-indigo-500 shadow-sm rounded-md resize-y min-h-[100px] {{ $akreditasi->status == 4 ? 'bg-white' : 'bg-gray-50 cursor-not-allowed' }}"
-                                            placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." {{ $akreditasi->status == 4 ? '' : 'disabled' }}></textarea>
+                                        <x-quill-editor 
+                                            wire:model.live="asesorCatatans.{{ $komponen->id }}"
+                                            placeholder="Masukkan catatan rekomendasi {{ $komponen->nama }}..." 
+                                            :disabled="$akreditasi->status != 4" />
                                     </div>
                                     @endforeach
                                 </div>

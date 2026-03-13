@@ -12,6 +12,7 @@ import { akreditasiPesantren } from "./alpine/akreditasi";
 import { adminManagement } from "./alpine/admin";
 import { asesorManagement } from "./alpine/asesor";
 import { dashboardCharts } from "./alpine/dashboard";
+import quillEditor from "./components/quill-editor";
 
 document.addEventListener("alpine:init", () => {
     Alpine.data("fileManagement", fileManagement);
@@ -23,6 +24,7 @@ document.addEventListener("alpine:init", () => {
     Alpine.data("asesorManagement", asesorManagement);
     Alpine.data("wilayahSelector", wilayahSelector);
     Alpine.data("dashboardCharts", dashboardCharts);
+    Alpine.data("quillEditor", quillEditor);
 
     Alpine.data("deleteConfirmation", () => ({
         confirmDelete(id, methodName, text = "Hapus data ini?") {
