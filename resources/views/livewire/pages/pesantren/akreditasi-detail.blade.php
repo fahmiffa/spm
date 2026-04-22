@@ -1,14 +1,5 @@
 <?php
 
-use App\Models\Akreditasi;
-use App\Models\Pesantren;
-use App\Models\Ipm;
-use App\Models\SdmPesantren;
-use App\Models\MasterEdpmKomponen;
-use App\Models\Edpm;
-use App\Models\EdpmCatatan;
-use App\Models\AkreditasiEdpm;
-use App\Models\AkreditasiEdpmCatatan;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -57,56 +48,43 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function mount($uuid)
     {
-        $this->akreditasi = Akreditasi::with(['assessments.asesor.user', 'assessment1', 'assessment2'])
-            ->where('uuid', $uuid)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $data = $pesantrenService->getAkreditasiDetail($uuid, Auth::id());
 
-        $userId = $this->akreditasi->user_id;
-        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
-        $this->ipm = Ipm::where('user_id', $userId)->first();
-        $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+        $this->akreditasi = $data['akreditasi'];
+        $this->pesantren = $data['pesantren'];
+        $this->ipm = $data['ipm'];
+        $this->sdm = $data['sdm'];
+        $this->komponens = $data['komponens'];
+        $this->visitasiTemplate = $data['visitasiTemplate'];
 
         if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
             $this->levels = $this->pesantren->units->pluck('unit')->toArray();
         }
 
-        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
-        $this->visitasiTemplate = \App\Models\Document::where('type', 'visitasi')->where('status', 1)->first();
+        // Pesantren EDPM
+        $this->pesantrenEvaluasis = $data['pesantren_edpm']['evaluasis'];
+        $this->pesantrenLinks = $data['pesantren_edpm']['links'];
+        $this->pesantrenCatatans = $data['pesantren_edpm']['catatans']->toArray();
 
-        // Load Pesantren EDPM
-        $pEdpms = Edpm::where('user_id', $userId)->get();
-        $pEvaluasis = $pEdpms->pluck('isian', 'butir_id');
-        $pLinks = $pEdpms->pluck('link', 'butir_id');
-        $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
-
-        // Load Assessor/Admin data if available (status 1, 2, 3, 4, 5)
-        $asesor1Id = $this->akreditasi->assessment1->asesor_id ?? null;
-        if ($asesor1Id) {
-            $a1Edpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor1Id)->get();
-            $this->asesor1Evaluasis = $a1Edpms->pluck('isian', 'butir_id');
-            $this->asesor1Nks = $a1Edpms->pluck('nk', 'butir_id');
-            $this->adminNvs = $a1Edpms->pluck('nv', 'butir_id');
-            $this->asesorButirCatatans = $a1Edpms->pluck('catatan', 'butir_id');
-            $this->asesorCatatans = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)
-                ->where('asesor_id', $asesor1Id)
-                ->get()
-                ->pluck('catatan', 'komponen_id');
+        // Assessor 1
+        if (!empty($data['asesor1'])) {
+            $this->asesor1Evaluasis = $data['asesor1']['evaluasis'];
+            $this->asesor1Nks = $data['asesor1']['nks'];
+            $this->adminNvs = $data['asesor1']['nvs'];
+            $this->asesorButirCatatans = $data['asesor1']['butir_catatans'];
+            $this->asesorCatatans = $data['asesor1']['catatans'];
         }
 
-        $asesor2Id = $this->akreditasi->assessment2->asesor_id ?? null;
-        if ($asesor2Id) {
-            $this->asesor2Evaluasis = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)
-                ->where('asesor_id', $asesor2Id)
-                ->get()
-                ->pluck('isian', 'butir_id');
+        // Assessor 2
+        if (!empty($data['asesor2'])) {
+            $this->asesor2Evaluasis = $data['asesor2']['evaluasis'];
         }
 
+        // Ensure all components have entries in catatans
         foreach ($this->komponens as $komponen) {
-            $this->pesantrenCatatans[$komponen->id] = $pCatatans[$komponen->id] ?? '';
-            foreach ($komponen->butirs as $butir) {
-                $this->pesantrenEvaluasis[$butir->id] = $pEvaluasis[$butir->id] ?? '';
-                $this->pesantrenLinks[$butir->id] = $pLinks[$butir->id] ?? null;
+            if (!isset($this->pesantrenCatatans[$komponen->id])) {
+                $this->pesantrenCatatans[$komponen->id] = '';
             }
         }
     }
@@ -127,6 +105,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function uploadKartuKendali()
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        
         if ($this->akreditasi->status != 3) {
             return;
         }
@@ -141,22 +121,7 @@ new #[Layout('layouts.app')] class extends Component {
 
         $path = $this->kartu_kendali_file->store('akreditasi/kartu_kendali', 'public');
 
-        $this->akreditasi->update([
-            'kartu_kendali' => $path
-        ]);
-
-        // Fetch all Admin users (Role ID 1)
-        $admins = \App\Models\User::whereHas('role', function ($q) {
-            $q->where('id', 1);
-        })->get();
-
-        // Notify Admin: Kartu Kendali Uploaded
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
-            'kartu_kendali_diunggah',
-            'Kartu Kendali Diunggah',
-            'Pesantren ' . ($this->akreditasi->user->pesantren->nama_pesantren ?? $this->akreditasi->user->name) . ' telah mengunggah kembali Kartu Kendali.',
-            route('admin.akreditasi-detail', $this->akreditasi->uuid)
-        ));
+        $pesantrenService->uploadKartuKendali($this->akreditasi->id, $path);
 
         $this->reset(['kartu_kendali_file']);
 
@@ -178,8 +143,8 @@ new #[Layout('layouts.app')] class extends Component {
                     <div>
                         <h2 class="text-2xl font-bold text-gray-800">Detail Pengajuan Akreditasi</h2>
                         <p class="text-sm text-gray-500">Status:
-                            <span class="font-semibold {{ Akreditasi::getStatusBadgeClass($akreditasi->status) }} px-2 py-0.5 rounded text-[10px]">
-                                {{ Akreditasi::getStatusLabel($akreditasi->status) }}
+                            <span class="font-semibold {{ \App\Models\Akreditasi::getStatusBadgeClass($akreditasi->status) }} px-2 py-0.5 rounded text-[10px]">
+                                {{ \App\Models\Akreditasi::getStatusLabel($akreditasi->status) }}
                             </span>
                         </p>
                     </div>

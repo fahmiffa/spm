@@ -63,110 +63,36 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getAkreditasisProperty()
     {
-        return Akreditasi::with(['assessments', 'catatans', 'assessment1'])
-            ->where('user_id', Auth::id())
-            ->when($this->periodeFilter, fn($q) => $q->whereYear('created_at', $this->periodeFilter))
-            ->when($this->statusFilter, fn($q) => $q->where('status', $this->statusFilter))
-            ->when($this->search, function ($query) {
-                $query->where('nomor_sk', 'like', '%' . $this->search . '%')
-                    ->orWhere('peringkat', 'like', '%' . $this->search . '%');
-            })
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        return $pesantrenService->getAkreditasis(
+            Auth::id(),
+            $this->search,
+            $this->periodeFilter,
+            $this->statusFilter,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function create($parentId = null)
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
         $userId = Auth::id();
 
-        // Check if already resubmitted
-        if ($parentId) {
-            $isResubmitted = Akreditasi::where('parent', $parentId)->exists();
-            if ($isResubmitted) {
-                $this->dispatch(
-                    'notification-received',
-                    type: 'error',
-                    title: 'Gagal!',
-                    message: 'Pengajuan ini sudah pernah diajukan ulang sebelumnya.'
-                );
-                return;
-            }
-        }
-
-        $missingData = [];
-
-        // 1. Check Profil Pesantren
-        $pesantren = Pesantren::where('user_id', $userId)->first();
-        if (!$pesantren) {
-            $missingData[] = 'Profil Pesantren belum diisi';
-        } else {
-            // Check critical fields or documents if needed. For now, just existence.
-            if (empty($pesantren->nama_pesantren)) {
-                $missingData[] = 'Nama Pesantren di Profil belum diisi';
-            }
-        }
-
-        // 2. Check IPM
-        $ipm = Ipm::where('user_id', $userId)->first();
-        if (!$ipm) {
-            $missingData[] = 'Data IPM belum diisi';
-        } else {
-            if (!$ipm->nsp_file) $missingData[] = 'Dokumen NSP di IPM belum diunggah';
-            if (!$ipm->lulus_santri_file) $missingData[] = 'Dokumen Kelulusan Santri di IPM belum diunggah';
-            if (!$ipm->kurikulum_file) $missingData[] = 'Dokumen Kurikulum di IPM belum diunggah';
-            if (!$ipm->buku_ajar_file) $missingData[] = 'Dokumen Buku Ajar di IPM belum diunggah';
-        }
-
-        // 3. Check SDM
-        // Check if there is at least one SDM record
-        $sdmCount = SdmPesantren::where('user_id', $userId)->count();
-        if ($sdmCount === 0) {
-            $missingData[] = 'Data SDM belum diisi';
-        }
-
-        // 4. Check EDPM
-        // Compare total evaluated butirs vs total master butirs
-        $totalButirs = MasterEdpmButir::count();
-        $evaluatedButirs = Edpm::where('user_id', $userId)->count();
-
-        if ($evaluatedButirs < $totalButirs) {
-            $missingData[] = 'Evaluasi Diri (EDPM) belum lengkap (' . $evaluatedButirs . '/' . $totalButirs . ' butir terisi)';
-        }
+        $missingData = $pesantrenService->checkDataCompleteness($userId);
 
         if (!empty($missingData)) {
             $errorMessage = "<ul class='text-left list-disc pl-5 mt-2'><li>" . implode("</li><li>", $missingData) . "</li></ul>";
-
-            $this->dispatch(
-                'show-validation-alert',
-                title: 'Data Belum Lengkap!',
-                html: "Mohon lengkapi data berikut sebelum mengajukan akreditasi:<br>" . $errorMessage
-            );
+            $this->dispatch('show-validation-alert', title: 'Data Belum Lengkap!', html: "Mohon lengkapi data berikut sebelum mengajukan akreditasi:<br>" . $errorMessage);
             return;
         }
 
-        $akreditasi = Akreditasi::create([
-            'user_id' => $userId,
-            'status' => 6, // 6. Pengajuan
-            'parent' => $parentId,
-        ]);
-
-        // Lock Pesantren Data
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $user->pesantren->update(['is_locked' => true]);
-
-        // Notify Admin
-        $admins = \App\Models\User::whereHas('role', function ($q) {
-            $q->where('id', 1);
-        })->get();
-        \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
-            'pengajuan',
-            'Pengajuan Akreditasi Baru',
-            'Pesantren ' . ($user->pesantren->nama_pesantren ?? $user->name) . ' telah membuat pengajuan akreditasi baru.',
-            route('admin.akreditasi')
-        ));
-
-        session()->flash('status', 'Pengajuan akreditasi berhasil dibuat.');
+        if ($pesantrenService->createSubmission($userId, $parentId)) {
+            session()->flash('status', 'Pengajuan akreditasi berhasil dibuat.');
+        } else {
+            $this->dispatch('notification-received', type: 'error', title: 'Gagal!', message: 'Pengajuan ini sudah pernah diajukan ulang sebelumnya.');
+        }
     }
 
     public function delete($id)
@@ -184,56 +110,16 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function cancelSubmission($id)
     {
-        $akreditasi = Akreditasi::where('user_id', Auth::id())
-            ->where('status', 6)
-            ->findOrFail($id);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $pesantrenService->cancelSubmission($id, Auth::id());
 
-        $akreditasi->delete();
-
-        // Unlock Pesantren Data if no more active accreditations
-        $hasActive = Akreditasi::where('user_id', Auth::id())
-            ->whereIn('status', [3, 4, 5, 6])
-            ->exists();
-
-        if (!$hasActive) {
-            $pesantren = Auth::user()->pesantren;
-            if ($pesantren) {
-                $pesantren->update(['is_locked' => false]);
-            }
-        }
-
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Dibatalkan!',
-            message: 'Pengajuan akreditasi telah berhasil dibatalkan.'
-        );
+        $this->dispatch('notification-received', type: 'success', title: 'Dibatalkan!', message: 'Pengajuan akreditasi telah berhasil dibatalkan.');
     }
 
     public function banding($id, $alasan)
     {
-        $akreditasi = Akreditasi::where('user_id', Auth::id())->findOrFail($id);
-
-        // Ensure status is 2 (Rejected) and has assessments
-        if ($akreditasi->status == 2 && $akreditasi->assessments()->exists()) {
-            $akreditasi->update([
-                'status' => 3, // 3. Validasi
-                'catatan' => $alasan,
-            ]);
-
-            // Notify Admin
-            $admins = \App\Models\User::whereHas('role', function ($q) {
-                $q->where('id', 1);
-            })->get();
-            /** @var \App\Models\User $user */
-            $user = Auth::user();
-            \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
-                'banding',
-                'Pengajuan Banding Baru',
-                'Pesantren ' . ($user->pesantren->nama_pesantren ?? $user->name) . ' telah mengajukan banding akreditasi.',
-                route('admin.akreditasi')
-            ));
-
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        if ($pesantrenService->submitAppeals($id, Auth::id(), $alasan)) {
             session()->flash('status', 'Pengajuan banding berhasil dikirim. Status berubah menjadi Validasi.');
         } else {
             session()->flash('error', 'Gagal mengajukan banding. Pastikan status pengajuan adalah Ditolak dan sudah melalui tahap Assessment.');

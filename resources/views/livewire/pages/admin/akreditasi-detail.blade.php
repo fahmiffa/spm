@@ -76,46 +76,50 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
-        $this->akreditasi = Akreditasi::with(['user.pesantren', 'assessments.asesor.user', 'assessment1', 'assessment2'])
-            ->where('uuid', $uuid)
-            ->firstOrFail();
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+
+        $this->akreditasi = $akreditasiService->findAkreditasi($uuid, ['user.pesantren', 'assessments.asesor.user', 'assessment1', 'assessment2']);
+
+        if (!$this->akreditasi) {
+            abort(404);
+        }
 
         $userId = $this->akreditasi->user_id;
-        $this->pesantren = Pesantren::with('units')->where('user_id', $userId)->first();
-        $this->ipm = Ipm::where('user_id', $userId)->first();
-        $this->sdm = SdmPesantren::where('user_id', $userId)->get()->keyBy('tingkat');
+        $this->pesantren = $pesantrenService->getProfile($userId);
+        $this->ipm = $pesantrenService->getIpm($userId);
+        $this->sdm = $pesantrenService->getSdm($userId)->keyBy('tingkat');
         if ($this->pesantren && $this->pesantren->relationLoaded('units')) {
             $this->levels = $this->pesantren->units->pluck('unit')->toArray();
         }
-        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
+        
+        $pEdpmData = $pesantrenService->getEdpmData($userId);
+        $this->komponens = $pEdpmData['komponens'];
 
         // Load Pesantren EDPM
-        $pEdpms = Edpm::where('user_id', $userId)->get();
-        $pEvaluasis = $pEdpms->pluck('isian', 'butir_id');
-        $pLinks = $pEdpms->pluck('link', 'butir_id');
-        $pCatatans = EdpmCatatan::where('user_id', $userId)->get()->pluck('catatan', 'komponen_id');
+        $pEvaluasis = $pEdpmData['existingEdpms']->pluck('isian', 'butir_id');
+        $pLinks = $pEdpmData['existingEdpms']->pluck('link', 'butir_id');
+        $pCatatans = $pEdpmData['existingCatatans'];
 
         // Load Assessor 1 EDPM
         $asesor1Id = $this->akreditasi->assessment1->asesor_id ?? null;
         if ($asesor1Id) {
-            $a1Edpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor1Id)->get();
-            $a1Evaluasis = $a1Edpms->pluck('isian', 'butir_id');
-            $a1Nks = $a1Edpms->pluck('nk', 'butir_id');
-            $a1Nvs = $a1Edpms->pluck('nv', 'butir_id');
-            $a1ButirCatatans = $a1Edpms->pluck('catatan', 'butir_id');
-
-            $a1CatatansModels = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor1Id)->get();
-            $a1Catatans = $a1CatatansModels->pluck('catatan', 'komponen_id');
-            $a1CatatanNks = $a1CatatansModels->pluck('nk', 'komponen_id');
+            $a1Data = $akreditasiService->getAsesorEdpmData($this->akreditasi->id, $asesor1Id);
+            $a1Evaluasis = $a1Data['evaluasis'];
+            $a1Nks = $a1Data['nks'];
+            $a1Nvs = $a1Data['nvs'];
+            $a1ButirCatatans = $a1Data['butirCatatans'];
+            $a1Catatans = $a1Data['catatans'];
+            $a1CatatanNks = $a1Data['catatanNks'];
         }
 
         // Load Assessor 2 EDPM
         $asesor2Id = $this->akreditasi->assessment2->asesor_id ?? null;
         if ($asesor2Id) {
-            $a2Edpms = AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor2Id)->get();
-            $a2Evaluasis = $a2Edpms->pluck('isian', 'butir_id');
-            $a2ButirCatatans = $a2Edpms->pluck('catatan', 'butir_id');
-            $a2Catatans = AkreditasiEdpmCatatan::where('akreditasi_id', $this->akreditasi->id)->where('asesor_id', $asesor2Id)->get()->pluck('catatan', 'komponen_id');
+            $a2Data = $akreditasiService->getAsesorEdpmData($this->akreditasi->id, $asesor2Id);
+            $a2Evaluasis = $a2Data['evaluasis'];
+            $a2ButirCatatans = $a2Data['butirCatatans'];
+            $a2Catatans = $a2Data['catatans'];
         }
 
         foreach ($this->komponens as $komponen) {
@@ -176,58 +180,20 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function saveVisitasiReschedule()
     {
-        if (in_array($this->akreditasi->status, [1, 2])) {
-            $this->dispatch(
-                'notification-received',
-                type: 'error',
-                title: 'Akses Ditolak',
-                message: 'Reschedule tidak dapat dilakukan karena akreditasi sudah selesai.'
-            );
-            return;
-        }
-
-        $assessment = $this->akreditasi->assessment1; // Main range
-
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        
         $this->validate([
-            'tgl_visitasi' => [
-                'required',
-                'date',
-                function ($attribute, $value, $fail) use ($assessment) {
-                    if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
-                        $fail('Tanggal visitasi harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
-                    }
-                },
-            ],
-            'tgl_visitasi_akhir' => [
-                'required',
-                'date',
-                'after_or_equal:tgl_visitasi',
-                function ($attribute, $value, $fail) use ($assessment) {
-                    if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
-                        $fail('Tanggal visitasi akhir harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
-                    }
-
-                    $start = \Carbon\Carbon::parse($this->tgl_visitasi);
-                    $end = \Carbon\Carbon::parse($value);
-                    if ($start->diffInDays($end) >= 4) {
-                        $fail('Rentang visitasi maksimal adalah 4 hari.');
-                    }
-                },
-            ],
+            'tgl_visitasi' => 'required|date',
+            'tgl_visitasi_akhir' => 'required|date|after_or_equal:tgl_visitasi',
         ]);
 
-        $this->akreditasi->update([
-            'tgl_visitasi' => $this->tgl_visitasi,
-            'tgl_visitasi_akhir' => $this->tgl_visitasi_akhir,
-        ]);
-
-        $this->dispatch('close-modal', 'visitasi-edit-modal');
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Berhasil!',
-            message: 'Jadwal Visitasi berhasil diperbarui.'
-        );
+        if ($akreditasiService->rescheduleVisitasi($this->akreditasi->id, $this->tgl_visitasi, $this->tgl_visitasi_akhir)) {
+            $this->dispatch('close-modal', 'visitasi-edit-modal');
+            $this->dispatch('notification-received', type: 'success', title: 'Berhasil!', message: 'Jadwal Visitasi berhasil diperbarui.');
+            $this->akreditasi->refresh();
+        } else {
+             $this->dispatch('notification-received', type: 'error', title: 'Gagal!', message: 'Jadwal Visitasi gagal diperbarui.');
+        }
     }
 
     public function setTab($tab)
@@ -312,13 +278,9 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
-        foreach ($this->adminNvs as $butirId => $nv) {
-            if (!empty($nv)) {
-                AkreditasiEdpm::where('akreditasi_id', $this->akreditasi->id)
-                    ->where('butir_id', $butirId)
-                    ->where('asesor_id', $asesor1Id)
-                    ->update(['nv' => $nv]);
-            }
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        if ($asesor1Id) {
+            $akreditasiService->updateAdminNv($this->akreditasi->id, $asesor1Id, $this->adminNvs);
         }
 
         $this->dispatch(
@@ -396,43 +358,19 @@ new #[Layout('layouts.app')] class extends Component {
             'sertifikat_file' => 'required|file|mimes:pdf|max:10240',
             'masa_berlaku' => 'required|date',
             'masa_berlaku_akhir' => 'required|date|after:masa_berlaku',
-        ], [
-            'nomor_sk.required' => 'Nomor SK wajib diisi.',
-            'sertifikat_file.required' => 'File Sertifikat wajib diunggah.',
-            'sertifikat_file.mimes' => 'Format file sertifikat harus PDF.',
-            'masa_berlaku.required' => 'Tanggal mulai berlaku wajib diisi.',
-            'masa_berlaku_akhir.required' => 'Tanggal akhir berlaku wajib diisi.',
-            'masa_berlaku_akhir.after' => 'Tanggal akhir harus setelah tanggal mulai.',
         ]);
 
-        $sertifikatPath = $this->sertifikat_file->store('akreditasi/sertifikat', 'public');
-
         $results = $this->determineResults();
-
-        $this->akreditasi->update([
-            'status' => 1,
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        
+        $akreditasiService->finalizeAkreditasi($this->akreditasi->id, [
             'nomor_sk' => $this->nomor_sk,
-            'sertifikat_path' => $sertifikatPath,
+            'sertifikat_file' => $this->sertifikat_file,
             'masa_berlaku' => $this->masa_berlaku,
             'masa_berlaku_akhir' => $this->masa_berlaku_akhir,
             'nilai' => $results['nilai'],
             'peringkat' => $results['peringkat'],
-        ]);
-
-        // Notify Pesantren
-        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('validasi', 'Akreditasi Disetujui', 'Selamat! Pengajuan akreditasi Anda telah disetujui dengan nomor SK: ' . $this->nomor_sk, route('pesantren.akreditasi-detail', $this->akreditasi->uuid)));
-
-        // Notify Asesor 1
-        $asesor1User = $this->akreditasi->assessment1->asesor->user ?? null;
-        if ($asesor1User) {
-            $asesor1User->notify(new \App\Notifications\AkreditasiNotification('validasi', 'Akreditasi Divalidasi', 'Hasil assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name) . ' telah divalidasi oleh Admin.', route('asesor.akreditasi')));
-        }
-
-        // Notify Asesor 2
-        $asesor2User = $this->akreditasi->assessment2->asesor->user ?? null;
-        if ($asesor2User) {
-            $asesor2User->notify(new \App\Notifications\AkreditasiNotification('validasi', 'Akreditasi Divalidasi', 'Hasil assessment untuk ' . ($this->pesantren->nama_pesantren ?? $this->akreditasi->user->name) . ' telah divalidasi oleh Admin.', route('asesor.akreditasi')));
-        }
+        ], true);
 
         session()->flash('status', 'Akreditasi berhasil disetujui.');
         return redirect()->route('admin.akreditasi');
@@ -446,22 +384,12 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->validate([
             'catatan_admin' => 'required|string',
-        ], [
-            'catatan_admin.required' => 'Catatan penolakan wajib diisi.',
         ]);
 
-        $this->akreditasi->update([
-            'status' => 2,
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        $akreditasiService->finalizeAkreditasi($this->akreditasi->id, [
             'catatan' => $this->catatan_admin,
-        ]);
-
-        // Notify Pesantren
-        $this->akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
-            'ditolak',
-            'Akreditasi Ditolak',
-            'Pengajuan akreditasi Anda ditolak. Catatan: ' . $this->catatan_admin,
-            route('pesantren.akreditasi-detail', $this->akreditasi->uuid)
-        ));
+        ], false);
 
         session()->flash('status', 'Akreditasi telah ditolak.');
         return redirect()->route('admin.akreditasi');

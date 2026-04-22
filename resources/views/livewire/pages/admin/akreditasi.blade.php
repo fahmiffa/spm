@@ -60,7 +60,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function openCatatanModal($id)
     {
-        $this->selectedAkreditasiNotes = Akreditasi::with(['catatans.user'])->find($id);
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        $this->selectedAkreditasiNotes = $akreditasiService->findAkreditasiById($id, ['catatans.user']);
         $this->dispatch('open-modal', 'catatan-modal');
     }
 
@@ -95,59 +96,48 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getAkreditasisProperty()
     {
-        $query = Akreditasi::with(['user.pesantren', 'assessments', 'catatans.user']);
-
-        if ($this->statusFilter === 'pengajuan') {
-            $query->where('status', 6);
-        } elseif ($this->statusFilter === 'assessment') {
-            $query->where('status', 5);
-        } elseif ($this->statusFilter === 'visitasi') {
-            $query->where('status', '<=', 4);
-        }
-
-        if ($this->search) {
-            $query->whereHas('user', function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('pesantren', function ($q2) {
-                        $q2->where('nama_pesantren', 'like', '%' . $this->search . '%');
-                    });
-            });
-        }
-
-        return $query->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        return $akreditasiService->getPaginatedAkreditasis(
+            $this->statusFilter,
+            $this->search,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function getCountPengajuanProperty()
     {
-        return Akreditasi::where('status', 6)->count();
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        return $akreditasiService->getStatusCounts()['pengajuan'];
     }
 
     public function getCountAssessmentProperty()
     {
-        return Akreditasi::where('status', 5)->count();
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        return $akreditasiService->getStatusCounts()['assessment'];
     }
 
     public function getCountVisitasiProperty()
     {
-        return Akreditasi::where('status', '<=', 4)->count();
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        return $akreditasiService->getStatusCounts()['visitasi'];
     }
 
     public function getAsesorsProperty()
     {
-        return Asesor::with('user')
-            ->whereDoesntHave('assessments', function ($query) {
-                $query->whereHas('akreditasi', function ($q) {
-                    $q->whereNotIn('status', [1, 2]);
-                });
-            })
-            ->get();
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        return $akreditasiService->getAvailableAsesors();
     }
 
     public function delete($id)
     {
-        Akreditasi::findOrFail($id)->delete();
-        session()->flash('status', 'Pengajuan akreditasi berhasil dihapus.');
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        if ($akreditasiService->deleteAkreditasi($id)) {
+            session()->flash('status', 'Pengajuan akreditasi berhasil dihapus.');
+        } else {
+            session()->flash('error', 'Gagal menghapus pengajuan akreditasi.');
+        }
     }
 
     public function openVerifikasiModal($id)
@@ -165,95 +155,32 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function verifikasi()
     {
-        // Validasi berdasarkan action_type
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+
         if ($this->action_type === 'approve') {
             $this->validate([
-                'asesor_id1' => 'required|exists:asesors,id',
-                'asesor_id2' => 'nullable|exists:asesors,id|different:asesor_id1',
+                'asesor_id1' => 'required',
+                'asesor_id2' => 'nullable|different:asesor_id1',
                 'tanggal_mulai' => 'required|date',
                 'tanggal_berakhir' => 'required|date|after_or_equal:tanggal_mulai',
-            ], [
-                'asesor_id1.required' => 'Asesor 1 wajib dipilih.',
-                'asesor_id1.exists' => 'Asesor 1 tidak valid.',
-                'asesor_id2.exists' => 'Asesor 2 tidak valid.',
-                'asesor_id2.different' => 'Asesor 1 dan Asesor 2 harus berbeda.',
-                'tanggal_mulai.required' => 'Tanggal mulai wajib diisi.',
-                'tanggal_mulai.date' => 'Format tanggal mulai salah.',
-                'tanggal_berakhir.required' => 'Tanggal berakhir wajib diisi.',
-                'tanggal_berakhir.date' => 'Format tanggal berakhir salah.',
-                'tanggal_berakhir.after_or_equal' => 'Tanggal berakhir harus sama atau setelah tanggal mulai.',
             ]);
 
-            // Clear existing assessments first
-            Assessment::where('akreditasi_id', $this->akreditasi_id)->delete();
-
-            // Create Asesor 1
-            Assessment::create([
-                'akreditasi_id' => $this->akreditasi_id,
-                'asesor_id' => $this->asesor_id1,
-                'tipe' => 1,
+            $akreditasiService->approvePengajuan($this->akreditasi_id, [
+                'asesor_id1' => $this->asesor_id1,
+                'asesor_id2' => $this->asesor_id2,
                 'tanggal_mulai' => $this->tanggal_mulai,
                 'tanggal_berakhir' => $this->tanggal_berakhir,
             ]);
 
-            // Create Asesor 2 if selected
-            if ($this->asesor_id2) {
-                Assessment::create([
-                    'akreditasi_id' => $this->akreditasi_id,
-                    'asesor_id' => $this->asesor_id2,
-                    'tipe' => 2,
-                    'tanggal_mulai' => $this->tanggal_mulai,
-                    'tanggal_berakhir' => $this->tanggal_berakhir,
-                ]);
-            }
-
-            $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
-            $akreditasi->update(['status' => 5]); // 5. Assessment
-
-            // Notify Pesantren
-            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('assessment', 'Update Status: Assessment', 'Pengajuan akreditasi Anda telah diverifikasi dan masuk tahap Assessment.', route('pesantren.akreditasi')));
-
-            // Notify Asesor 1
-            $asesor1 = Asesor::with('user')->find($this->asesor_id1);
-            if ($asesor1 && $asesor1->user) {
-                $asesor1->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 1 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
-            }
-
-            // Notify Asesor 2
-            if ($this->asesor_id2) {
-                $asesor2 = Asesor::with('user')->find($this->asesor_id2);
-                if ($asesor2 && $asesor2->user) {
-                    $asesor2->user->notify(new \App\Notifications\AkreditasiNotification('tugas_baru', 'Tugas Assessment Baru', 'Anda telah ditugaskan sebagai asesor 2 untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name), route('asesor.akreditasi')));
-                }
-            }
-
-            session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assesment.');
+            session()->flash('status', 'Pengajuan berhasil diverifikasi. Status berubah menjadi Assessment.');
         } else {
-            // Reject action
             $this->validate([
                 'catatan_penolakan' => 'required|string|min:10',
-            ], [
-                'catatan_penolakan.required' => 'Catatan penolakan wajib diisi.',
-                'catatan_penolakan.min' => 'Catatan penolakan minimal 10 karakter.',
             ]);
 
-            /** @var Akreditasi $akreditasi */
-            $akreditasi = Akreditasi::findOrFail($this->akreditasi_id);
-            $akreditasi->update([
-                'status' => 6, // 6. Pengajuan (Perbaikan)
-            ]);
+            $akreditasiService->rejectPengajuan($this->akreditasi_id, $this->catatan_penolakan);
 
-            AkreditasiCatatan::create([
-                'akreditasi_id' => $akreditasi->id,
-                'user_id' => Auth::id(), // Admin
-                'tipe' => 'pengajuan',
-                'catatan' => $this->catatan_penolakan,
-            ]);
-
-            // Notify Pesantren
-            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification('di stop', 'Pengajuan Perlu Perbaikan', 'Pengajuan akreditasi Anda ditolak oleh admin. Catatan: ' . $this->catatan_penolakan . '. Silahkan perbaiki dokumen dan ajukan kembali.', route('pesantren.akreditasi')));
-
-            session()->flash('status', 'Pengajuan berhasil di stop dan status tetap Menunggu Verifikasi untuk perbaikan.');
+            session()->flash('status', 'Pengajuan berhasil ditolak (Stop) dan dialihkan untuk perbaikan.');
         }
 
         $this->dispatch('close-modal', 'verifikasi-modal');
@@ -542,39 +469,111 @@ new #[Layout('layouts.app')] class extends Component {
 
     <!-- Modal Catatan (View Only) -->
     <x-modal name="catatan-modal" focusable>
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-6 border-b pb-4">
-                <h2 class="text-xl font-bold text-gray-800">Catatan</h2>
-                <button x-on:click="$dispatch('close')" class="text-gray-400 hover:text-gray-600 transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
+        <div class="p-0 overflow-hidden rounded-3xl">
             @if($selectedAkreditasiNotes)
-            <div class="space-y-6 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                @forelse($selectedAkreditasiNotes->catatans as $catatan)
-                <div class="flex gap-4">
-                    <div class="flex-shrink-0">
-                        <img src="https://ui-avatars.com/api/?name={{ urlencode($catatan->user->name) }}&color=7F9CF5&background=EBF4FF" class="w-10 h-10 rounded-full border-2 border-white shadow-sm" alt="Avatar">
-                    </div>
-                    <div class="flex-1">
-                        <div class="text-sm font-bold text-gray-800 mb-2">{{ $catatan->user->name }}</div>
-                        <div class="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-xs text-gray-700 leading-relaxed shadow-sm">
-                            {!! nl2br(e($catatan->catatan)) !!}
+            @php
+            $latestCatatan = $selectedAkreditasiNotes->catatans->sortByDesc('created_at')->first();
+            $isRejection = $latestCatatan && !empty($latestCatatan->perbaikan);
+            @endphp
+
+            <div class="p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-xl font-bold text-[#1e3a5f]">
+                        {{ $isRejection ? 'Catatan Penolakan Visitasi' : 'Catatan Akreditasi' }}
+                    </h2>
+                    <button x-on:click="$dispatch('close')" class="text-slate-300 hover:text-slate-500 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="space-y-8 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
+                    @forelse($selectedAkreditasiNotes->catatans->sortByDesc('created_at') as $catatan)
+                    @php
+                    $isNoteRejection = !empty($catatan->perbaikan);
+                    @endphp
+                    <div class="bg-white border-b border-slate-50 last:border-0 pb-8 last:pb-0">
+                        <div class="flex items-center gap-4 mb-6">
+                            <img src="https://ui-avatars.com/api/?name={{ urlencode($catatan->user->name) }}&color=1e3a5f&background=f1f5f9"
+                                class="w-12 h-12 rounded-2xl border-2 border-white shadow-sm object-cover" alt="Avatar">
+                            <div>
+                                <h3 class="text-sm font-black text-[#1e3a5f]">{{ $catatan->user->name }}</h3>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    {{ $catatan->user->isAsesor() ? 'Ketua Asesor' : ($catatan->user->isAdmin() ? 'Administrator Pusat' : 'Pihak Berwenang') }}
+                                </p>
+                            </div>
                         </div>
-                        <div class="mt-2 text-[10px] text-gray-400 font-medium tracking-wide">{{ $catatan->created_at->format('d/m/Y H:i') }}</div>
+
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tipe Catatan:</p>
+                                <span class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-tight {{ $isNoteRejection ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600' }}">
+                                    {{ $catatan->tipe ?? 'Umum' }}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Tanggal:</p>
+                                <p class="text-[11px] font-black text-slate-700">
+                                    {{ $catatan->created_at->translatedFormat('d F Y H:i') }}
+                                </p>
+                            </div>
+                        </div>
+
+                        @if($isNoteRejection)
+                        <div class="mb-6">
+                            <p class="text-[11px] font-black text-slate-800 mb-3">Dokumen yang memerlukan perbaikan</p>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach(explode(', ', $catatan->perbaikan) as $p)
+                                <div class="flex items-center gap-2 px-3 py-2 bg-amber-500 rounded-xl text-white">
+                                    @switch($p)
+                                    @case('Profil Pesantren')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    @break
+                                    @case('IPM')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    @break
+                                    @case('Data SDM')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    @break
+                                    @case('EPDM')
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    @break
+                                    @default
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                    @endswitch
+                                    <span class="text-[10px] font-black uppercase tracking-tight">{{ $p }}</span>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        <div class="rounded-3xl p-6 {{ $isNoteRejection ? 'bg-amber-50 text-slate-700' : 'bg-blue-50 text-slate-700' }}">
+                            <div class="text-xs leading-relaxed font-medium space-y-4 prose-sm prose-slate max-w-none">
+                                {!! nl2br(e($catatan->catatan)) !!}
+                            </div>
+                        </div>
                     </div>
+                    @empty
+                    <div class="text-center py-12">
+                        <svg class="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <p class="text-gray-400 font-medium font-bold text-xs text-center">Tidak ada catatan ditemukan.</p>
+                    </div>
+                    @endforelse
                 </div>
-                @empty
-                <div class="text-center py-12">
-                    <svg class="w-12 h-12 text-gray-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <p class="text-gray-400 font-medium">Tidak ada catatan untuk akreditasi ini.</p>
-                </div>
-                @endforelse
             </div>
             @endif
         </div>

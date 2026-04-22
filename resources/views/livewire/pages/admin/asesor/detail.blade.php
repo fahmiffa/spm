@@ -12,7 +12,13 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function mount($uuid)
     {
-        $this->user = User::where('uuid', $uuid)->with('asesor')->firstOrFail();
+        $asesorService = app(\App\Services\AsesorService::class);
+        $this->user = $asesorService->findAsesor($uuid);
+        
+        if (!$this->user) {
+            abort(404);
+        }
+
         $this->asesor = $this->user->asesor;
     }
 }; ?>

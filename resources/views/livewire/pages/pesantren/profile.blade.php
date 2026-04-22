@@ -94,7 +94,8 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
-        $this->pesantren = Pesantren::firstOrCreate(['user_id' => auth()->id()], ['nama_pesantren' => auth()->user()->name]);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $this->pesantren = $pesantrenService->getProfile(auth()->id());
 
         $this->nama_pesantren = $this->pesantren->nama_pesantren;
         $this->ns_pesantren = $this->pesantren->ns_pesantren;
@@ -313,30 +314,20 @@ new #[Layout('layouts.app')] class extends Component {
             }
         }
 
-        $this->pesantren->update($data);
-
-        // Save Units Data
-        $currentUnits = $this->layanan_satuan_pendidikan;
-
-        // delete units not in selected list
-        $this->pesantren->units()->whereNotIn('unit', $currentUnits)->delete();
-
-        // update or create selected units
-        foreach ($currentUnits as $unitName) {
-            $this->pesantren->units()->updateOrCreate(
-                ['unit' => $unitName],
-                [
-                    'jumlah_rombel' => $this->units_data[$unitName]['jumlah_rombel'] ?? 0,
-                ]
-            );
+        $unitsData = [];
+        foreach ($this->layanan_satuan_pendidikan as $unitName) {
+            $unitsData[] = [
+                'unit' => $unitName,
+                'jumlah_rombel' => $this->units_data[$unitName]['jumlah_rombel'] ?? 0,
+            ];
         }
 
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Berhasil!',
-            message: 'Profil pesantren berhasil diperbarui.'
-        );
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        if ($pesantrenService->updateProfile(auth()->id(), $data, $unitsData)) {
+            $this->dispatch('notification-received', type: 'success', title: 'Berhasil!', message: 'Profil pesantren berhasil diperbarui.');
+            $this->isEditing = false;
+            $this->mount();
+        }
     }
 }; ?>
 

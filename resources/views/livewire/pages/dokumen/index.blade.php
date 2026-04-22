@@ -2,7 +2,6 @@
 
 use Livewire\Volt\Component;
 use Livewire\Attributes\Layout;
-use App\Models\Document;
 
 new #[Layout('layouts.app')] class extends Component {
     public $doc = 'all';
@@ -14,19 +13,11 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getDocumentsProperty()
     {
-        $query = Document::where('status', 1);
-
-        if (auth()->user()->isAsesor()) {
-            $query->where('is_asesor', true);
-        } elseif (auth()->user()->isPesantren()) {
-            $query->where('is_pesantren', true);
-        }
-
-        if ($this->doc !== 'all') {
-            $query->where('type', $this->doc);
-        }
-
-        return $query->latest()->get();
+        $documentService = app(\App\Services\DocumentService::class);
+        /** @var \App\Models\User $user */
+        $user = auth()->user();
+        $role = $user->isAsesor() ? 'asesor' : ($user->isPesantren() ? 'pesantren' : null);
+        return $documentService->getActiveDocuments($role, $this->doc);
     }
 }; ?>
 

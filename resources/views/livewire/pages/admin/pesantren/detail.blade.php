@@ -12,30 +12,24 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function mount($uuid)
     {
-        $this->user = User::where('uuid', $uuid)->with(['pesantren', 'pesantren.units'])->firstOrFail();
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $this->user = $pesantrenService->findUserDetail($uuid);
+        
+        if (!$this->user) {
+            abort(404);
+        }
+        
         $this->pesantren = $this->user->pesantren;
     }
 
     public function toggleLock()
     {
         if ($this->pesantren) {
-            $prevLocked = $this->pesantren->is_locked;
-            $this->pesantren->is_locked = !$this->pesantren->is_locked;
-            $this->pesantren->save();
-
-            $status = $this->pesantren->is_locked ? 'terkunci' : 'terbuka';
-
-            if ($prevLocked && !$this->pesantren->is_locked) {
-                // Notifikasi ke pesantren saat data dibuka kuncinya
-                $this->user->notify(new \App\Notifications\AkreditasiNotification(
-                    'buka_kunci',
-                    'Akses Data Dibuka',
-                    'Administrator telah membuka kunci data Anda. Anda sekarang dapat memperbarui profil dan dokumen.',
-                    route('pesantren.profile')
-                ));
+            $pesantrenService = app(\App\Services\PesantrenService::class);
+            if ($pesantrenService->toggleDataLock($this->pesantren->id)) {
+                $status = $this->pesantren->refresh()->is_locked ? 'terkunci' : 'terbuka';
+                $this->dispatch('notification-received', title: 'Berhasil', message: "Akses data pesantren berhasil diubah menjadi $status.");
             }
-
-            $this->dispatch('notification-received', title: 'Berhasil', message: "Akses data pesantren berhasil diubah menjadi $status.");
         }
     }
 }; ?>

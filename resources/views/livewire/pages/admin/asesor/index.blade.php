@@ -61,43 +61,26 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function toggleStatus($userId)
     {
-        $user = User::findOrFail($userId);
-        $user->status = $user->status == 1 ? 0 : 1;
-        $user->save();
-        session()->flash('status', 'Status asesor berhasil diperbarui.');
+        $asesorService = app(\App\Services\AsesorService::class);
+        if ($asesorService->toggleStatus($userId)) {
+            session()->flash('status', 'Status asesor berhasil diperbarui.');
+        }
     }
 
     public function getAsesorsProperty()
     {
-        $query = User::where('role_id', 2)
-            ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%');
-            })
-            ->when($this->filterStatus !== '', function ($query) {
-                $query->where('status', $this->filterStatus);
-            })
-            ->when($this->filterPeran, function ($query) {
-                $query->whereHas('asesor.assessments', function ($q) {
-                    $q->where('tipe', $this->filterPeran);
-                });
-            })
-            ->when($this->filterPenugasan, function ($query) {
-                if ($this->filterPenugasan === 'bertugas') {
-                    $query->whereHas('asesor.assessments.akreditasi', function ($q) {
-                        $q->whereNotIn('status', [1, 2]);
-                    });
-                } elseif ($this->filterPenugasan === 'bebas') {
-                    $query->whereDoesntHave('asesor.assessments', function ($q) {
-                        $q->whereHas('akreditasi', function ($sq) {
-                            $sq->whereNotIn('status', [1, 2]);
-                        });
-                    });
-                }
-            });
-
-        return $query->with(['asesor.assessments.akreditasi.user.pesantren'])
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $asesorService = app(\App\Services\AsesorService::class);
+        return $asesorService->getPaginatedAsesors(
+            [
+                'search' => $this->search,
+                'status' => $this->filterStatus,
+                'peran' => $this->filterPeran,
+                'penugasan' => $this->filterPenugasan,
+            ],
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function updatedSelectAll($value)

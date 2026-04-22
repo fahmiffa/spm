@@ -56,12 +56,13 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getDocumentsProperty()
     {
-        return Document::query()
-            ->when($this->search, function ($query) {
-                $query->where('title', 'like', '%' . $this->search . '%');
-            })
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $documentService = app(\App\Services\DocumentService::class);
+        return $documentService->getPaginatedDocuments(
+            $this->search,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function openModal()
@@ -75,7 +76,14 @@ new #[Layout('layouts.app')] class extends Component {
     public function edit($id)
     {
         $this->resetValidation();
-        $doc = Document::findOrFail($id);
+        $documentService = app(\App\Services\DocumentService::class);
+        $doc = $documentService->findDocument($id);
+        
+        if (!$doc) {
+            $this->dispatch('notification-received', type: 'error', title: 'Gagal', message: 'Dokumen tidak ditemukan.');
+            return;
+        }
+
         $this->documentId = $doc->id;
         $this->title = $doc->title;
         $this->status = $doc->status;
@@ -102,32 +110,10 @@ new #[Layout('layouts.app')] class extends Component {
             $rules['file'] = 'nullable|file|mimes:pdf,doc,docx,xls,xlsx|max:10240';
         }
 
-        $this->validate($rules);
+        $validatedData = $this->validate($rules);
 
-        $data = [
-            'title' => $this->title,
-            'status' => $this->status,
-            'is_pesantren' => $this->is_pesantren,
-            'is_asesor' => $this->is_asesor,
-            'type' => $this->type,
-        ];
-
-        if ($this->file) {
-            if ($this->documentId) {
-                $doc = Document::findOrFail($this->documentId);
-                if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
-                    Storage::disk('public')->delete($doc->file_path);
-                }
-            }
-            $path = $this->file->store('documents', 'public');
-            $data['file_path'] = $path;
-        }
-
-        if ($this->documentId) {
-            Document::where('id', $this->documentId)->update($data);
-        } else {
-            Document::create($data);
-        }
+        $documentService = app(\App\Services\DocumentService::class);
+        $documentService->saveDocument($validatedData, $this->documentId, $this->file);
 
         $this->dispatch('close-modal', 'document-modal');
         $this->dispatch('notification-received', type: 'success', title: 'Berhasil', message: 'Dokumen berhasil disimpan.');
@@ -136,12 +122,12 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function delete($id)
     {
-        $doc = Document::findOrFail($id);
-        if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
-            Storage::disk('public')->delete($doc->file_path);
+        $documentService = app(\App\Services\DocumentService::class);
+        if ($documentService->deleteDocument($id)) {
+            $this->dispatch('notification-received', type: 'success', title: 'Berhasil', message: 'Dokumen berhasil dihapus.');
+        } else {
+            $this->dispatch('notification-received', type: 'error', title: 'Gagal', message: 'Dokumen tidak dapat dihapus.');
         }
-        $doc->delete();
-        $this->dispatch('notification-received', type: 'success', title: 'Berhasil', message: 'Dokumen berhasil dihapus.');
     }
 }; ?>
 

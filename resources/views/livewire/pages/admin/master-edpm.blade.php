@@ -35,7 +35,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function loadData()
     {
-        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
+        $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+        $this->komponens = $masterEdpmService->getKomponensData();
     }
 
     public function setTab($tab)
@@ -64,14 +65,16 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->resetKomponenForm();
         if ($id) {
-            $komponen = MasterEdpmKomponen::findOrFail($id);
-            $this->komponen_id = $komponen->id;
-            $this->komponen_nama = $komponen->nama;
-            $this->komponen_ipr = $komponen->ipr == 1;
-            $this->modalTitle = 'Edit Komponen';
+            $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+            $komponen = $masterEdpmService->findKomponen($id);
+            if ($komponen) {
+                $this->komponen_id = $komponen->id;
+                $this->komponen_nama = $komponen->nama;
+                $this->komponen_ipr = $komponen->ipr == 1;
+                $this->modalTitle = 'Edit Komponen';
+            }
         } else {
             $this->modalTitle = 'Tambah Komponen';
-            // Set default IPR based on active tab
             $this->komponen_ipr = ($this->activeTab === 'ipr');
         }
         $this->activeModal = 'komponen';
@@ -82,13 +85,11 @@ new #[Layout('layouts.app')] class extends Component {
     {
         $this->validate(['komponen_nama' => 'required|string|max:255']);
 
-        MasterEdpmKomponen::updateOrCreate(
-            ['id' => $this->komponen_id],
-            [
-                'nama' => $this->komponen_nama,
-                'ipr' => $this->komponen_ipr ? 1 : NULL
-            ]
-        );
+        $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+        $masterEdpmService->saveKomponen([
+            'nama' => $this->komponen_nama,
+            'ipr' => $this->komponen_ipr ? 1 : NULL
+        ], $this->komponen_id);
 
         session()->flash('status', 'Komponen berhasil disimpan.');
         $this->loadData();
@@ -97,7 +98,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function deleteKomponen($id)
     {
-        MasterEdpmKomponen::findOrFail($id)->delete();
+        $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+        $masterEdpmService->deleteKomponen($id);
         $this->loadData();
         session()->flash('status', 'Komponen berhasil dihapus.');
     }
@@ -108,12 +110,15 @@ new #[Layout('layouts.app')] class extends Component {
         $this->butir_komponen_id = $komponenId;
 
         if ($butirId) {
-            $butir = MasterEdpmButir::findOrFail($butirId);
-            $this->butir_id = $butir->id;
-            $this->butir_no_sk = $butir->no_sk;
-            $this->butir_nomor_butir = $butir->nomor_butir;
-            $this->butir_pernyataan = $butir->butir_pernyataan;
-            $this->modalTitle = 'Edit Butir Pernyataan';
+            $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+            $butir = $masterEdpmService->findButir($butirId);
+            if ($butir) {
+                $this->butir_id = $butir->id;
+                $this->butir_no_sk = $butir->no_sk;
+                $this->butir_nomor_butir = $butir->nomor_butir;
+                $this->butir_pernyataan = $butir->butir_pernyataan;
+                $this->modalTitle = 'Edit Butir Pernyataan';
+            }
         } else {
             $this->modalTitle = 'Tambah Butir Pernyataan';
         }
@@ -124,20 +129,17 @@ new #[Layout('layouts.app')] class extends Component {
     public function saveButir()
     {
         $this->validate([
-            // 'butir_no_sk' => 'required|string',
             'butir_nomor_butir' => 'required|string',
             'butir_pernyataan' => 'required|string',
         ]);
 
-        MasterEdpmButir::updateOrCreate(
-            ['id' => $this->butir_id],
-            [
-                'komponen_id' => $this->butir_komponen_id,
-                'no_sk' => $this->butir_no_sk,
-                'nomor_butir' => $this->butir_nomor_butir,
-                'butir_pernyataan' => $this->butir_pernyataan,
-            ]
-        );
+        $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+        $masterEdpmService->saveButir([
+            'komponen_id' => $this->butir_komponen_id,
+            'no_sk' => $this->butir_no_sk,
+            'nomor_butir' => $this->butir_nomor_butir,
+            'butir_pernyataan' => $this->butir_pernyataan,
+        ], $this->butir_id);
 
         session()->flash('status', 'Butir pernyataan berhasil disimpan.');
         $this->loadData();
@@ -146,7 +148,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function deleteButir($id)
     {
-        MasterEdpmButir::findOrFail($id)->delete();
+        $masterEdpmService = app(\App\Services\MasterEdpmService::class);
+        $masterEdpmService->deleteButir($id);
         $this->loadData();
         session()->flash('status', 'Butir pernyataan berhasil dihapus.');
     }
@@ -210,9 +213,6 @@ new #[Layout('layouts.app')] class extends Component {
                                 <div class="w-2 h-8 bg-indigo-500 rounded-full"></div>
                                 <div>
                                     <h4 class="font-bold text-[#111827] uppercase tracking-wide text-sm">{{ $komponen->nama }}</h4>
-                                    @if ($komponen->ipr)
-                                    <span class="bg-amber-100 text-amber-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded border border-amber-200 uppercase tracking-tighter">IPR</span>
-                                    @endif
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">

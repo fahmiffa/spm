@@ -29,7 +29,8 @@ new #[Layout('layouts.app')] class extends Component {
         if (!auth()->user()->isAdmin()) {
             abort(403);
         }
-        $this->roles = Role::all();
+        $roleService = app(\App\Services\RoleService::class);
+        $this->roles = $roleService->getAllRoles();
     }
 
     public function updatedSearch()
@@ -60,21 +61,20 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getUsersProperty()
     {
-        return User::with('role')
-            ->where('role_id', $this->activeTab)
-            ->when($this->search, function ($query) {
-                $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('email', 'like', '%' . $this->search . '%');
-                });
-            })
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $userService = app(\App\Services\UserService::class);
+        return $userService->getPaginatedAccounts(
+            $this->activeTab,
+            $this->search,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function getCountByRole($roleId)
     {
-        return User::where('role_id', $roleId)->count();
+        $userService = app(\App\Services\UserService::class);
+        return $userService->getCountByRole($roleId);
     }
 
     public function resetForm()
@@ -97,13 +97,19 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function editUser($id)
     {
-        $user = User::findOrFail($id);
+        $userService = app(\App\Services\UserService::class);
+        $user = $userService->findUser($id);
+        
+        if (!$user) {
+            $this->dispatch('swal:error', title: 'Gagal!', text: 'Data tidak ditemukan.');
+            return;
+        }
+
         $this->userId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->email = $user->email;
         $this->role_id = $user->role_id;
-        $this->status = $user->status == 1; // 1 is active, 0 is inactive
+        $this->status = $user->status == 1;
         $this->password = '';
         $this->isEditing = true;
         $this->dispatch('open-modal', 'account-modal');
@@ -115,37 +121,21 @@ new #[Layout('layouts.app')] class extends Component {
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email,' . ($this->userId ?? 'NULL')],
             'role_id' => ['required', 'exists:roles,id'],
-            'status' => ['boolean'] // Add validation for status
+            'status' => ['boolean'],
+            'password' => ['nullable', 'string']
         ];
 
-        // $rules['password'] = ['nullable', 'string', Rules\Password::defaults()];
-        $rules['password'] = ['nullable', 'string'];
-
-        $this->validate($rules);
-
-        if ($this->isEditing) {
-            $user = User::find($this->userId);
-            $data = [
-                'name' => $this->name,
-                'email' => $this->email,
-                'role_id' => $this->role_id,
-                'status' => $this->status ? 1 : 0
-            ];
-            if ($this->password) {
-                $data['password'] = Hash::make($this->password);
-            }
-            $user->update($data);
-            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil diperbarui.');
-        } else {
-            User::create([
-                'name' => $this->name,
-                'email' => $this->email,
-                'password' => Hash::make($this->password),
-                'role_id' => $this->role_id,
-                'status' => $this->status ? 1 : 0
-            ]);
-            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil ditambahkan.');
+        if (!$this->isEditing) {
+            $rules['password'] = ['required', 'string'];
         }
+
+        $validatedData = $this->validate($rules);
+
+        $userService = app(\App\Services\UserService::class);
+        $userService->saveAccount($validatedData, $this->userId);
+
+        $msg = $this->isEditing ? 'Data Akun berhasil diperbarui.' : 'Data Akun berhasil ditambahkan.';
+        $this->dispatch('swal:success', title: 'Berhasil!', text: $msg);
 
         $this->dispatch('close-modal', 'account-modal');
         $this->resetForm();
@@ -153,21 +143,20 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function deleteUser($id)
     {
-        if ($id == auth()->id()) {
-            $this->dispatch('swal:error', title: 'Gagal!', text: 'Anda tidak dapat menghapus akun Anda sendiri.');
-            return;
+        $userService = app(\App\Services\UserService::class);
+        if ($userService->deleteAccount($id)) {
+            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil dihapus.');
+        } else {
+            $this->dispatch('swal:error', title: 'Gagal!', text: 'Anda tidak dapat menghapus akun Anda sendiri atau terjadi kesalahan.');
         }
-        User::find($id)->delete();
-        $this->dispatch('swal:success', title: 'Berhasil!', text: 'Data Akun berhasil dihapus.');
     }
 
     public function toggleStatus($id)
     {
-        $user = User::findOrFail($id);
-        $user->status = $user->status == 1 ? 0 : 1;
-        $user->save();
-
-        $this->dispatch('swal:success', title: 'Berhasil!', text: 'Status akun berhasil diubah.');
+        $userService = app(\App\Services\UserService::class);
+        if ($userService->toggleAccountStatus($id)) {
+            $this->dispatch('swal:success', title: 'Berhasil!', text: 'Status akun berhasil diubah.');
+        }
     }
 
     public function setTab($tab)

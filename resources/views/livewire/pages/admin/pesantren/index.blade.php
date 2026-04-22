@@ -58,40 +58,15 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getPesantrensProperty()
     {
-        return User::where('role_id', 3)
-            ->when($this->search, function ($query) {
-                $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhere('email', 'like', '%' . $this->search . '%')
-                        ->orWhereHas('pesantren', function ($pq) {
-                            $pq->where('nama_pesantren', 'like', '%' . $this->search . '%')
-                                ->orWhere('ns_pesantren', 'like', '%' . $this->search . '%');
-                        });
-                });
-            })
-            ->when($this->filterStatus !== '', function ($query) {
-                $query->where('status', $this->filterStatus);
-            })
-            ->when($this->filterAkreditasi, function ($query) {
-                if ($this->filterAkreditasi === 'belum') {
-                    $query->whereDoesntHave('akreditasis');
-                } elseif ($this->filterAkreditasi === 'proses') {
-                    $query->whereHas('akreditasis', function ($q) {
-                        $q->whereNotIn('status', [1, 2]);
-                    });
-                } elseif ($this->filterAkreditasi === 'terakreditasi') {
-                    $query->whereHas('akreditasis', function ($q) {
-                        $q->where('status', 1);
-                    });
-                } elseif ($this->filterAkreditasi === 'ditolak') {
-                    $query->whereHas('akreditasis', function ($q) {
-                        $q->where('status', 2);
-                    });
-                }
-            })
-            ->with(['pesantren', 'akreditasis'])
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        return $pesantrenService->getPaginatedData(
+            $this->search,
+            $this->filterStatus,
+            $this->filterAkreditasi,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
     public function updatedSelectAll($value)

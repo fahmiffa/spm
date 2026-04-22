@@ -32,7 +32,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function openCatatanModal($id)
     {
-        $this->selectedAkreditasiNotes = Akreditasi::with(['catatans.user'])->find($id);
+        $akreditasiService = app(\App\Services\AkreditasiService::class);
+        $this->selectedAkreditasiNotes = $akreditasiService->findAkreditasiById($id, ['catatans.user']);
         $this->dispatch('open-modal', 'catatan-modal');
     }
 
@@ -69,46 +70,16 @@ new #[Layout('layouts.app')] class extends Component {
         $asesor = auth()->user()->asesor;
         if (!$asesor) return collect();
 
-        $query = Assessment::with(['akreditasi.user.pesantren', 'akreditasi.catatans.user', 'akreditasi.assessment1'])
-            ->where('asesor_id', $asesor->id);
-
-        if ($this->search) {
-            $query->whereHas('akreditasi.user.pesantren', function ($q) {
-                $q->where('nama_pesantren', 'like', '%' . $this->search . '%');
-            })->orWhereHas('akreditasi.user', function ($q) {
-                $q->where('name', 'like', '%' . $this->search . '%');
-            });
-        }
-
-        if ($this->periodeFilter) {
-            $query->whereHas('akreditasi', function ($q) {
-                $q->whereYear('created_at', $this->periodeFilter);
-            });
-        }
-
-        if ($this->statusFilter) {
-            $query->whereHas('akreditasi', function ($q) {
-                if ($this->statusFilter === 'selesai') {
-                    $q->where('status', '<=', 3);
-                } elseif ($this->statusFilter === 'siap') {
-                    $q->where('status', '>', 3)->whereNotNull('tgl_visitasi');
-                } elseif ($this->statusFilter === 'revisi') {
-                    $q->where('status', '>', 3)->whereHas('catatans', function ($cq) {
-                        $cq->whereNotNull('perbaikan')->where('perbaikan', '!=', '');
-                    });
-                } elseif ($this->statusFilter === 'belum') {
-                    $q->where('status', '>', 3)->whereNull('tgl_visitasi')
-                        ->whereDoesntHave('catatans', function ($cq) {
-                            $cq->whereNotNull('perbaikan')->where('perbaikan', '!=', '');
-                        });
-                } else {
-                    $q->where('status', $this->statusFilter);
-                }
-            });
-        }
-
-        return $query->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $asesorService = app(\App\Services\AsesorService::class);
+        return $asesorService->getPaginatedAssessments(
+            $asesor->id,
+            $this->search,
+            $this->periodeFilter,
+            $this->statusFilter,
+            $this->perPage,
+            $this->sortField,
+            $this->sortAsc
+        );
     }
 
 
@@ -120,31 +91,39 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function openAturJadwalModal($id)
     {
-        $this->selectedAssessment = Assessment::with(['akreditasi.user.pesantren'])->find($id);
-        $this->visitasi_akreditasi_id = $this->selectedAssessment->akreditasi_id;
-        $this->visitasi_tanggal = date('Y-m-d');
-        $this->visitasi_tanggal_akhir = date('Y-m-d');
-        $this->visitasi_catatan = '';
-        $this->visitasi_action = 'terima';
-        $this->resetErrorBag();
-        $this->dispatch('open-modal', 'atur-jadwal-modal');
+        $asesorService = app(\App\Services\AsesorService::class);
+        $this->selectedAssessment = $asesorService->findAssessment($id);
+        
+        if ($this->selectedAssessment) {
+            $this->visitasi_akreditasi_id = $this->selectedAssessment->akreditasi_id;
+            $this->visitasi_tanggal = date('Y-m-d');
+            $this->visitasi_tanggal_akhir = date('Y-m-d');
+            $this->visitasi_catatan = '';
+            $this->visitasi_action = 'terima';
+            $this->resetErrorBag();
+            $this->dispatch('open-modal', 'atur-jadwal-modal');
+        }
     }
 
     public function openTolakVisitasiModal($id)
     {
-        $this->selectedAssessment = Assessment::with(['akreditasi.user.pesantren'])->find($id);
-        $this->visitasi_akreditasi_id = $this->selectedAssessment->akreditasi_id;
-        $this->visitasi_catatan = '';
-        $this->visitasi_perbaikan = [];
-        $this->visitasi_action = 'tolak';
-        $this->resetErrorBag();
-        $this->dispatch('open-modal', 'tolak-visitasi-modal');
+        $asesorService = app(\App\Services\AsesorService::class);
+        $this->selectedAssessment = $asesorService->findAssessment($id);
+        
+        if ($this->selectedAssessment) {
+            $this->visitasi_akreditasi_id = $this->selectedAssessment->akreditasi_id;
+            $this->visitasi_catatan = '';
+            $this->visitasi_perbaikan = [];
+            $this->visitasi_action = 'tolak';
+            $this->resetErrorBag();
+            $this->dispatch('open-modal', 'tolak-visitasi-modal');
+        }
     }
 
     public function submitVisitasi()
     {
-        $akreditasi = Akreditasi::with('assessments')->find($this->visitasi_akreditasi_id);
-        $assessment = $akreditasi->assessments->first(); // Assuming all assessments share the same range
+        $asesorService = app(\App\Services\AsesorService::class);
+        $assessment = $this->selectedAssessment;
 
         if ($this->visitasi_action == 'terima') {
             $this->validate([
@@ -152,7 +131,7 @@ new #[Layout('layouts.app')] class extends Component {
                     'required',
                     'date',
                     function ($attribute, $value, $fail) use ($assessment) {
-                        if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                         if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
                             $fail('Tanggal visitasi harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
                         }
                     },
@@ -162,7 +141,7 @@ new #[Layout('layouts.app')] class extends Component {
                     'date',
                     'after_or_equal:visitasi_tanggal',
                     function ($attribute, $value, $fail) use ($assessment) {
-                        if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
+                         if ($assessment && ($value < $assessment->tanggal_mulai || $value > $assessment->tanggal_berakhir)) {
                             $fail('Tanggal visitasi akhir harus berada dalam rentang assessment (' . \Carbon\Carbon::parse($assessment->tanggal_mulai)->format('d/m/Y') . ' - ' . \Carbon\Carbon::parse($assessment->tanggal_berakhir)->format('d/m/Y') . ').');
                         }
 
@@ -178,87 +157,19 @@ new #[Layout('layouts.app')] class extends Component {
             $this->validate([
                 'visitasi_perbaikan' => 'required|array|min:1',
                 'visitasi_catatan' => 'required|min:10',
-            ], [
-                'visitasi_perbaikan.required' => 'Minimal satu bagian harus dipilih.',
-                'visitasi_catatan.required' => 'Alasan penolakan wajib diisi.',
-                'visitasi_catatan.min' => 'Alasan penolakan minimal 10 karakter.',
             ]);
         }
 
-        // Identify active user (Asesor)
-        $asesorName = auth()->user()->name;
-        // Fetch admins
-        $admins = \App\Models\User::whereHas('role', function ($q) {
-            $q->where('id', 1);
-        })->get();
-
-        if ($this->visitasi_action == 'terima') {
-            $akreditasi->update([
-                'status' => 4, // 4. Visitasi
-                'tgl_visitasi' => $this->visitasi_tanggal,
-                'tgl_visitasi_akhir' => $this->visitasi_tanggal_akhir,
-            ]);
-
-            $rangeStr = \Carbon\Carbon::parse($this->visitasi_tanggal)->format('d/m/Y');
-            if ($this->visitasi_tanggal != $this->visitasi_tanggal_akhir) {
-                $rangeStr .= ' s/d ' . \Carbon\Carbon::parse($this->visitasi_tanggal_akhir)->format('d/m/Y');
-            }
-
-            if (!empty($this->visitasi_catatan)) {
-                AkreditasiCatatan::create([
-                    'akreditasi_id' => $akreditasi->id,
-                    'user_id' => auth()->id(),
-                    'tipe' => 'visitasi',
-                    'catatan' => $this->visitasi_catatan,
-                ]);
-            }
-
-            // Notify Pesantren: Visitasi Scheduled
-            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
-                'visitasi_diterima',
-                'Jadwal Visitasi Ditetapkan',
-                'Asesor ' . $asesorName . ' telah menjadwalkan visitasi pada tanggal ' . $rangeStr . '.',
-                route('pesantren.akreditasi')
-            ));
-
-            // Notify Admin: Visitasi Scheduled
-            \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
-                'visitasi_diterima',
-                'Jadwal Visitasi Ditetapkan',
-                'Asesor ' . $asesorName . ' telah menetapkan jadwal visitasi untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name) . ' pada tanggal ' . $rangeStr . '.',
-                route('admin.akreditasi')
-            ));
-        } else {
-            $akreditasi->status = 5; // 5. Assessment (kembali ke tahap penjadwalan)
-            AkreditasiCatatan::create([
-                'akreditasi_id' => $akreditasi->id,
-                'user_id' => auth()->id(),
-                'tipe' => 'visitasi',
-                'catatan' => $this->visitasi_catatan,
-                'perbaikan' => implode(', ', $this->visitasi_perbaikan),
-            ]);
-            $akreditasi->save();
-
-            // Notify Pesantren: Visitasi Rejected
-            $akreditasi->user->notify(new \App\Notifications\AkreditasiNotification(
-                'visitasi_ditolak',
-                'Pengajuan Visitasi Ditolak',
-                'Asesor ' . $asesorName . ' menolak jadwal visitasi dengan catatan: ' . $this->visitasi_catatan . '. Silahkan periksa catatan perbaikan.',
-                route('pesantren.akreditasi')
-            ));
-
-            // Notify Admin: Visitasi Rejected
-            \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AkreditasiNotification(
-                'visitasi_ditolak',
-                'Visitasi Ditolak Asesor',
-                'Asesor ' . $asesorName . ' menolak visitasi untuk pesantren ' . ($akreditasi->user->pesantren->nama_pesantren ?? $akreditasi->user->name) . '.',
-                route('admin.akreditasi')
-            ));
+        if ($asesorService->processVisitasi($this->visitasi_akreditasi_id, auth()->id(), [
+            'tanggal' => $this->visitasi_tanggal,
+            'tanggal_akhir' => $this->visitasi_tanggal_akhir,
+            'catatan' => $this->visitasi_catatan,
+            'perbaikan' => $this->visitasi_perbaikan,
+        ], $this->visitasi_action)) {
+            $this->dispatch('close-modal', 'atur-jadwal-modal');
+            $this->dispatch('close-modal', 'tolak-visitasi-modal');
+            $this->js('window.location.reload()');
         }
-
-        $this->dispatch('close-modal', 'atur-jadwal-modal');
-        $this->dispatch('close-modal', 'tolak-visitasi-modal');
-        $this->js('window.location.reload()');
     }
 }; ?>
 

@@ -25,10 +25,12 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function loadData()
     {
-        $this->komponens = MasterEdpmKomponen::with('butirs')->orderByRaw('COALESCE(ipr, 0) ASC')->orderBy('id', 'ASC')->get();
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $data = $pesantrenService->getEdpmData(auth()->id());
 
-        $existingEdpms = Edpm::where('user_id', auth()->id())->get()->keyBy('butir_id');
-        $existingCatatans = EdpmCatatan::where('user_id', auth()->id())->get()->pluck('catatan', 'komponen_id');
+        $this->komponens = $data['komponens'];
+        $existingEdpms = $data['existingEdpms'];
+        $existingCatatans = $data['existingCatatans'];
 
         foreach ($this->komponens as $komponen) {
             $this->catatans[$komponen->id] = $existingCatatans[$komponen->id] ?? '';
@@ -89,6 +91,7 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
         if (auth()->user()->pesantren->is_locked) {
             $this->js("Swal.fire({
                 icon: 'error',
@@ -128,29 +131,15 @@ new #[Layout('layouts.app')] class extends Component {
             return;
         }
 
-        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
-        foreach ($allIds as $butirId) {
-            $isian = $this->evaluasis[$butirId] ?? null;
-            $link = $this->links[$butirId] ?? null;
-            Edpm::updateOrCreate(
-                ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
-            );
+        if ($pesantrenService->saveEdpmEvaluation(auth()->id(), $this->evaluasis, $this->links, $this->catatans)) {
+            session()->flash('status', 'Evaluasi EDPM berhasil disimpan.');
+            $this->dispatch('notification-received', title: 'Berhasil', message: 'Evaluasi EDPM berhasil disimpan.');
         }
-
-        foreach ($this->catatans as $komponenId => $catatan) {
-            EdpmCatatan::updateOrCreate(
-                ['user_id' => auth()->id(), 'komponen_id' => $komponenId],
-                ['catatan' => $catatan]
-            );
-        }
-
-        session()->flash('status', 'Evaluasi EDPM berhasil disimpan.');
-        $this->dispatch('notification-received', title: 'Berhasil', message: 'Evaluasi EDPM berhasil disimpan.');
     }
 
     public function saveDraft()
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
         if (auth()->user()->pesantren->is_locked) {
             $this->js("Swal.fire({
                 icon: 'error',
@@ -168,29 +157,9 @@ new #[Layout('layouts.app')] class extends Component {
             'catatans.*' => 'nullable|string',
         ]);
 
-        $allIds = array_unique(array_merge(array_keys($this->evaluasis), array_keys($this->links)));
-        foreach ($allIds as $butirId) {
-            $isian = $this->evaluasis[$butirId] ?? null;
-            $link = $this->links[$butirId] ?? null;
-
-            if (($isian !== '' && $isian !== null) || ($link !== '' && $link !== null)) {
-                Edpm::updateOrCreate(
-                    ['user_id' => auth()->id(), 'butir_id' => $butirId],
-                    ['isian' => $isian === '' ? null : $isian, 'link' => $link === '' ? null : $link]
-                );
-            }
+        if ($pesantrenService->saveEdpmDraft(auth()->id(), $this->evaluasis, $this->links, $this->catatans)) {
+            $this->dispatch('notification-received', title: 'Draft Disimpan', message: 'Draft evaluasi EDPM berhasil disimpan.');
         }
-
-        foreach ($this->catatans as $komponenId => $catatan) {
-            if ($catatan !== '' && $catatan !== null) {
-                EdpmCatatan::updateOrCreate(
-                    ['user_id' => auth()->id(), 'komponen_id' => $komponenId],
-                    ['catatan' => $catatan]
-                );
-            }
-        }
-
-        $this->dispatch('notification-received', title: 'Draft Disimpan', message: 'Draft evaluasi EDPM berhasil disimpan.');
     }
 
     public function isStepComplete($index)

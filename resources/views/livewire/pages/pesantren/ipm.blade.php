@@ -26,7 +26,8 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
-        $this->ipm = Ipm::firstOrCreate(['user_id' => auth()->id()]);
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $this->ipm = $pesantrenService->getIpm(auth()->id());
 
         $this->existing_files = [
             'nsp_file' => $this->ipm->nsp_file,
@@ -58,6 +59,7 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
         if (auth()->user()->pesantren->is_locked) {
             $this->js("Swal.fire({
                 icon: 'error',
@@ -84,7 +86,6 @@ new #[Layout('layouts.app')] class extends Component {
 
         foreach ($fileFields as $dbField => $property) {
             if ($this->$property) {
-                // Delete old file if exists
                 if ($this->ipm->$dbField) {
                     Storage::disk('public')->delete($this->ipm->$dbField);
                 }
@@ -94,15 +95,10 @@ new #[Layout('layouts.app')] class extends Component {
         }
 
         if (!empty($data)) {
-            $this->ipm->update($data);
+            if ($pesantrenService->updateIpm(auth()->id(), $data)) {
+                $this->dispatch('notification-received', type: 'success', title: 'Berhasil!', message: 'Data IPM berhasil diperbarui.');
+            }
         }
-
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Berhasil!',
-            message: 'Data IPM berhasil diperbarui.'
-        );
     }
 }; ?>
 

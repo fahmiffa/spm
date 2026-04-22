@@ -40,14 +40,15 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
-        $pesantren = Pesantren::with('units')->where('user_id', auth()->id())->first();
+        $pesantrenService = app(\App\Services\PesantrenService::class);
+        $pesantren = $pesantrenService->getProfile(auth()->id());
 
         if ($pesantren) {
             $this->levels = $pesantren->units->pluck('unit')->toArray();
             $this->unitIds = $pesantren->units->pluck('id', 'unit')->toArray();
         }
 
-        $existingData = SdmPesantren::where('user_id', auth()->id())->get()->keyBy('tingkat');
+        $existingData = $pesantrenService->getSdm(auth()->id());
 
         foreach ($this->levels as $level) {
             foreach ($this->fields as $field) {
@@ -58,6 +59,7 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        $pesantrenService = app(\App\Services\PesantrenService::class);
         if (auth()->user()->pesantren->is_locked) {
             $this->js("Swal.fire({
                 icon: 'error',
@@ -70,19 +72,11 @@ new #[Layout('layouts.app')] class extends Component {
 
         foreach ($this->levels as $level) {
             $unitId = $this->unitIds[$level] ?? null;
-
-            SdmPesantren::updateOrCreate(
-                ['user_id' => auth()->id(), 'tingkat' => $level],
-                array_merge($this->data[$level], ['pesantren_unit_id' => $unitId])
-            );
+            $dataToSave = array_merge($this->data[$level], ['pesantren_unit_id' => $unitId]);
+            $pesantrenService->updateSdm(auth()->id(), $level, $dataToSave);
         }
 
-        $this->dispatch(
-            'notification-received',
-            type: 'success',
-            title: 'Berhasil!',
-            message: 'Data SDM berhasil disimpan.'
-        );
+        $this->dispatch('notification-received', type: 'success', title: 'Berhasil!', message: 'Data SDM berhasil disimpan.');
     }
 
     public function getCategoryTotal($categoryKey, $fieldSuffix)

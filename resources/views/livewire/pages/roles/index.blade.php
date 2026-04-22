@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Role;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
@@ -47,13 +46,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function getRolesProperty()
     {
-        return Role::query()
-            ->when($this->search, function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhere('parameter', 'like', '%' . $this->search . '%');
-            })
-            ->orderBy($this->sortField, $this->sortAsc ? 'asc' : 'desc')
-            ->paginate($this->perPage);
+        $roleService = app(\App\Services\RoleService::class);
+        return $roleService->getPaginatedRoles($this->search, $this->perPage, $this->sortField, $this->sortAsc);
     }
 
     public function resetForm()
@@ -73,7 +67,10 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function editRole($id)
     {
-        $role = Role::findOrFail($id);
+        $roleService = app(\App\Services\RoleService::class);
+        $role = $roleService->findRole($id);
+        if (!$role) return;
+
         $this->roleId = $role->id;
         $this->name = $role->name;
         $this->parameter = $role->parameter;
@@ -88,21 +85,18 @@ new #[Layout('layouts.app')] class extends Component {
             'parameter' => 'required|string|max:255|unique:roles,parameter,' . ($this->roleId ?? 'NULL'),
         ]);
 
-        if ($this->isEditing) {
-            Role::find($this->roleId)->update(['name' => $this->name, 'parameter' => $this->parameter]);
-            session()->flash('status', 'Role berhasil diperbarui.');
-        } else {
-            Role::create(['name' => $this->name, 'parameter' => $this->parameter]);
-            session()->flash('status', 'Role berhasil dibuat.');
-        }
+        $roleService = app(\App\Services\RoleService::class);
+        $roleService->saveRole(['name' => $this->name, 'parameter' => $this->parameter], $this->roleId);
 
+        session()->flash('status', $this->isEditing ? 'Role berhasil diperbarui.' : 'Role berhasil dibuat.');
         $this->dispatch('close-modal', 'role-modal');
         $this->resetForm();
     }
 
     public function deleteRole($id)
     {
-        Role::find($id)->delete();
+        $roleService = app(\App\Services\RoleService::class);
+        $roleService->deleteRole($id);
         session()->flash('status', 'Role berhasil dihapus.');
     }
 }; ?>

@@ -68,13 +68,8 @@ new #[Layout('layouts.app')] class extends Component {
             abort(403);
         }
 
-        $this->asesor = Asesor::firstOrCreate(
-            ['user_id' => auth()->id()],
-            [
-                'nama_dengan_gelar' => auth()->user()->name,
-                'nama_tanpa_gelar' => auth()->user()->name,
-            ]
-        );
+        $asesorService = app(\App\Services\AsesorService::class);
+        $this->asesor = $asesorService->getProfile(auth()->id());
 
         $this->foto_upload = null;
         $this->nama_dengan_gelar = $this->asesor->nama_dengan_gelar;
@@ -103,6 +98,7 @@ new #[Layout('layouts.app')] class extends Component {
         $this->pengalaman_pelatihan = $this->asesor->pengalaman_pelatihan ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
         $this->pengalaman_bekerja = $this->asesor->pengalaman_bekerja ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
         $this->pengalaman_berorganisasi = $this->asesor->pengalaman_berorganisasi ?? [['dimana' => '', 'kapan' => '', 'sebagai' => '']];
+        
         $rawKarya = $this->asesor->karya_publikasi ?? [];
         $this->karya_publikasi = [];
         if (empty($rawKarya)) {
@@ -171,6 +167,8 @@ new #[Layout('layouts.app')] class extends Component {
 
     public function save()
     {
+        $asesorService = app(\App\Services\AsesorService::class);
+        
         $this->validate([
             'nama_dengan_gelar' => 'required|string|max:255',
             'nama_tanpa_gelar' => 'required|string|max:255',
@@ -229,7 +227,7 @@ new #[Layout('layouts.app')] class extends Component {
             }
         }
 
-        $this->asesor->update($data);
+        $asesorService->updateProfile(auth()->id(), $data);
 
         // Update password if provided
         if ($this->password) {
